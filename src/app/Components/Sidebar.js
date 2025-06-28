@@ -29,7 +29,7 @@ export default function Sidebar() {
     <aside id="layout-menu" className="layout-menu menu-vertical menu bg-menu-theme">
       <div className="app-brand demo">
         <Link href="/" className="app-brand-link">
-         <span class="app-brand-logo demo mt-2">
+         <span className="app-brand-logo demo mt-2">
                 <img
                   src="/assets/img/branding/flow108_logo_recolored.png"
                   alt="Logo"

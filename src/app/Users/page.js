@@ -1,52 +1,220 @@
-'use client';
-import React, { useEffect } from 'react';
+"use client";
+import React, { useEffect, useState } from "react";
 
 export default function Page() {
+  const [users, setUsers] = useState([]);
+  const [view, setView] = useState("userList");
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isEditing, setIsEditing] = useState(false); // new
+  const [editUserId, setEditUserId] = useState(null); // store ID of the user being edited
+
+  const usersPerPage = 10;
+
+  const [newUser, setNewUser] = useState({
+    OID: "1", // static
+    Email: "",
+    Name: "",
+    GivenName: "",
+    FamilyName: "",
+    ProfilePictureUrl: "",
+    IsEmailVerified: false,
+    IsApproved: true,
+  });
+
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const fetchUsers = () => {
+    fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users")
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Fetched Users:", data); // 👈 Add this line
+        setUsers(data);
+      })
+      .catch((error) => console.error("Error fetching users:", error));
+  };
+
   useEffect(() => {
-    document.querySelectorAll('.delete-btn').forEach((button) => {
-      button.addEventListener('click', function (event) {
-        const confirmDelete = confirm('Are you sure you want to delete this user?');
-        if (!confirmDelete) {
-          event.preventDefault();
-        }
-      });
-    });
+    fetchUsers();
   }, []);
+
+  const handleSubmitUser = async (e) => {
+    e.preventDefault();
+
+    const url = isEditing
+      ? `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${editUserId}`
+      : "https://flow108.coinagesoft.com/api/AdminAccount/add-user";
+
+    const method = isEditing ? "PATCH" : "POST";
+    const body = isEditing
+  ? {
+      OID: "1",
+      Email: newUser.Email,
+      Name: newUser.Name,
+      GivenName: newUser.GivenName,
+      FamilyName: newUser.FamilyName,
+      ProfilePictureUrl: newUser.ProfilePictureUrl,
+      IsEmailVerified: newUser.IsEmailVerified,
+      IsApproved: newUser.IsApproved,
+    }
+  : view === "requestApproval"
+  ? {
+      OID: "1",
+      Email: newUser.Email,
+      Name: newUser.Name,
+      GivenName: "",
+      FamilyName: "",
+      ProfilePictureUrl: "",
+      IsEmailVerified: false,
+      IsApproved: newUser.IsApproved,
+    }
+  : newUser;
+
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        alert(isEditing ? "User updated successfully." : "User added successfully.");
+        fetchUsers();
+        setNewUser({
+          OID: "1",
+          Email: "",
+          Name: "",
+          GivenName: "",
+          FamilyName: "",
+          ProfilePictureUrl: "",
+          IsEmailVerified: false,
+          IsApproved: true,
+        });
+        setIsEditing(false);
+        setEditUserId(null);
+        const modalEl = document.getElementById("addUserModal");
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to save user.");
+      }
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("An error occurred.");
+    }
+  };
+
+  const handleStatusChange = async (userId, isApproved) => {
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${userId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ IsApproved: isApproved }),
+        }
+      );
+
+      if (res.ok) {
+        fetchUsers(); // Refresh the table after update
+      } else {
+        const err = await res.json();
+        alert(err.message || "Failed to update status.");
+      }
+    } catch (error) {
+      alert("Error while updating status.");
+      console.error(error);
+    }
+  };
+
+  const sortedUsers = [...users]
+    .filter((user) =>
+      view === "userList" ? user.IsApproved : !user.IsApproved
+    )
+    .sort((a, b) => {
+      if (!sortColumn) return 0;
+
+      let valA = a[sortColumn] ?? "";
+      let valB = b[sortColumn] ?? "";
+
+      if (sortColumn === "IsApproved") {
+        valA = a.IsApproved ? 1 : 0;
+        valB = b.IsApproved ? 1 : 0;
+      } else if (sortColumn === "Plan") {
+        valA = a.Plan || "";
+        valB = b.Plan || "";
+      } else {
+        valA = valA.toString().toLowerCase();
+        valB = valB.toString().toLowerCase();
+      }
+
+      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = sortedUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(sortedUsers.length / usersPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  const getSortArrow = (col) => {
+    if (sortColumn !== col) return "";
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
 
   return (
     <div>
       <div className="content-wrapper">
-        {/* <!-- Content --> */}
         <div className="container-xxl flex-grow-1 container-p-y">
+          {/* Stats */}
           <div className="row g-6 mb-6">
             {[
               {
                 count: 42,
-                label: 'User Registered',
-                percent: '+18.2%',
-                class: 'primary',
-                icon: 'ri-user-add-line',
+                label: "User Registered",
+                percent: "+18.2%",
+                class: "primary",
+                icon: "ri-user-add-line",
               },
               {
                 count: 8,
-                label: 'Paid Members',
-                percent: '-8.7%',
-                class: 'warning',
-                icon: 'ri-user-star-line',
+                label: "Paid Members",
+                percent: "-8.7%",
+                class: "warning",
+                icon: "ri-user-star-line",
               },
               {
                 count: 27,
-                label: 'Total Questions',
-                percent: '+4.3%',
-                class: 'danger',
-                icon: 'ri-group-line',
+                label: "Total Questions",
+                percent: "+4.3%",
+                class: "danger",
+                icon: "ri-group-line",
               },
               {
                 count: 13,
-                label: 'Total Posts',
-                percent: '-2.5%',
-                class: 'info',
-                icon: 'ri-article-line',
+                label: "Total Posts",
+                percent: "-2.5%",
+                class: "info",
+                icon: "ri-article-line",
               },
             ].map((item, index) => (
               <div key={index} className="col-6 col-sm-6 col-lg-3 mb-2">
@@ -54,7 +222,9 @@ export default function Page() {
                   <div className="card-body">
                     <div className="d-flex align-items-center mb-2">
                       <div className="avatar me-4">
-                        <span className={`avatar-initial rounded-3 bg-label-${item.class}`}>
+                        <span
+                          className={`avatar-initial rounded-3 bg-label-${item.class}`}
+                        >
                           <i className={`tf-icons ${item.icon} ri-24px`}></i>
                         </span>
                       </div>
@@ -71,91 +241,217 @@ export default function Page() {
             ))}
           </div>
 
-          {/* <!-- Users List Table --> */}
+          {/* View Toggle */}
+          <h4 className="mb-3 mt-4 fw-bold">Manage Users</h4>
+          <div className="d-flex gap-3 mb-3">
+            <button
+              className={`btn ${
+                view === "userList" ? "btn-primary" : "btn-outline-primary"
+              }`}
+              onClick={() => setView("userList")}
+            >
+              User List
+            </button>
+            <button
+              className={`btn ${
+                view === "requestApproval"
+                  ? "btn-primary"
+                  : "btn-outline-primary"
+              }`}
+              onClick={() => setView("requestApproval")}
+            >
+              User Request Approval
+            </button>
+          </div>
+
+          {/* User Table */}
           <div className="card">
-            <div className="card-header">
-              <div className="card-header d-flex flex-column flex-md-row justify-content-between align-items-center">
-                <h3 className="card-title mb-0 mb-md-0">User List</h3>
-                <div className="d-flex gap-2">
-                  <button className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                    <i className="ri-add-line"></i> Add User
-                  </button>
-                </div>
+            <div className="card-header d-flex flex-column flex-md-row justify-content-between align-items-center">
+              <h3 className="card-title mb-0">
+                {view === "userList" ? "User List" : "User Request Approval"}
+              </h3>
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addUserModal"
+                >
+                  <i className="ri-add-line"></i>{" "}
+                  {view === "userList" ? "Add User" : "Add Request"}
+                </button>
               </div>
             </div>
+
             <div className="card-datatable table-responsive">
               <div className="container mt-2">
-                <table id="userTable" className="table table-bordered table-striped">
+                <table className="table table-bordered table-striped">
                   <thead className="table-primary">
                     <tr>
                       <th>
-                        <input type="checkbox" id="selectAll" />
+                        <input type="checkbox" />
                       </th>
-                      <th>User</th>
-                      <th>Email</th>
-                      <th>Plan</th>
-                      <th>Status</th>
-                      <th>Actions</th>
+                      <th
+                        onClick={() => handleSort("Name")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        User{getSortArrow("Name")}
+                      </th>
+                      <th
+                        onClick={() => handleSort("Email")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        Email{getSortArrow("Email")}
+                      </th>
+                      <th
+                        onClick={() => handleSort("Plan")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        Plan{getSortArrow("Plan")}
+                      </th>
+                      <th
+                        onClick={() => handleSort("IsApproved")}
+                        style={{ cursor: "pointer" }}
+                      >
+                        Status{getSortArrow("IsApproved")}
+                      </th>
+                      {view === "userList" && <th>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      {
-                        name: 'Meera Sharma',
-                        email: 'meerasharma@example.com',
-                        plan: 'Free Plan',
-                        status: 'Active',
-                        badge: 'success',
-                      },
-                      {
-                        name: 'Dev Patel',
-                        email: 'devpatel@example.com',
-                        plan: 'Flow Plan',
-                        status: 'Pending',
-                        badge: 'danger text-dark',
-                      },
-                      {
-                        name: 'Ananya Desai',
-                        email: 'ananyadesai@example.com',
-                        plan: 'Diva Plan',
-                        status: 'Pending',
-                        badge: 'danger text-dark',
-                      },
-                    ].map((user, index) => (
+                    {currentUsers.map((user, index) => (
                       <tr key={index}>
                         <td>
-                          <input type="checkbox" className="row-checkbox" />
+                          <input type="checkbox" />
                         </td>
-                        <td>{user.name}</td>
-                        <td>{user.email}</td>
-                        <td>{user.plan}</td>
+                        <td>{user.Name}</td>
+                        <td>{user.Email}</td>
+                        <td>{user.Plan || "Flow Plan"}</td>
                         <td>
-                          <span className={`badge bg-${user.badge}`}>{user.status}</span>
+                          {view === "requestApproval" ? (
+                            <select
+                              className="form-select form-select-sm"
+                              value={user.IsApproved ? "Approved" : "Pending"}
+                              onChange={
+                                (e) =>
+                                  handleStatusChange(
+                                    user.Id,
+                                    e.target.value === "Approved"
+                                  ) // ✅ Correct ID
+                              }
+                            >
+                              <option>Pending</option>
+                              <option>Approved</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`badge ${
+                                user.IsApproved ? "bg-success" : "bg-warning"
+                              }`}
+                            >
+                              {user.IsApproved ? "Active" : "Pending"}
+                            </span>
+                          )}
                         </td>
-                        <td>
-                          <a href="/UserDetails">
-                            <button className="btn btn-sm btn-outline-success me-1">
-                              <i className="bi bi-bar-chart-fill"></i>
+                        {view === "userList" && (
+                          <td>
+                            <a href="/UserDetails">
+                              <button className="btn btn-sm btn-outline-success me-1">
+                                <i className="bi bi-bar-chart-fill"></i>
+                              </button>
+                            </a>
+                            
+                              <button
+                                className="btn btn-sm btn-outline-primary me-1"
+                                onClick={() => {
+                                  setNewUser({
+                                    OID: "1",
+                                    Email: user.Email,
+                                    Name: user.Name,
+                                    GivenName: user.GivenName,
+                                    FamilyName: user.FamilyName,
+                                    ProfilePictureUrl: user.ProfilePictureUrl,
+                                    IsEmailVerified: user.IsEmailVerified,
+                                    IsApproved: user.IsApproved,
+                                  });
+                                  setIsEditing(true);
+                                  setEditUserId(user.Id);
+                                  const modalEl =
+                                    document.getElementById("addUserModal");
+                                  const modal = new bootstrap.Modal(modalEl);
+                                  modal.show();
+                                }}
+                              >
+                                <i className="bi bi-pencil"></i>
+                              </button>
+                            
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={(e) => {
+                                if (
+                                  !confirm(
+                                    "Are you sure you want to delete this user?"
+                                  )
+                                ) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            >
+                              <i className="bi bi-trash"></i>
                             </button>
-                          </a>
-                          <a href="./userUpdateForm.html">
-                            <button className="btn btn-sm btn-outline-primary me-1">
-                              <i className="bi bi-pencil"></i>
-                            </button>
-                          </a>
-                          <button className="btn btn-sm btn-outline-danger delete-btn">
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </td>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                <nav className="mt-3">
+                  <ul className="pagination justify-content-center">
+                    <li
+                      className={`page-item ${
+                        currentPage === 1 ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                      >
+                        Previous
+                      </button>
+                    </li>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <li
+                        key={i}
+                        className={`page-item ${
+                          currentPage === i + 1 ? "active" : ""
+                        }`}
+                      >
+                        <button
+                          className="page-link"
+                          onClick={() => handlePageChange(i + 1)}
+                        >
+                          {i + 1}
+                        </button>
+                      </li>
+                    ))}
+                    <li
+                      className={`page-item ${
+                        currentPage === totalPages ? "disabled" : ""
+                      }`}
+                    >
+                      <button
+                        className="page-link"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                      >
+                        Next
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
               </div>
             </div>
           </div>
 
-          {/* <!-- Add User Modal --> */}
+          {/* Add User Modal */}
           <div
             className="modal fade"
             id="addUserModal"
@@ -168,7 +464,7 @@ export default function Page() {
               <div className="modal-content border-0 shadow-lg rounded-4">
                 <div className="modal-header text-white rounded-top-4">
                   <h5 className="modal-title" id="addUserModalLabel">
-                    Add New User
+                    {view === "userList" ? "Add New User" : "Add User Request"}
                   </h5>
                   <button
                     type="button"
@@ -178,33 +474,133 @@ export default function Page() {
                   ></button>
                 </div>
                 <div className="modal-body p-4">
-                  <form id="addUserFormModal">
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Name</label>
-                      <input type="text" className="form-control rounded-3 shadow-sm" placeholder="Enter name" required />
-                    </div>
+                  <form id="addUserFormModal" onSubmit={handleSubmitUser}>
+                    {/* Email - shown in both views */}
                     <div className="mb-3">
                       <label className="form-label fw-semibold">Email</label>
-                      <input type="email" className="form-control rounded-3 shadow-sm" placeholder="Enter email" required />
+                      <input
+                        type="email"
+                        className="form-control"
+                        required
+                        value={newUser.Email}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, Email: e.target.value })
+                        }
+                      />
                     </div>
+
+                    {/* Name - shown in both views */}
                     <div className="mb-3">
-                      <label className="form-label fw-semibold">Plan</label>
-                      <select className="form-select rounded-3 shadow-sm" required>
-                        <option value="">Select plan</option>
-                        <option>Diva Plan</option>
-                        <option>Flow Plan</option>
+                      <label className="form-label fw-semibold">Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        required
+                        value={newUser.Name}
+                        onChange={(e) =>
+                          setNewUser({ ...newUser, Name: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    {/* Additional fields only shown in Add User view */}
+                    {view === "userList" && (
+                      <>
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">
+                            Given Name
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={newUser.GivenName}
+                            onChange={(e) =>
+                              setNewUser({
+                                ...newUser,
+                                GivenName: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">
+                            Family Name
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={newUser.FamilyName}
+                            onChange={(e) =>
+                              setNewUser({
+                                ...newUser,
+                                FamilyName: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">
+                            Profile Picture URL
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={newUser.ProfilePictureUrl}
+                            onChange={(e) =>
+                              setNewUser({
+                                ...newUser,
+                                ProfilePictureUrl: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">
+                            Email Verified
+                          </label>
+                          <select
+                            className="form-select"
+                            value={newUser.IsEmailVerified ? "true" : "false"}
+                            onChange={(e) =>
+                              setNewUser({
+                                ...newUser,
+                                IsEmailVerified: e.target.value === "true",
+                              })
+                            }
+                          >
+                            <option value="true">True</option>
+                            <option value="false">False</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* IsApproved - shown in both views */}
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">Approved</label>
+                      <select
+                        className="form-select"
+                        value={newUser.IsApproved ? "true" : "false"}
+                        onChange={(e) =>
+                          setNewUser({
+                            ...newUser,
+                            IsApproved: e.target.value === "true",
+                          })
+                        }
+                      >
+                        <option value="true">True</option>
+                        <option value="false">False</option>
                       </select>
                     </div>
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">Status</label>
-                      <select className="form-select rounded-3 shadow-sm" required>
-                        <option value="">Select status</option>
-                        <option>Active</option>
-                        <option>Pending</option>
-                      </select>
-                    </div>
+
                     <div className="d-grid">
-                      <button type="submit" className="btn btn-primary rounded-3 shadow-sm fw-semibold">
+                      <button
+                        type="submit"
+                        className="btn btn-primary fw-semibold"
+                      >
                         Submit
                       </button>
                     </div>
@@ -213,7 +609,6 @@ export default function Page() {
               </div>
             </div>
           </div>
-          {/* End Add Modal */}
         </div>
       </div>
     </div>
