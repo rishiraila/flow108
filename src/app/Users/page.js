@@ -18,7 +18,7 @@ export default function Page() {
     Name: "",
     GivenName: "",
     FamilyName: "",
-    ProfilePictureUrl: "",
+    // ProfilePictureUrl: "",
     IsEmailVerified: false,
     IsApproved: true,
   });
@@ -61,7 +61,7 @@ export default function Page() {
       Name: newUser.Name,
       GivenName: newUser.GivenName,
       FamilyName: newUser.FamilyName,
-      ProfilePictureUrl: newUser.ProfilePictureUrl,
+      // ProfilePictureUrl: newUser.ProfilePictureUrl,
       IsEmailVerified: newUser.IsEmailVerified,
       IsApproved: newUser.IsApproved,
     }
@@ -72,7 +72,7 @@ export default function Page() {
       Name: newUser.Name,
       GivenName: "",
       FamilyName: "",
-      ProfilePictureUrl: "",
+      // ProfilePictureUrl: "",
       IsEmailVerified: false,
       IsApproved: newUser.IsApproved,
     }
@@ -95,7 +95,7 @@ export default function Page() {
           Name: "",
           GivenName: "",
           FamilyName: "",
-          ProfilePictureUrl: "",
+          // ProfilePictureUrl: "",
           IsEmailVerified: false,
           IsApproved: true,
         });
@@ -369,7 +369,7 @@ export default function Page() {
                                     Name: user.Name,
                                     GivenName: user.GivenName,
                                     FamilyName: user.FamilyName,
-                                    ProfilePictureUrl: user.ProfilePictureUrl,
+                                    // ProfilePictureUrl: user.ProfilePictureUrl,
                                     IsEmailVerified: user.IsEmailVerified,
                                     IsApproved: user.IsApproved,
                                   });
@@ -540,22 +540,7 @@ export default function Page() {
                           />
                         </div>
 
-                        <div className="mb-3">
-                          <label className="form-label fw-semibold">
-                            Profile Picture URL
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            value={newUser.ProfilePictureUrl}
-                            onChange={(e) =>
-                              setNewUser({
-                                ...newUser,
-                                ProfilePictureUrl: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
+                       
 
                         <div className="mb-3">
                           <label className="form-label fw-semibold">
