@@ -22,6 +22,36 @@ export default function Page() {
     IsEmailVerified: false,
     IsApproved: true,
   });
+  const handleDeleteUser = async (email) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminAccount/delete-user-by-email?email=${encodeURIComponent(
+          email
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.Status === false && data.Data === true) {
+        alert("User deleted successfully.");
+        fetchUsers(); // Refresh user list
+      } else {
+        alert("Failed to delete user.");
+        console.error("API error:", data);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("An error occurred while deleting the user.");
+    }
+  };
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -387,15 +417,7 @@ export default function Page() {
 
                             <button
                               className="btn btn-sm btn-outline-danger"
-                              onClick={(e) => {
-                                if (
-                                  !confirm(
-                                    "Are you sure you want to delete this user?"
-                                  )
-                                ) {
-                                  e.preventDefault();
-                                }
-                              }}
+                              onClick={() => handleDeleteUser(user.Email)}
                             >
                               <i className="bi bi-trash"></i>
                             </button>
