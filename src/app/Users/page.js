@@ -55,29 +55,28 @@ export default function Page() {
 
     const method = isEditing ? "PATCH" : "POST";
     const body = isEditing
-  ? {
-      OID: "1",
-      Email: newUser.Email,
-      Name: newUser.Name,
-      GivenName: newUser.GivenName,
-      FamilyName: newUser.FamilyName,
-      // ProfilePictureUrl: newUser.ProfilePictureUrl,
-      IsEmailVerified: newUser.IsEmailVerified,
-      IsApproved: newUser.IsApproved,
-    }
-  : view === "requestApproval"
-  ? {
-      OID: "1",
-      Email: newUser.Email,
-      Name: newUser.Name,
-      GivenName: "",
-      FamilyName: "",
-      // ProfilePictureUrl: "",
-      IsEmailVerified: false,
-      IsApproved: newUser.IsApproved,
-    }
-  : newUser;
-
+      ? {
+          OID: "1",
+          Email: newUser.Email,
+          Name: newUser.Name,
+          GivenName: newUser.GivenName,
+          FamilyName: newUser.FamilyName,
+          // ProfilePictureUrl: newUser.ProfilePictureUrl,
+          IsEmailVerified: newUser.IsEmailVerified,
+          IsApproved: newUser.IsApproved,
+        }
+      : view === "requestApproval"
+      ? {
+          OID: "1",
+          Email: newUser.Email,
+          Name: newUser.Name,
+          GivenName: "",
+          FamilyName: "",
+          // ProfilePictureUrl: "",
+          IsEmailVerified: false,
+          IsApproved: newUser.IsApproved,
+        }
+      : newUser;
 
     try {
       const res = await fetch(url, {
@@ -87,7 +86,9 @@ export default function Page() {
       });
 
       if (res.ok) {
-        alert(isEditing ? "User updated successfully." : "User added successfully.");
+        alert(
+          isEditing ? "User updated successfully." : "User added successfully."
+        );
         fetchUsers();
         setNewUser({
           OID: "1",
@@ -354,36 +355,36 @@ export default function Page() {
                         </td>
                         {view === "userList" && (
                           <td>
-                            <a href="/UserDetails">
+                            <a href={`/UserDetails?id=${user.Id}`}>
                               <button className="btn btn-sm btn-outline-success me-1">
                                 <i className="bi bi-bar-chart-fill"></i>
                               </button>
                             </a>
-                            
-                              <button
-                                className="btn btn-sm btn-outline-primary me-1"
-                                onClick={() => {
-                                  setNewUser({
-                                    OID: "1",
-                                    Email: user.Email,
-                                    Name: user.Name,
-                                    GivenName: user.GivenName,
-                                    FamilyName: user.FamilyName,
-                                    // ProfilePictureUrl: user.ProfilePictureUrl,
-                                    IsEmailVerified: user.IsEmailVerified,
-                                    IsApproved: user.IsApproved,
-                                  });
-                                  setIsEditing(true);
-                                  setEditUserId(user.Id);
-                                  const modalEl =
-                                    document.getElementById("addUserModal");
-                                  const modal = new bootstrap.Modal(modalEl);
-                                  modal.show();
-                                }}
-                              >
-                                <i className="bi bi-pencil"></i>
-                              </button>
-                            
+
+                            <button
+                              className="btn btn-sm btn-outline-primary me-1"
+                              onClick={() => {
+                                setNewUser({
+                                  OID: "1",
+                                  Email: user.Email,
+                                  Name: user.Name,
+                                  GivenName: user.GivenName,
+                                  FamilyName: user.FamilyName,
+                                  // ProfilePictureUrl: user.ProfilePictureUrl,
+                                  IsEmailVerified: user.IsEmailVerified,
+                                  IsApproved: user.IsApproved,
+                                });
+                                setIsEditing(true);
+                                setEditUserId(user.Id);
+                                const modalEl =
+                                  document.getElementById("addUserModal");
+                                const modal = new bootstrap.Modal(modalEl);
+                                modal.show();
+                              }}
+                            >
+                              <i className="bi bi-pencil"></i>
+                            </button>
+
                             <button
                               className="btn btn-sm btn-outline-danger"
                               onClick={(e) => {
@@ -539,8 +540,6 @@ export default function Page() {
                             }
                           />
                         </div>
-
-                       
 
                         <div className="mb-3">
                           <label className="form-label fw-semibold">
