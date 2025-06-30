@@ -227,20 +227,21 @@ export default function UserDetailsClient() {
               </div>
               <div className="col-md-4 mb-2">
                 <strong>Severity:</strong>
-                <div>
+                <ul className="mb-0 list-unstyled">
                   {profileData.Stage2?.Severity?.map((s, i) => (
-                    <span key={i} className="badge bg-danger me-1">
-                      {s}
-                    </span>
+                    <li key={i} className="mb-1">
+                      <span className="badge bg-danger">{s}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
+
               <div className="col-md-4 mb-2">
                 <strong>Goals:</strong>
                 <div>
                   {profileData.Stage3?.Goal?.map((goal, i) => (
-                    <span key={i} className="m-2">
-                      {goal}
+                    <span key={i} className="">
+                      <li key={i}>{goal}</li>
                     </span>
                   ))}
                 </div>
