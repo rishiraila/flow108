@@ -110,7 +110,7 @@ export default function Page() {
 
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ FIXED HERE
+        `https://flow108.coinagesoft.com/api/UserPlans/${selectedPlan.Id}`, // ✅ FIXED HERE
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
