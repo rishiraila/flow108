@@ -4,6 +4,7 @@ import Sidebar from "./Components/Sidebar";
 import "./globals.css";
 import Script from "next/script";
 import Navbar from "./Components/Navbar";
+// import "/public/styles.css";
 // import "bootstrap/dist/css/bootstrap.min.css";
 // import 'bootstrap/dist/css/bootstrap.min.css';
 

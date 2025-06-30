@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function Page() {
   const [plans, setPlans] = useState([]);
@@ -73,16 +74,15 @@ export default function Page() {
   };
 
   const handleEditClick = (plan) => {
-  setSelectedPlan(plan);
-  setEditTitle(plan.Title); // <-- FIX
-  setEditPrice(plan.Price); // <-- FIX
-  setEditFeatures((plan.Features || []).map((f) => f.FeatureText)); // <-- FIX
-  const modal = new window.bootstrap.Modal(
-    document.getElementById("editPlanModal")
-  );
-  modal.show();
-};
-
+    setSelectedPlan(plan);
+    setEditTitle(plan.Title); // <-- FIX
+    setEditPrice(plan.Price); // <-- FIX
+    setEditFeatures((plan.Features || []).map((f) => f.FeatureText)); // <-- FIX
+    const modal = new window.bootstrap.Modal(
+      document.getElementById("editPlanModal")
+    );
+    modal.show();
+  };
 
   const handleEditFeatureChange = (index, value) => {
     const updated = [...editFeatures];
@@ -95,48 +95,47 @@ export default function Page() {
   };
 
   const saveEditedPlan = async (e) => {
-  e.preventDefault();
-  if (!selectedPlan) return;
+    e.preventDefault();
+    if (!selectedPlan) return;
 
-  const payload = {
-    title: editTitle,
-    price: editPrice,
-    planDate: new Date().toISOString(),
-    features: editFeatures.map((text) => ({ featureText: text })),
-  };
+    const payload = {
+      title: editTitle,
+      price: editPrice,
+      planDate: new Date().toISOString(),
+      features: editFeatures.map((text) => ({ featureText: text })),
+    };
 
-  try {
-    const res = await fetch(
-      `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ FIXED HERE
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ FIXED HERE
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Update failed: ${res.status} ${errorText}`);
       }
-    );
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Update failed: ${res.status} ${errorText}`);
+      window.bootstrap.Modal.getInstance(
+        document.getElementById("editPlanModal")
+      ).hide();
+
+      setSelectedPlan(null);
+      setEditTitle("");
+      setEditPrice("");
+      setEditFeatures([""]);
+
+      fetchPlans();
+      showToast("Plan updated successfully!");
+    } catch (err) {
+      console.error("Update error:", err.message);
+      showToast("Failed to update plan.", false);
     }
-
-    window.bootstrap.Modal.getInstance(
-      document.getElementById("editPlanModal")
-    ).hide();
-
-    setSelectedPlan(null);
-    setEditTitle("");
-    setEditPrice("");
-    setEditFeatures([""]);
-
-    fetchPlans();
-    showToast("Plan updated successfully!");
-  } catch (err) {
-    console.error("Update error:", err.message);
-    showToast("Failed to update plan.", false);
-  }
-};
-
+  };
 
   const showToast = (message, isSuccess = true) => {
     const toastEl = document.getElementById("liveToast");
@@ -235,10 +234,12 @@ export default function Page() {
                     <div className="card border shadow-none">
                       <div className="card-body pt-12">
                         <div className="mt-3 mb-5 text-center">
-                          <img
+                          <Image
                             src="/assets/img/illustrations/pricing-basic.png"
                             alt="Basic Image"
-                            height="100"
+                            width={100} // required
+                            height={100} // required
+                            style={{ objectFit: "contain" }} // optional
                           />
                         </div>
 
