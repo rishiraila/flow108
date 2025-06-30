@@ -10,18 +10,21 @@ export default function UserDetailsClient() {
   const [weightData, setWeightData] = useState([]);
   const [periodData, setPeriodData] = useState([]);
   const [profileData, setProfileData] = useState(null);
-
+  const [activityData, setActivityData] = useState([]);
   useEffect(() => {
     if (userId) {
       fetchProfileData(userId);
       fetchPeriodData(userId);
       fetchWeightData(userId);
+      fetchActivityData(userId);
     }
   }, [userId]);
 
   const fetchProfileData = async (uid) => {
     try {
-      const res = await fetch("https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users");
+      const res = await fetch(
+        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users"
+      );
       const allUsers = await res.json();
       const profile = allUsers.find((user) => user.UserId === uid);
       setProfileData(profile || null);
@@ -29,10 +32,22 @@ export default function UserDetailsClient() {
       console.error("Error fetching profile data:", error);
     }
   };
-
+  const fetchActivityData = async (uid) => {
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`
+      );
+      const data = await res.json();
+      setActivityData(data.Events || []);
+    } catch (error) {
+      console.error("Error fetching activity data:", error);
+    }
+  };
   const fetchWeightData = async (uid) => {
     try {
-      const res = await fetch(`https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`);
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`
+      );
       const data = await res.json();
       setWeightData(data);
     } catch (error) {
@@ -42,7 +57,9 @@ export default function UserDetailsClient() {
 
   const fetchPeriodData = async (uid) => {
     try {
-      const res = await fetch(`https://flow108.coinagesoft.com/api/admin-activity/period/${uid}`);
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin-activity/period/${uid}`
+      );
       const data = await res.json();
       setPeriodData(data);
     } catch (error) {
@@ -58,7 +75,6 @@ export default function UserDetailsClient() {
   };
 
   const approxCycleDuration = 28;
-
 
   return (
     <div className="container-xxl flex-grow-1 container-p-y">
@@ -145,101 +161,161 @@ export default function UserDetailsClient() {
           </div>
         </div> */}
       </div>
-     {profileData && (
-  <div className="card mb-4 shadow-sm border-0">
-    <div className="card-header  text-white rounded-top">
-      <h5 className="mb-0">
-        <i className="bi bi-person-badge me-2"></i>User Profile Information
-      </h5>
-    </div>
-    <div className="card-body">
-      <div className="row mb-3">
-        <div className="col-md-4 mb-2">
-          <strong>Email:</strong>
-          <p className="mb-0 text-muted">{profileData.Email}</p>
-        </div>
-        <div className="col-md-4 mb-2">
-          <strong>Date of Birth:</strong>
-          <p className="mb-0 text-muted">
-            {new Date(profileData.Stage1?.DateOfBirth).toLocaleDateString("en-GB")}
-          </p>
-        </div>
-        <div className="col-md-4 mb-2">
-          <strong>Height:</strong>
-          <p className="mb-0 text-muted">{profileData.Stage1?.HeightCm} cm</p>
-        </div>
-      </div>
+      {profileData && (
+        <div className="card mb-4 shadow-sm border-0">
+          <div className="card-header  text-white rounded-top">
+            <h5 className="mb-0">
+              <i className="bi bi-person-badge me-2"></i>User Profile
+              Information
+            </h5>
+          </div>
+          <div className="card-body">
+            <div className="row mb-3">
+              <div className="col-md-4 mb-2">
+                <strong>Email:</strong>
+                <p className="mb-0 text-muted">{profileData.Email}</p>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Date of Birth:</strong>
+                <p className="mb-0 text-muted">
+                  {new Date(profileData.Stage1?.DateOfBirth).toLocaleDateString(
+                    "en-GB"
+                  )}
+                </p>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Height:</strong>
+                <p className="mb-0 text-muted">
+                  {profileData.Stage1?.HeightCm} cm
+                </p>
+              </div>
+            </div>
 
-      <hr />
+            <hr />
 
-      <div className="row mb-3">
-        <div className="col-md-4 mb-2">
-          <strong>Initial Weight:</strong>
-          <p className="mb-0 text-muted">{profileData.Stage1?.WeightKg} kg</p>
-        </div>
-        <div className="col-md-4 mb-2">
-          <strong>Last Period Date:</strong>
-          <p className="mb-0 text-muted">
-            {new Date(profileData.Stage2?.LastPeriodDate).toLocaleDateString("en-GB")}
-          </p>
-        </div>
-        <div className="col-md-4 mb-2">
-          <strong>Cycle Duration:</strong>
-          <p className="mb-0 text-muted">{profileData.Stage2?.CycleDurationDays} days</p>
-        </div>
-      </div>
+            <div className="row mb-3">
+              <div className="col-md-4 mb-2">
+                <strong>Initial Weight:</strong>
+                <p className="mb-0 text-muted">
+                  {profileData.Stage1?.WeightKg} kg
+                </p>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Last Period Date:</strong>
+                <p className="mb-0 text-muted">
+                  {new Date(
+                    profileData.Stage2?.LastPeriodDate
+                  ).toLocaleDateString("en-GB")}
+                </p>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Cycle Duration:</strong>
+                <p className="mb-0 text-muted">
+                  {profileData.Stage2?.CycleDurationDays} days
+                </p>
+              </div>
+            </div>
 
-      <hr />
+            <hr />
 
-      <div className="row mb-3">
-        <div className="col-md-4 mb-2">
-          <strong>Period Length:</strong>
-          <p className="mb-0 text-muted">{profileData.Stage2?.PeriodDurationDays} days</p>
-        </div>
-        <div className="col-md-4 mb-2">
-          <strong>Severity:</strong>
-          <div>
-            {profileData.Stage2?.Severity?.map((s, i) => (
-              <span key={i} className="badge bg-danger me-1">{s}</span>
-            ))}
+            <div className="row mb-3">
+              <div className="col-md-4 mb-2">
+                <strong>Period Length:</strong>
+                <p className="mb-0 text-muted">
+                  {profileData.Stage2?.PeriodDurationDays} days
+                </p>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Severity:</strong>
+                <div>
+                  {profileData.Stage2?.Severity?.map((s, i) => (
+                    <span key={i} className="badge bg-danger me-1">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="col-md-4 mb-2">
+                <strong>Goals:</strong>
+                <div>
+                  {profileData.Stage3?.Goal?.map((goal, i) => (
+                    <span key={i} className="m-2">
+                      {goal}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <hr />
+
+            <div className="d-flex gap-3">
+              <div>
+                <strong>Stage 1:</strong>{" "}
+                <span
+                  className={`badge ${
+                    profileData.Stage1Completed ? "bg-success" : "bg-secondary"
+                  }`}
+                >
+                  {profileData.Stage1Completed ? "Completed" : "Pending"}
+                </span>
+              </div>
+              <div>
+                <strong>Stage 2:</strong>{" "}
+                <span
+                  className={`badge ${
+                    profileData.Stage2Completed ? "bg-success" : "bg-secondary"
+                  }`}
+                >
+                  {profileData.Stage2Completed ? "Completed" : "Pending"}
+                </span>
+              </div>
+              <div>
+                <strong>Stage 3:</strong>{" "}
+                <span
+                  className={`badge ${
+                    profileData.Stage3Completed ? "bg-success" : "bg-secondary"
+                  }`}
+                >
+                  {profileData.Stage3Completed ? "Completed" : "Pending"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="col-md-4 mb-2">
-          <strong>Goals:</strong>
-          <div>
-            {profileData.Stage3?.Goal?.map((goal, i) => (
-              <span key={i} className="m-2">{goal}</span>
-            ))}
-          </div>
-        </div>
+      )}
+
+      <div className="mt-5" id="wrapper-userActivityTable">
+        <h4 className="mb-3">Additional Activity</h4>
+        <table className="table table-bordered table-striped">
+          <thead className="table-primary">
+            <tr>
+              <th style={{ width: "20%" }}>Date</th>
+              <th>Activity Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activityData.length > 0 ? (
+              activityData.map((event, index) => (
+                <tr key={index}>
+                  <td>{new Date(event.Date).toLocaleDateString("en-GB")}</td>
+                  <td>
+                    <ul className="mb-0">
+                      {event.Entries.map((entry, i) => (
+                        <li key={i}>{entry.Title}</li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="2">No activity data available</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      <hr />
-
-      <div className="d-flex gap-3">
-        <div>
-          <strong>Stage 1:</strong>{" "}
-          <span className={`badge ${profileData.Stage1Completed ? "bg-success" : "bg-secondary"}`}>
-            {profileData.Stage1Completed ? "Completed" : "Pending"}
-          </span>
-        </div>
-        <div>
-          <strong>Stage 2:</strong>{" "}
-          <span className={`badge ${profileData.Stage2Completed ? "bg-success" : "bg-secondary"}`}>
-            {profileData.Stage2Completed ? "Completed" : "Pending"}
-          </span>
-        </div>
-        <div>
-          <strong>Stage 3:</strong>{" "}
-          <span className={`badge ${profileData.Stage3Completed ? "bg-success" : "bg-secondary"}`}>
-            {profileData.Stage3Completed ? "Completed" : "Pending"}
-          </span>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
 
       {/* <!-- period insight table --> */}
       <div id="wrapper-userTablePeriod">

@@ -9,10 +9,12 @@ export default function Page() {
   const [editPrice, setEditPrice] = useState("");
   const [editFeatures, setEditFeatures] = useState([""]);
 
+
   const [newPlan, setNewPlan] = useState({
     title: "",
     price: "",
     features: [""],
+    isActive: false, 
   });
 
   useEffect(() => {
@@ -31,12 +33,13 @@ export default function Page() {
 
   const handleAddPlan = async (e) => {
     e.preventDefault();
-    const payload = {
-      title: newPlan.title,
-      price: newPlan.price,
-      planDate: new Date().toISOString(),
-      features: newPlan.features.map((text) => ({ featureText: text })),
-    };
+   const payload = {
+  title: newPlan.title,
+  price: newPlan.price,
+  planDate: new Date().toISOString(),
+  isActive: newPlan.isActive, 
+  features: newPlan.features.map((text) => ({ featureText: text })),
+};
 
     try {
       const res = await fetch(
@@ -358,6 +361,26 @@ export default function Page() {
                         >
                           + Add Feature
                         </button>
+                        <div className="form-check mb-2">
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id="isActiveCheckbox"
+                            checked={newPlan.isActive}
+                            onChange={(e) =>
+                              setNewPlan({
+                                ...newPlan,
+                                isActive: e.target.checked,
+                              })
+                            }
+                          />
+                          <label
+                            className="form-check-label"
+                            htmlFor="isActiveCheckbox"
+                          >
+                            Is Active?
+                          </label>
+                        </div>
                       </div>
                       <div className="modal-footer">
                         <button type="submit" className="btn btn-success">
