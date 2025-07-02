@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import Calendar from "react-calendar";
+import "react-calendar/dist/Calendar.css";
 
 export default function UserDetailsClient() {
   const searchParams = useSearchParams();
@@ -11,6 +13,77 @@ export default function UserDetailsClient() {
   const [periodData, setPeriodData] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [activityData, setActivityData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const activityByDate = activityData.reduce((acc, item) => {
+    const date = new Date(item.Date).toISOString().split("T")[0];
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(...item.Entries);
+    return acc;
+  }, {});
+  const markersByDate = useMemo(() => {
+    const map = {};
+    for (const item of activityData) {
+      const date = new Date(item.Date).toISOString().split("T")[0];
+      if (!map[date]) {
+        map[date] = {
+          diet: false,
+          exercise: false,
+          period: false,
+          estimate: false,
+          entries: [],
+        };
+      }
+      for (const entry of item.Entries) {
+        if (/diet/i.test(entry.Title) && /breached/i.test(entry.Title))
+          map[date].diet = true;
+
+        if (/exercise|workout/i.test(entry.Title)) map[date].exercise = true;
+        if (/period/i.test(entry.Title) && !/estimate/i.test(entry.Title))
+          map[date].period = true;
+        if (/estimated period/i.test(entry.Title)) map[date].estimate = true;
+        map[date].entries.push(entry);
+      }
+    }
+    return map;
+  }, [activityData]);
+
+  const tileContent = ({ date }) => {
+    const dateStr = date.toISOString().split("T")[0];
+    const marker = markersByDate[dateStr];
+    if (!marker) return null;
+
+    return (
+      <div className="d-flex flex-column align-items-center ">
+        {/* Dots Row */}
+        <div className="d-flex ">
+          {marker.diet && (
+            <img
+              src="/dietfollow.svg"
+              alt="Diet Breached"
+              width={10}
+              height={10}
+            />
+          )}
+          {marker.exercise && (
+            <img src="/Exercised.svg" alt="Exercise" width={10} height={10} />
+          )}
+        </div>
+
+        {/* Period Icon Row */}
+        {(marker.period || marker.estimate) && (
+          <img
+            src="/perioddate.svg"
+            alt="Period"
+            width={20}
+            height={20}
+            className=""
+          />
+        )}
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (userId) {
       fetchProfileData(userId);
@@ -286,36 +359,102 @@ export default function UserDetailsClient() {
         </div>
       )}
 
-      <div className="mt-5" id="wrapper-userActivityTable">
-        <h4 className="mb-3">Additional Activity</h4>
-        <table className="table table-bordered table-striped">
-          <thead className="table-primary">
-            <tr>
-              <th style={{ width: "20%" }}>Date</th>
-              <th>Activity Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activityData.length > 0 ? (
-              activityData.map((event, index) => (
-                <tr key={index}>
-                  <td>{new Date(event.Date).toLocaleDateString("en-GB")}</td>
-                  <td>
-                    <ul className="mb-0">
-                      {event.Entries.map((entry, i) => (
-                        <li key={i}>{entry.Title}</li>
-                      ))}
-                    </ul>
-                  </td>
-                </tr>
-              ))
+      <div className="row g-4 mt-4 align-items-start">
+        {/* 📅 Calendar on Left */}
+        <div className="col-lg-6">
+          <div className="card p-4 shadow-sm border rounded-4">
+            <h5 className="mb-3">Activity Calendar</h5>
+            <Calendar
+              onClickDay={(value) => setSelectedDate(value)}
+              tileContent={tileContent}
+              calendarType="gregory"
+              className="custom-calendar w-100 rounded border p-2"
+              value={selectedDate} // Highlight the selected date
+            />
+
+            <hr className="my-3" />
+            <h6 className="mb-2">Icon Legends:</h6>
+            <div className="d-flex align-items-center gap-4 flex-wrap">
+              <div className="d-flex align-items-center gap-2">
+                <img src="/dietfollow.svg" alt="Diet" width={12} height={12} />
+                <span className="text-muted small">Diet Followed</span>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <img
+                  src="/Exercised.svg"
+                  alt="Exercise"
+                  width={12}
+                  height={12}
+                />
+                <span className="text-muted small">Exercise Done</span>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                <img
+                  src="/perioddate.svg"
+                  alt="Period"
+                  width={14}
+                  height={14}
+                />
+                <span className="text-muted small">Period/Estimate</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 📘 Diary Modal on Right */}
+        <div className="col-lg-6 position-relative">
+          <div className="card border-0 shadow-lg rounded-4 p-4 bg-white h-100 position-relative">
+            {selectedDate ? (
+              <>
+                {/* Close Button */}
+                <button
+                  className="btn btn-sm btn-outline-primary position-absolute top-0 end-0 mt-3 me-3 rounded-circle"
+                  style={{ width: "32px", height: "32px", zIndex: 10 }}
+                  onClick={() => setSelectedDate(null)}
+                >
+                  &times;
+                </button>
+
+                {/* Header */}
+                <div className="mb-4 pb-3 border-bottom">
+                  <h4 className="fw-bold text-primary mb-1 ">
+                    Diary – {selectedDate.toLocaleDateString("en-GB")}
+                  </h4>
+                  <p className="text-muted small mb-0">
+                    Activity summary for the day
+                  </p>
+                </div>
+
+                {/* Activity Log */}
+                <h6 className="fw-bold text-secondary mb-3">Activity Log</h6>
+                <div className="d-flex flex-column gap-3">
+                  {markersByDate[
+                    selectedDate.toISOString().split("T")[0]
+                  ]?.entries.map((entry, i) => (
+                    <div
+                      key={i}
+                     
+                      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
+                    >
+                      <div className="fw-semibold text-dark mb-1">
+                        {entry.Title}
+                      </div>
+                      <div className="text-muted small">
+                        {entry.Description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
-              <tr>
-                <td colSpan="2">No activity data available</td>
-              </tr>
+              <div className="text-center text-muted py-5">
+                <p className="mb-0">
+                  Select a past date from the calendar to view activity.
+                </p>
+              </div>
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
 
       {/* <!-- period insight table --> */}
@@ -348,10 +487,15 @@ export default function UserDetailsClient() {
                 "en-GB"
               );
 
+              const severityValue =
+                typeof item.Severity === "string"
+                  ? item.Severity.toLowerCase()
+                  : "";
+
               const badgeColor =
-                item.Severity.toLowerCase() === "high"
+                severityValue === "high"
                   ? "danger"
-                  : item.Severity.toLowerCase() === "low"
+                  : severityValue === "low"
                   ? "warning"
                   : "info";
 

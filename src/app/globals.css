@@ -40,3 +40,149 @@ a {
     color-scheme: dark;
   }
 }
+.calendar-markers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  position: relative;
+  margin-top: 2px;
+}
+
+.circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  margin: auto;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+.bg-pink {
+  background-color: #000000;
+}
+
+.bg-striped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    #635d60,
+    #635d60 3px,
+    transparent 3px,
+    transparent 6px
+  );
+}
+
+.diamond {
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  margin: 1px 2px;
+}
+/* Calendar container override */
+.react-calendar {
+  border: none !important;
+  font-family: 'Segoe UI', sans-serif;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+/* Tiles */
+.react-calendar__tile {
+  padding: 12px 0 !important;
+  border-radius: 50%;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Selected day with light pink */
+.react-calendar__tile--active {
+  background: #ffb6c1 !important;
+  color: #fff !important;
+  font-weight: 600;
+}
+
+/* Hover effect */
+.react-calendar__tile:hover {
+  background: #ffe4ec !important;
+  color: #000;
+}
+
+/* Remove blue default */
+/* Today’s date in grey circle */
+.react-calendar__tile--now {
+  background: transparent !important;
+  position: relative;
+  font-weight: bold;
+}
+
+.react-calendar__tile--now::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 28px;
+  background: #d3d3d3; /* grey */
+  border-radius: 50%;
+  z-index: -1;
+}
+
+/* Selected date in pink circle */
+.react-calendar__tile--active {
+  background: #d6ced2 !important; /* light pink */
+  color: white !important;
+  border-radius: 50%;
+  font-weight: bold;
+}
+
+/* Icons/dots under date */
+.calendar-icons {
+  margin-top: 4px;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.react-calendar__tile {
+  padding: 12px 6px !important;
+}
+.tile-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2px;
+  height: 100%;
+}
+
+.tile-date {
+  line-height: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.today-circle {
+  background-color: #e0e0e0;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile-icons {
+  margin-top: 2px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.calendar-icon {
+  display: inline-block;
+}
