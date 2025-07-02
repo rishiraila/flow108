@@ -14,6 +14,20 @@ export default function UserDetailsClient() {
   const [profileData, setProfileData] = useState(null);
   const [activityData, setActivityData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const totalPages = Math.ceil(periodData.length / itemsPerPage);
+  const paginatedData = periodData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+const [weightPage, setWeightPage] = useState(1);
+const weightPerPage = 5;
+const totalWeightPages = Math.ceil(weightData.length / weightPerPage);
+const paginatedWeightData = weightData.slice(
+  (weightPage - 1) * weightPerPage,
+  weightPage * weightPerPage
+);
 
   const activityByDate = activityData.reduce((acc, item) => {
     const date = new Date(item.Date).toISOString().split("T")[0];
@@ -359,7 +373,7 @@ export default function UserDetailsClient() {
         </div>
       )}
 
-      <div className="row g-4 mt-4 align-items-start">
+      <div className="row g-4 mt-4 align-items-start mb-4">
         {/* 📅 Calendar on Left */}
         <div className="col-lg-6">
           <div className="card p-4 shadow-sm border rounded-4">
@@ -433,7 +447,6 @@ export default function UserDetailsClient() {
                   ]?.entries.map((entry, i) => (
                     <div
                       key={i}
-                     
                       style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
                     >
                       <div className="fw-semibold text-dark mb-1">
@@ -458,114 +471,184 @@ export default function UserDetailsClient() {
       </div>
 
       {/* <!-- period insight table --> */}
-      <div id="wrapper-userTablePeriod">
-        <h4 className="mb-5">User Period Table</h4>
+      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4 className="mb-0 fw-bold text-dark">User Period Table</h4>
+        </div>
 
-        <table
-          id="userTablePeriod"
-          className="table table-bordered table-striped"
-        >
-          <thead className="table-primary">
-            <tr>
-              <th>Sr No.</th>
-
-              <th>Approx Cycle Duration</th>
-              <th>Current Cycles </th>
-              <th>Current Cycle Duration</th>
-              <th>Start Date</th>
-              <th>Density</th>
-            </tr>
-          </thead>
-          <tbody>
-            {periodData.map((item, index) => {
-              const daysSinceStart = calculateDuration(item.StartDate);
-              const currentCycles = Math.floor(
-                daysSinceStart / approxCycleDuration
-              );
-              const currentCycleDuration = daysSinceStart % approxCycleDuration;
-              const formattedDate = new Date(item.StartDate).toLocaleDateString(
-                "en-GB"
-              );
-
-              const severityValue =
-                typeof item.Severity === "string"
-                  ? item.Severity.toLowerCase()
-                  : "";
-
-              const badgeColor =
-                severityValue === "high"
-                  ? "danger"
-                  : severityValue === "low"
-                  ? "warning"
-                  : "info";
-
-              return (
-                <tr key={index}>
-                  <td>{index + 1}</td>
-
-                  <td>{approxCycleDuration} days</td>
-                  <td>{currentCycles}</td>
-                  <td>{currentCycleDuration}</td>
-                  <td>{formattedDate}</td>
-                  <td>
-                    <span className={`badge bg-${badgeColor} text-dark`}>
-                      {item.Severity}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* <!-- weight insight table --> */}
-      <div id="wrapper-userTableWeight">
-        <h4 className="mb-3">User Weight Table</h4>
-        <table
-          id="userTableWeight"
-          className="table table-bordered table-striped"
-        >
-          <thead className="table-primary">
-            <tr>
-              <th>Sr No.</th>
-              <th>Estemated BMI</th>
-
-              <th>Reg. Weight </th>
-              <th>Current Weight </th>
-              <th>Latest Update Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {weightData.length > 0 ? (
-              weightData.map((entry, index) => {
-                const formattedDate = new Date(entry.Date).toLocaleDateString(
-                  "en-GB"
+        <div className="table-responsive">
+          <table className="table table-bordered table-striped mb-0">
+            <thead className="table-primary">
+              <tr>
+                <th>Sr No.</th>
+                <th>Approx Cycle Duration</th>
+                <th>Current Cycles</th>
+                <th>Current Cycle Duration</th>
+                <th>Start Date</th>
+                <th>Density</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.map((item, index) => {
+                const daysSinceStart = calculateDuration(item.StartDate);
+                const currentCycles = Math.floor(
+                  daysSinceStart / approxCycleDuration
                 );
-                const firstWeight = weightData[0].Weight;
-                const currentWeight = entry.Weight;
+                const currentCycleDuration =
+                  daysSinceStart % approxCycleDuration;
+                const formattedDate = new Date(
+                  item.StartDate
+                ).toLocaleDateString("en-GB");
+
+                const severityValue =
+                  typeof item.Severity === "string"
+                    ? item.Severity.toLowerCase()
+                    : "";
+
+                const badgeColor =
+                  severityValue === "high"
+                    ? "danger"
+                    : severityValue === "low"
+                    ? "warning"
+                    : "info";
 
                 return (
                   <tr key={index}>
-                    <td>{index + 1}</td>
-                    <td>{entry.BMI.toFixed(2)}</td>
-
-                    <td>{firstWeight}</td>
-                    <td>
-                      <span className="">{currentWeight}</span>
-                    </td>
+                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                    <td>{approxCycleDuration} days</td>
+                    <td>{currentCycles}</td>
+                    <td>{currentCycleDuration}</td>
                     <td>{formattedDate}</td>
+                    <td>
+                      <span className={`badge bg-${badgeColor} text-dark`}>
+                        {item.Severity}
+                      </span>
+                    </td>
                   </tr>
                 );
-              })
-            ) : (
-              <tr>
-                <td colSpan="6">No weight data available</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav className="mt-3">
+            <ul className="pagination justify-content-end mb-0">
+              <li
+                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((prev) => prev - 1)}
+                >
+                  Previous
+                </button>
+              </li>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${
+                    currentPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li
+                className={`page-item ${
+                  currentPage === totalPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
+
+      {/* <!-- weight insight table --> */}
+     <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+  <div className="d-flex justify-content-between align-items-center mb-4">
+    <h4 className="mb-0 fw-bold text-dark">User Weight Table</h4>
+  </div>
+
+  <div className="table-responsive">
+    <table className="table table-bordered table-striped mb-0">
+      <thead className="table-primary">
+        <tr>
+          <th>Sr No.</th>
+          <th>Estimated BMI</th>
+          <th>Reg. Weight</th>
+          <th>Current Weight</th>
+          <th>Latest Update Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {paginatedWeightData.length > 0 ? (
+          paginatedWeightData.map((entry, index) => {
+            const formattedDate = new Date(entry.Date).toLocaleDateString("en-GB");
+            const firstWeight = weightData[0].Weight;
+            const currentWeight = entry.Weight;
+
+            return (
+              <tr key={index}>
+                <td>{(weightPage - 1) * weightPerPage + index + 1}</td>
+                <td>{entry.BMI.toFixed(2)}</td>
+                <td>{firstWeight}</td>
+                <td>{currentWeight}</td>
+                <td>{formattedDate}</td>
+              </tr>
+            );
+          })
+        ) : (
+          <tr>
+            <td colSpan="5" className="text-center text-muted">No weight data available</td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Pagination */}
+  {totalWeightPages > 1 && (
+    <nav className="mt-3">
+      <ul className="pagination justify-content-end mb-0">
+        <li className={`page-item ${weightPage === 1 ? "disabled" : ""}`}>
+          <button className="page-link" onClick={() => setWeightPage((prev) => prev - 1)}>
+            Previous
+          </button>
+        </li>
+        {Array.from({ length: totalWeightPages }, (_, i) => (
+          <li
+            key={i}
+            className={`page-item ${weightPage === i + 1 ? "active" : ""}`}
+          >
+            <button className="page-link" onClick={() => setWeightPage(i + 1)}>
+              {i + 1}
+            </button>
+          </li>
+        ))}
+        <li className={`page-item ${weightPage === totalWeightPages ? "disabled" : ""}`}>
+          <button className="page-link" onClick={() => setWeightPage((prev) => prev + 1)}>
+            Next
+          </button>
+        </li>
+      </ul>
+    </nav>
+  )}
+</div>
+
 
       {/* <!-- exercise insight table --> */}
       {/* <div id="wrapper-userTableExercise">
