@@ -8,18 +8,112 @@ export default function Page() {
   const [editTitle, setEditTitle] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editFeatures, setEditFeatures] = useState([""]);
-
+  const [editIsActive, setEditIsActive] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [userPlans, setUserPlans] = useState({});
 
   const [newPlan, setNewPlan] = useState({
     title: "",
     price: "",
     features: [""],
-    isActive: false, 
+    isActive: false,
   });
 
   useEffect(() => {
     fetchPlans();
   }, []);
+  const openAssignModal = async (planId) => {
+    setSelectedPlanId(planId);
+
+    try {
+      const res = await fetch(
+        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
+      );
+      const data = await res.json();
+
+      const approvedUsers = (data?.Data || []).filter((u) => u.IsApproved);
+      setUsers(approvedUsers);
+
+      const plansMap = {};
+      for (const user of approvedUsers) {
+        try {
+          const res = await fetch(
+            `https://flow108.coinagesoft.com/api/UserPlans/user/${user.Id}`
+          );
+          const plans = await res.json();
+          plansMap[user.Id] = plans?.[0]?.Title || "No Plan Assigned";
+        } catch {
+          plansMap[user.Id] = "No Plan Assigned";
+        }
+      }
+      setUserPlans(plansMap);
+
+      const modal = new window.bootstrap.Modal(
+        document.getElementById("assignPlanModal")
+      );
+      modal.show();
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+  const unassignPlanFromUser = async (userId, planTitle) => {
+    const plan = plans.find((p) => p.Title === planTitle);
+    if (!plan || !userId) return;
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/plans/unassign?userId=${userId}&planId=${plan.Id}`,
+        {
+          method: "POST",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (res.ok) {
+        showToast("Plan unassigned successfully!");
+        setUserPlans((prev) => ({
+          ...prev,
+          [userId]: "No Plan Assigned",
+        }));
+      } else {
+        showToast("Failed to unassign plan.", false);
+      }
+    } catch (err) {
+      console.error("Unassign error:", err.message);
+      showToast("Error unassigning plan.", false);
+    }
+  };
+
+  const assignPlanToUser = async (userId, planId) => {
+    if (!planId || !userId) return;
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/plans/assign?userId=${userId}&planId=${planId}`,
+        {
+          method: "POST",
+          headers: { accept: "*/*" },
+        }
+      );
+
+      if (res.ok) {
+        showToast("Plan assigned successfully!");
+        setUserPlans((prev) => ({
+          ...prev,
+          [userId]: plans.find((p) => p.Id === planId)?.Title || "Assigned",
+        }));
+      } else {
+        showToast("Failed to assign plan.", false);
+      }
+    } catch (err) {
+      console.error("Assignment error:", err.message);
+      showToast("Error assigning plan.", false);
+    }
+  };
 
   const fetchPlans = () => {
     fetch("https://flow108.coinagesoft.com/api/admin/plans")
@@ -33,13 +127,13 @@ export default function Page() {
 
   const handleAddPlan = async (e) => {
     e.preventDefault();
-   const payload = {
-  title: newPlan.title,
-  price: newPlan.price,
-  planDate: new Date().toISOString(),
-  isActive: newPlan.isActive, 
-  features: newPlan.features.map((text) => ({ featureText: text })),
-};
+    const payload = {
+      title: newPlan.title,
+      price: newPlan.price,
+      planDate: new Date().toISOString(),
+      isActive: newPlan.isActive,
+      features: newPlan.features.map((text) => ({ featureText: text })),
+    };
 
     try {
       const res = await fetch(
@@ -78,9 +172,10 @@ export default function Page() {
 
   const handleEditClick = (plan) => {
     setSelectedPlan(plan);
-    setEditTitle(plan.Title); // <-- FIX
-    setEditPrice(plan.Price); // <-- FIX
-    setEditFeatures((plan.Features || []).map((f) => f.FeatureText)); // <-- FIX
+    setEditTitle(plan.Title);
+    setEditPrice(plan.Price);
+    setEditFeatures((plan.Features || []).map((f) => f.FeatureText));
+    setEditIsActive(plan.IsActive || false);
     const modal = new window.bootstrap.Modal(
       document.getElementById("editPlanModal")
     );
@@ -98,47 +193,48 @@ export default function Page() {
   };
 
   const saveEditedPlan = async (e) => {
-    e.preventDefault();
-    if (!selectedPlan) return;
+  e.preventDefault();
+  if (!selectedPlan) return;
 
-    const payload = {
-      title: editTitle,
-      price: editPrice,
-      planDate: new Date().toISOString(),
-      features: editFeatures.map((text) => ({ featureText: text })),
-    };
-
-    try {
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/api/UserPlans/${selectedPlan.Id}`, // ✅ FIXED HERE
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Update failed: ${res.status} ${errorText}`);
-      }
-
-      window.bootstrap.Modal.getInstance(
-        document.getElementById("editPlanModal")
-      ).hide();
-
-      setSelectedPlan(null);
-      setEditTitle("");
-      setEditPrice("");
-      setEditFeatures([""]);
-
-      fetchPlans();
-      showToast("Plan updated successfully!");
-    } catch (err) {
-      console.error("Update error:", err.message);
-      showToast("Failed to update plan.", false);
-    }
+  const payload = {
+    title: editTitle,
+    price: editPrice,
+    planDate: new Date().toISOString(),
+    isActive: editIsActive,
+    features: editFeatures.map((text) => ({ featureText: text })),
   };
+
+  try {
+    const res = await fetch(
+      `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ Correct endpoint
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Update failed: ${res.status} ${errorText}`);
+    }
+
+    window.bootstrap.Modal.getInstance(
+      document.getElementById("editPlanModal")
+    ).hide();
+
+    setSelectedPlan(null);
+    setEditTitle("");
+    setEditPrice("");
+    setEditFeatures([""]);
+    fetchPlans();
+    showToast("Plan updated successfully!");
+  } catch (err) {
+    console.error("Update error:", err.message);
+    showToast("Failed to update plan.", false);
+  }
+};
+
 
   const showToast = (message, isSuccess = true) => {
     const toastEl = document.getElementById("liveToast");
@@ -246,12 +342,10 @@ export default function Page() {
                           />
                         </div>
 
-                        {/* ✅ FIX: use plan.Title */}
                         <h4 className="card-title text-center text-capitalize mb-2">
                           {plan.Title}
                         </h4>
 
-                        {/* ✅ FIX: use plan.Price */}
                         <p
                           className="text-center mb-5"
                           style={{ fontWeight: "bold", fontSize: "20px" }}
@@ -259,7 +353,6 @@ export default function Page() {
                           ₹ {plan.Price}
                         </p>
 
-                        {/* ✅ FIX: use plan.Features and f.FeatureText */}
                         <ul className="list-group ps-6 my-5 pt-4">
                           {(plan.Features || []).map((f, i) => (
                             <li key={f.Id || i} className="mb-4">
@@ -269,12 +362,17 @@ export default function Page() {
                         </ul>
 
                         <div className="d-flex justify-content-center gap-1 mt-3">
-                          <a href="#" className="btn btn-primary btn-small">
+                          <a
+                            href="#"
+                            className="btn btn-outline-success"
+                            onClick={() => openAssignModal(plan.Id)}
+                          >
                             <i
-                              className="bi bi-person-check"
-                              style={{ fontSize: "20px" }}
+                              className="bi bi-person-plus"
+                              style={{ fontSize: "15px" }}
                             ></i>
                           </a>
+
                           <a
                             href="#"
                             className="btn btn-outline-primary"
@@ -306,7 +404,7 @@ export default function Page() {
                 className="modal fade"
                 id="addPlanModal"
                 tabIndex="-1"
-                aria-hidden="true"
+                aria-hidden="true"data-bs-backdrop="static" data-bs-keyboard="false"
               >
                 <div className="modal-dialog">
                   <div className="modal-content">
@@ -397,7 +495,7 @@ export default function Page() {
                 className="modal fade"
                 id="editPlanModal"
                 tabIndex="-1"
-                aria-hidden="true"
+                aria-hidden="true"data-bs-backdrop="static" data-bs-keyboard="false"
               >
                 <div className="modal-dialog">
                   <form className="modal-content" onSubmit={saveEditedPlan}>
@@ -439,6 +537,21 @@ export default function Page() {
                           required
                         />
                       ))}
+                      <div className="form-check mb-2">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id="editIsActiveCheckbox"
+                          checked={editIsActive}
+                          onChange={(e) => setEditIsActive(e.target.checked)}
+                        />
+                        <label
+                          className="form-check-label"
+                          htmlFor="editIsActiveCheckbox"
+                        >
+                          Is Active?
+                        </label>
+                      </div>
 
                       <button
                         type="button"
@@ -457,6 +570,92 @@ export default function Page() {
                 </div>
               </div>
               {/* End Edit Plan Modal */}
+              <div
+                className="modal fade"
+                id="assignPlanModal"
+                tabIndex="-1"
+                  aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false"
+                
+              >
+                <div className="modal-dialog modal-lg modal-dialog-centered">
+                  <div
+                    className="modal-content rounded-4 shadow"
+                    style={{ border: "1px solid #dee2e6" }}
+                  >
+                    <div className="modal-header text-white rounded-top-4">
+                      <h5 className="modal-title fw-bold">
+                        Assign Plan to Approved Users
+                      </h5>
+                      <button
+                        type="button"
+                        className="btn-close btn-close-black"
+                        data-bs-dismiss="modal"
+                      ></button>
+                    </div>
+
+                    <div
+                      className="modal-body p-4"
+                      style={{
+                        maxHeight: "500px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {users.length === 0 ? (
+                        <p className="text-muted">No approved users found.</p>
+                      ) : (
+                        <table className="table table-hover table-bordered align-middle">
+                          <thead className="table-light sticky-top">
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Assigned Plan</th>
+                              <th style={{ width: "150px" }}>Change Plan</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {users.map((user) => (
+                              <tr key={user.Id}>
+                                <td>{user.Name}</td>
+                                <td>{user.Email}</td>
+                                <td>{userPlans[user.Id]}</td>
+                                <td>
+                                  <div className="d-flex gap-2  align-items-center">
+                                    <button
+                                      className="btn btn-sm btn-outline-primary"
+                                      onClick={() =>
+                                        assignPlanToUser(
+                                          user.Id,
+                                          selectedPlanId
+                                        )
+                                      }
+                                    >
+                                      Assign
+                                    </button>
+                                    {userPlans[user.Id] !==
+                                      "No Plan Assigned" && (
+                                      <button
+                                        className="btn btn-sm btn-outline-danger"
+                                        onClick={() =>
+                                          unassignPlanFromUser(
+                                            user.Id,
+                                            userPlans[user.Id]
+                                          )
+                                        }
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

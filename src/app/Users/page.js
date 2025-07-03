@@ -7,8 +7,9 @@ export default function Page() {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState("asc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isEditing, setIsEditing] = useState(false); // new
-  const [editUserId, setEditUserId] = useState(null); // store ID of the user being edited
+  const [isEditing, setIsEditing] = useState(false);
+  const [editUserId, setEditUserId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const usersPerPage = 10;
 
@@ -40,13 +41,14 @@ export default function Page() {
 
       const data = await response.json();
 
-      if (response.ok && data.Status === false && data.Data === true) {
-        alert("User deleted successfully.");
-        fetchUsers(); // Refresh user list
-      } else {
-        alert("Failed to delete user.");
-        console.error("API error:", data);
-      }
+     if (response.ok && data.Status === true && data.Data === true) {
+  alert("User deleted successfully.");
+  fetchUsers();
+} else {
+  alert("Failed to delete user.");
+  console.error("API error:", data);
+}
+
     } catch (error) {
       console.error("Delete error:", error);
       alert("An error occurred while deleting the user.");
@@ -66,9 +68,18 @@ export default function Page() {
     fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users")
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched Users:", data); // 👈 Add this line
-        setUsers(data);
-      })
+  console.log("Fetched Users:", data);
+  // Example: if response is { Status: true, Data: [user1, user2] }
+  if (Array.isArray(data)) {
+    setUsers(data);
+  } else if (data?.Data && Array.isArray(data.Data)) {
+    setUsers(data.Data); // Use the actual array inside response
+  } else {
+    setUsers([]); // Fallback to empty array
+    console.error("Unexpected response format", data);
+  }
+})
+
       .catch((error) => console.error("Error fetching users:", error));
   };
 
@@ -170,31 +181,40 @@ export default function Page() {
     }
   };
 
-  const sortedUsers = [...users]
-    .filter((user) =>
-      view === "userList" ? user.IsApproved : !user.IsApproved
-    )
-    .sort((a, b) => {
-      if (!sortColumn) return 0;
+  const sortedUsers = Array.isArray(users)
+  ? [...users]
+      .filter((user) => view === "userList" ? user.IsApproved : !user.IsApproved)
+      .filter((user) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          user.Name?.toLowerCase().includes(term) ||
+          user.Email?.toLowerCase().includes(term)
+        );
+      })
+      .sort((a, b) => {
+        if (!sortColumn) return 0;
 
-      let valA = a[sortColumn] ?? "";
-      let valB = b[sortColumn] ?? "";
+        let valA = a[sortColumn] ?? "";
+        let valB = b[sortColumn] ?? "";
 
-      if (sortColumn === "IsApproved") {
-        valA = a.IsApproved ? 1 : 0;
-        valB = b.IsApproved ? 1 : 0;
-      } else if (sortColumn === "Plan") {
-        valA = a.Plan || "";
-        valB = b.Plan || "";
-      } else {
-        valA = valA.toString().toLowerCase();
-        valB = valB.toString().toLowerCase();
-      }
+        if (sortColumn === "IsApproved") {
+          valA = a.IsApproved ? 1 : 0;
+          valB = b.IsApproved ? 1 : 0;
+        } else if (sortColumn === "Plan") {
+          valA = a.Plan || "";
+          valB = b.Plan || "";
+        } else {
+          valA = valA.toString().toLowerCase();
+          valB = valB.toString().toLowerCase();
+        }
 
-      if (valA < valB) return sortDirection === "asc" ? -1 : 1;
-      if (valA > valB) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
+        if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+        if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      })
+  : [];
+
+
 
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -298,12 +318,20 @@ export default function Page() {
           {/* User Table */}
           <div className="card">
             <div className="card-header d-flex flex-column flex-md-row justify-content-between align-items-center">
-              <h3 className="card-title mb-0">
+              <h3 className="card-title mb-0 mb-md-0">
                 {view === "userList" ? "User List" : "User Request Approval"}
               </h3>
-              <div className="d-flex gap-2">
+
+              <div className="d-flex flex-column flex-md-row align-items-center gap-3">
+                <input
+                  type="text"
+                  className="form-control form-control-sm"
+                  placeholder="Search by Name or Email"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-sm btn-primary w-75"
                   data-bs-toggle="modal"
                   data-bs-target="#addUserModal"
                 >
