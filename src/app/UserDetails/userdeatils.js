@@ -15,19 +15,21 @@ export default function UserDetailsClient() {
   const [activityData, setActivityData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [estimatedDate, setEstimatedDate] = useState(null);
+
   const itemsPerPage = 5;
   const totalPages = Math.ceil(periodData.length / itemsPerPage);
   const paginatedData = periodData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-const [weightPage, setWeightPage] = useState(1);
-const weightPerPage = 5;
-const totalWeightPages = Math.ceil(weightData.length / weightPerPage);
-const paginatedWeightData = weightData.slice(
-  (weightPage - 1) * weightPerPage,
-  weightPage * weightPerPage
-);
+  const [weightPage, setWeightPage] = useState(1);
+  const weightPerPage = 5;
+  const totalWeightPages = Math.ceil(weightData.length / weightPerPage);
+  const paginatedWeightData = weightData.slice(
+    (weightPage - 1) * weightPerPage,
+    weightPage * weightPerPage
+  );
 
   const activityByDate = activityData.reduce((acc, item) => {
     const date = new Date(item.Date).toISOString().split("T")[0];
@@ -65,13 +67,15 @@ const paginatedWeightData = weightData.slice(
   const tileContent = ({ date }) => {
     const dateStr = date.toISOString().split("T")[0];
     const marker = markersByDate[dateStr];
-    if (!marker) return null;
+    const isEstimated =
+      estimatedDate && dateStr === estimatedDate.toISOString().split("T")[0];
+
+    if (!marker && !isEstimated) return null;
 
     return (
       <div className="d-flex flex-column align-items-center ">
-        {/* Dots Row */}
         <div className="d-flex ">
-          {marker.diet && (
+          {marker?.diet && (
             <img
               src="/dietfollow.svg"
               alt="Diet Breached"
@@ -79,16 +83,27 @@ const paginatedWeightData = weightData.slice(
               height={10}
             />
           )}
-          {marker.exercise && (
+          {marker?.exercise && (
             <img src="/Exercised.svg" alt="Exercise" width={10} height={10} />
           )}
         </div>
 
-        {/* Period Icon Row */}
-        {(marker.period || marker.estimate) && (
+        {/* For actual period */}
+        {marker?.period && (
           <img
             src="/perioddate.svg"
             alt="Period"
+            width={20}
+            height={20}
+            className=""
+          />
+        )}
+
+        {/* For estimated period */}
+        {isEstimated && (
+          <img
+            src="/estimateperioddate.svg"
+            alt="Estimated Period"
             width={20}
             height={20}
             className=""
@@ -126,10 +141,35 @@ const paginatedWeightData = weightData.slice(
       );
       const data = await res.json();
       setActivityData(data.Events || []);
+      // Don't use data.EstimatedNextPeriodDate
     } catch (error) {
       console.error("Error fetching activity data:", error);
     }
   };
+  useEffect(() => {
+    if (activityData.length > 0) {
+      // Flatten all entries with their dates
+      const allPeriodLogs = activityData
+        .flatMap((event) =>
+          event.Entries.map((entry) => ({
+            date: new Date(event.Date),
+            title: entry.Title,
+          }))
+        )
+        .filter((log) => /period logged/i.test(log.title));
+
+      // Sort by date descending
+      const sorted = allPeriodLogs.sort((a, b) => b.date - a.date);
+
+      if (sorted.length > 0) {
+        const lastPeriodDate = sorted[0].date;
+        const estimated = new Date(lastPeriodDate);
+        estimated.setDate(estimated.getDate() + 28); // add 28 days
+        setEstimatedDate(estimated);
+      }
+    }
+  }, [activityData]);
+
   const fetchWeightData = async (uid) => {
     try {
       const res = await fetch(
@@ -411,6 +451,15 @@ const paginatedWeightData = weightData.slice(
                 />
                 <span className="text-muted small">Period/Estimate</span>
               </div>
+              <div className="d-flex align-items-center gap-2">
+                <img
+                  src="/estimateperioddate.svg"
+                  alt="Estimated"
+                  width={14}
+                  height={14}
+                />
+                <span className="text-muted small">Estimated Period Date</span>
+              </div>
             </div>
           </div>
         </div>
@@ -442,22 +491,74 @@ const paginatedWeightData = weightData.slice(
                 {/* Activity Log */}
                 <h6 className="fw-bold text-secondary mb-3">Activity Log</h6>
                 <div className="d-flex flex-column gap-3">
-                  {markersByDate[
-                    selectedDate.toISOString().split("T")[0]
-                  ]?.entries.map((entry, i) => (
-                    <div
-                      key={i}
-                      style={{ boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}
-                    >
-                      <div className="fw-semibold text-dark mb-1">
-                        {entry.Title}
-                      </div>
-                      <div className="text-muted small">
-                        {entry.Description}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+  {/* Show estimated period if date matches */}
+  {estimatedDate &&
+    selectedDate.toISOString().split("T")[0] ===
+      estimatedDate.toISOString().split("T")[0] && (
+      <div
+        style={{
+          backgroundColor: "#ffe6f0",
+          borderLeft: "4px solid #ff80aa",
+          padding: "10px",
+          borderRadius: "6px",
+        }}
+      >
+        <strong className="text-danger">Estimated Period Date</strong>
+        <p className="text-muted mb-0 small">
+          Based on the last logged period and 28-day cycle.
+        </p>
+      </div>
+  )}
+
+  {/* Show each activity with consistent styled box */}
+  {markersByDate[
+    selectedDate.toISOString().split("T")[0]
+  ]?.entries.map((entry, i) => {
+    const title = entry.Title.toLowerCase();
+
+    let styles = {
+      backgroundColor: "#f8f9fa", // default grey
+      borderLeft: "4px solid #ccc", // default border
+    };
+    let label = "";
+    let labelColor = "";
+
+    if (/period/i.test(title)) {
+      styles.backgroundColor = "#ffe6f0";
+      styles.borderLeft = "4px solid #ff80aa";
+      label = "Period Log";
+      labelColor = "text-danger";
+    } else if (/diet/i.test(title)) {
+      styles.backgroundColor = "#e6fff2";
+      styles.borderLeft = "4px solid #28a745";
+      label = "Diet Entry";
+      labelColor = "text-success";
+    } else if (/exercise|workout/i.test(title)) {
+      styles.backgroundColor = "#f0f0f0";
+      styles.borderLeft = "4px solid #6c757d";
+      label = "Exercise Log";
+      labelColor = "text-secondary";
+    }
+
+    return (
+      <div
+        key={i}
+        style={{
+          ...styles,
+          padding: "10px",
+          borderRadius: "6px",
+        }}
+      >
+        {label && (
+          <strong className={labelColor}>{label}</strong>
+        )}
+        <div className="fw-semibold text-dark mb-1">{entry.Title}</div>
+        <div className="text-muted small">{entry.Description}</div>
+      </div>
+    );
+  })}
+</div>
+
               </>
             ) : (
               <div className="text-center text-muted py-5">
@@ -578,77 +679,95 @@ const paginatedWeightData = weightData.slice(
       </div>
 
       {/* <!-- weight insight table --> */}
-     <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
-  <div className="d-flex justify-content-between align-items-center mb-4">
-    <h4 className="mb-0 fw-bold text-dark">User Weight Table</h4>
-  </div>
+      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4 className="mb-0 fw-bold text-dark">User Weight Table</h4>
+        </div>
 
-  <div className="table-responsive">
-    <table className="table table-bordered table-striped mb-0">
-      <thead className="table-primary">
-        <tr>
-          <th>Sr No.</th>
-          <th>Estimated BMI</th>
-          <th>Reg. Weight</th>
-          <th>Current Weight</th>
-          <th>Latest Update Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {paginatedWeightData.length > 0 ? (
-          paginatedWeightData.map((entry, index) => {
-            const formattedDate = new Date(entry.Date).toLocaleDateString("en-GB");
-            const firstWeight = weightData[0].Weight;
-            const currentWeight = entry.Weight;
-
-            return (
-              <tr key={index}>
-                <td>{(weightPage - 1) * weightPerPage + index + 1}</td>
-                <td>{entry.BMI.toFixed(2)}</td>
-                <td>{firstWeight}</td>
-                <td>{currentWeight}</td>
-                <td>{formattedDate}</td>
+        <div className="table-responsive">
+          <table className="table table-bordered table-striped mb-0">
+            <thead className="table-primary">
+              <tr>
+                <th>Sr No.</th>
+                <th>Estimated BMI</th>
+                <th>Reg. Weight</th>
+                <th>Current Weight</th>
+                <th>Latest Update Date</th>
               </tr>
-            );
-          })
-        ) : (
-          <tr>
-            <td colSpan="5" className="text-center text-muted">No weight data available</td>
-          </tr>
+            </thead>
+            <tbody>
+              {paginatedWeightData.length > 0 ? (
+                paginatedWeightData.map((entry, index) => {
+                  const formattedDate = new Date(entry.Date).toLocaleDateString(
+                    "en-GB"
+                  );
+                  const firstWeight = weightData[0].Weight;
+                  const currentWeight = entry.Weight;
+
+                  return (
+                    <tr key={index}>
+                      <td>{(weightPage - 1) * weightPerPage + index + 1}</td>
+                      <td>{entry.BMI.toFixed(2)}</td>
+                      <td>{firstWeight}</td>
+                      <td>{currentWeight}</td>
+                      <td>{formattedDate}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center text-muted">
+                    No weight data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalWeightPages > 1 && (
+          <nav className="mt-3">
+            <ul className="pagination justify-content-end mb-0">
+              <li className={`page-item ${weightPage === 1 ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setWeightPage((prev) => prev - 1)}
+                >
+                  Previous
+                </button>
+              </li>
+              {Array.from({ length: totalWeightPages }, (_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${
+                    weightPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setWeightPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li
+                className={`page-item ${
+                  weightPage === totalWeightPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setWeightPage((prev) => prev + 1)}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
         )}
-      </tbody>
-    </table>
-  </div>
-
-  {/* Pagination */}
-  {totalWeightPages > 1 && (
-    <nav className="mt-3">
-      <ul className="pagination justify-content-end mb-0">
-        <li className={`page-item ${weightPage === 1 ? "disabled" : ""}`}>
-          <button className="page-link" onClick={() => setWeightPage((prev) => prev - 1)}>
-            Previous
-          </button>
-        </li>
-        {Array.from({ length: totalWeightPages }, (_, i) => (
-          <li
-            key={i}
-            className={`page-item ${weightPage === i + 1 ? "active" : ""}`}
-          >
-            <button className="page-link" onClick={() => setWeightPage(i + 1)}>
-              {i + 1}
-            </button>
-          </li>
-        ))}
-        <li className={`page-item ${weightPage === totalWeightPages ? "disabled" : ""}`}>
-          <button className="page-link" onClick={() => setWeightPage((prev) => prev + 1)}>
-            Next
-          </button>
-        </li>
-      </ul>
-    </nav>
-  )}
-</div>
-
+      </div>
 
       {/* <!-- exercise insight table --> */}
       {/* <div id="wrapper-userTableExercise">
