@@ -20,7 +20,6 @@ export default function Sidebar() {
         },
       ],
     },
-
     {
       href: "/Subscriptions",
       icon: "ri-vip-crown-line",
@@ -81,9 +80,6 @@ export default function Sidebar() {
 
       <ul className="menu-inner py-1 mt-1">
         {menuItems.map((item) => {
-          const isMainAllowed =
-            item.label === "Users" || item.label === "Subscriptions";
-
           if (item.submenu) {
             return (
               <li
@@ -94,47 +90,27 @@ export default function Sidebar() {
                     : ""
                 }`}
               >
-                <a
-                  href="#"
-                  className={`menu-link menu-toggle ${
-                    isMainAllowed ? "" : "disabled text-muted"
-                  }`}
-                  onClick={(e) => {
-                    if (!isMainAllowed) e.preventDefault();
-                  }}
-                  style={isMainAllowed ? {} : { pointerEvents: "none" }}
-                >
+                <a href="#" className="menu-link menu-toggle">
                   <i className={`menu-icon tf-icons ${item.icon}`}></i>
                   <div>{item.label}</div>
                 </a>
                 <ul className="menu-sub">
-                  {item.submenu
-                    .filter(
-                      (sub) =>
-                        item.label === "Users" &&
-                        (sub.label === "All Users" ||
-                          sub.label === "Super Users")
-                    )
-                    .map((sub) => {
-                      return (
-                        <li
-                          key={sub.href}
-                          className={`menu-item${
-                            pathname === sub.href ? " active" : ""
-                          }`}
-                        >
-                          <Link href={sub.href} className="menu-link">
-                            <div>{sub.label}</div>
-                          </Link>
-                        </li>
-                      );
-                    })}
+                  {item.submenu.map((sub) => (
+                    <li
+                      key={sub.href}
+                      className={`menu-item${
+                        pathname === sub.href ? " active" : ""
+                      }`}
+                    >
+                      <Link href={sub.href} className="menu-link">
+                        <div>{sub.label}</div>
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               </li>
             );
           }
-
-          const isDirectAllowed = item.label === "Subscriptions";
 
           return (
             <li
@@ -143,13 +119,7 @@ export default function Sidebar() {
                 pathname.startsWith(item.href) ? " active" : ""
               }`}
             >
-              <Link
-                href={item.href}
-                className={`menu-link ${
-                  isDirectAllowed ? "" : "disabled text-muted"
-                }`}
-                style={isDirectAllowed ? {} : { pointerEvents: "none" }}
-              >
+              <Link href={item.href} className="menu-link">
                 <i className={`menu-icon tf-icons ${item.icon}`}></i>
                 <div>{item.label}</div>
               </Link>
