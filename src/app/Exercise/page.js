@@ -1,462 +1,682 @@
-import React from 'react'
+ 'use client'
 
-export default function page() {
-  return (
-    <div>
-           <div className="content-wrapper">
-          {/* <!-- Content --> */}
+import React, { useState, useEffect } from 'react';
 
-          <div className="container-xxl flex-grow-1 container-p-y">
-
-            <div className="row mb-5">
-              <div className="col-6 col-sm-6 col-lg-3 mb-2">
-                <div className="card card-border-shadow-primary h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center mb-2">
-                      <div className="avatar me-4">
-                        <span className="avatar-initial rounded-3 bg-label-primary"><i
-                            className="tf-icons ri-user-add-line ri-24px"></i></span>
-                      </div>
-                      <h4 className="mb-0">42</h4>
-                    </div>
-                    <h6 className="mb-0 fw-normal">User Registered</h6>
-                    <p className="mb-0">
-                      <span className="me-1 fw-medium">+18.2%</span>
-                      <small className="text-muted">than last week</small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6 col-sm-6 col-lg-3 mb-2">
-                <div className="card card-border-shadow-warning h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center mb-2">
-                      <div className="avatar me-4">
-                        <span className="avatar-initial rounded-3 bg-label-warning"><i
-                            className="ri-user-star-line ri-24px"></i></span>
-                      </div>
-                      <h4 className="mb-0">8</h4>
-                    </div>
-                    <h6 className="mb-0 fw-normal">Paid Members</h6>
-                    <p className="mb-0">
-                      <span className="me-1 fw-medium">-8.7%</span>
-                      <small className="text-muted">than last week</small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6 col-sm-6 col-lg-3 mb-2">
-                <div className="card card-border-shadow-danger h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center mb-2">
-                      <div className="avatar me-4">
-                        <span className="avatar-initial rounded-3 bg-label-danger"><i
-                            className="ri-group-line ri-24px"></i></span>
-                      </div>
-                      <h4 className="mb-0">27</h4>
-                    </div>
-                    <h6 className="mb-0 fw-normal">Total Questions</h6>
-                    <p className="mb-0">
-                      <span className="me-1 fw-medium">+4.3%</span>
-                      <small className="text-muted">than last week</small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="col-6 col-sm-6 col-lg-3 mb-2">
-                <div className="card card-border-shadow-info h-100">
-                  <div className="card-body">
-                    <div className="d-flex align-items-center mb-2">
-                      <div className="avatar me-4">
-                        <span className="avatar-initial rounded-3 bg-label-info"><i
-                            className="ri-article-line ri-24px"></i></span>
-                      </div>
-                      <h4 className="mb-0">13</h4>
-                    </div>
-                    <h6 className="mb-0 fw-normal">Total Posts</h6>
-                    <p className="mb-0">
-                      <span className="me-1 fw-medium">-2.5%</span>
-                      <small className="text-muted">than last week</small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            <div className="bs-stepper-content  rounded-0">
-              <form id="wizard-checkout-form" onSubmit="return false">
-                {/* <!-- Cart --> */}
-                <div id="checkout-cart" className="content">
-                  <div className="row">
-                    {/* <!-- Cart left --> */}
-                    <div className="col-xl-8 mb-4 mb-xl-0">
+export default function ExercisePage() {
+  const [workouts, setWorkouts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [editableSteps, setEditableSteps] = useState([]);
+  const [newSteps, setNewSteps] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+const [selectedUsers, setSelectedUsers] = useState([]);
+const [assignWorkoutId, setAssignWorkoutId] = useState(null);
 
 
+  useEffect(() => {
+    fetchWorkouts();
+  }, []);
+const handleNewStepChange = (index, field, value) => {
+  const updatedSteps = [...newSteps];
+  updatedSteps[index][field] = field === 'Duration' || field === 'Order' ? parseInt(value) : value;
+  setNewSteps(updatedSteps);
+};
+const fetchUsers = async () => {
+  try {
+    const res = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+    if (!res.ok) throw new Error("Failed to fetch users");
+    const data = await res.json();
+    console.log("User API response:", data);
 
-                    </div>
-                  </div>
-                </div>
-
-                  {/* <!-- Confirmation --> */}
-                  <div id="checkout-confirmation" className="content">
-
-
-                    <div className="row">
-                      {/* <!-- Confirmation items --> */}
-                      <div className="col-xl-8 mb-4 mb-xl-0">
-                        <ul className="list-group">
-                          <li className="list-group-item p-5">
-                            <div className="d-flex gap-4">
-                              <div className="flex-shrink-0">
-                                <a href="/WorkoutDetails"><img src="/assets/img/avatars/14.png" alt="google home"
-                                    className="w-px-75" /></a>
-                              </div>
-                              <div className="flex-grow-1">
-                                <div className="row d-flex align-items-center">
-                                  <div className="col-md-8 pt-2">
-                                    <a href="/WorkoutDetails" className="text-body mt-1">
-                                      <h6 className="mb-2">Beginner Fitness Plan</h6>
-                                    </a>
-                                    <div className="text-body mb-2 d-flex flex-wrap">
-                                      <span className="me-1">Duration:</span>
-                                      <a href="/WorkoutDetails" className="me-1"> 1 Month</a>
-                                    </div>
-                                    <span className="badge bg-label-success rounded-pill mt-2 mt-sm-0">features: Lorem ipsum
-                                      dolor sit amet.</span>
-                                  </div>
-                                  <div className="col-md-4">
-                                    <div className="text-md-end">
-                                      <div className="my-2 my-lg-6">
-                                        <button className="btn btn-outline-primary" data-bs-toggle="modal"
-                                          data-bs-target="#editPlanModal">Edit</button>
-
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                          <li className="list-group-item p-5">
-                            <div className="d-flex gap-4">
-                              <div className="flex-shrink-0">
-                                <a href="/WorkoutDetails"><img src="/assets/img/avatars/12.png" alt="google home"
-                                    className="w-px-75" /></a>
-                              </div>
-                              <div className="flex-grow-1">
-                                <div className="row d-flex align-items-center">
-                                  <div className="col-md-8 pt-2">
-                                    <a href="/WorkoutDetails" className="text-body mt-1">
-                                      <h6 className="mb-2">Intermediate Strength Plan</h6>
-                                    </a>
-                                    <div className="text-body mb-2 d-flex flex-wrap">
-                                      <span className="me-1">Duration: </span>
-                                      <a href="/WorkoutDetails" className="me-1">3 Months</a>
-                                    </div>
-                                    <span className="badge bg-label-success rounded-pill mt-2 mt-sm-0">features: Lorem ipsum
-                                      dolor sit amet.</span>
-                                  </div>
-                                  <div className="col-md-4">
-                                    <div className="text-md-end">
-                                      <div className="my-2 my-lg-6">
-                                        <button className="btn btn-outline-primary" data-bs-toggle="modal"
-                                          data-bs-target="#editPlanModal">Edit</button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                          <li className="list-group-item p-5">
-                            <div className="d-flex gap-4">
-                              <div className="flex-shrink-0">
-                                <a href="/WorkoutDetails"> <img src="/assets/img/avatars/20.png" alt="google home"
-                                    className="w-px-75" /></a>
-                              </div>
-                              <div className="flex-grow-1">
-                                <div className="row d-flex align-items-center">
-                                  <div className="col-md-8 pt-2">
-                                    <a href="/WorkoutDetails" className="text-body mt-1">
-                                      <h6 className="mb-2">weight loss plan</h6>
-                                    </a>
-                                    <div className="text-body mb-2 d-flex flex-wrap">
-                                      <span className="me-1">Duration:</span>
-                                      <a href="/WorkoutDetails" className="me-1">2 Months</a>
-                                    </div>
-                                    <span className="badge bg-label-success rounded-pill mt-2 mt-sm-0">features: Lorem ipsum
-                                      dolor sit amet.</span>
-                                  </div>
-                                  <div className="col-md-4">
-                                    <div className="text-md-end">
-                                      <div className="my-2 my-lg-6">
-                                        <button className="btn btn-outline-primary" data-bs-toggle="modal"
-                                          data-bs-target="#editPlanModal">Edit</button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                          <li className="list-group-item p-5">
-                            <div className="d-flex gap-4">
-                              <div className="flex-shrink-0">
-                                <img src="/assets/img/avatars/11.png" alt="google home" className="w-px-75" />
-                              </div>
-                              <div className="flex-grow-1">
-                                <div className="row d-flex align-items-center">
-                                  <div className="col-md-8 pt-2">
-                                    <a href="javascript:void(0)" className="text-body mt-1">
-                                      <h6 className="mb-2">Muscle Building plan</h6>
-                                    </a>
-                                    <div className="text-body mb-1 d-flex flex-wrap">
-                                      <span className="me-1">Duration:</span>
-                                      <a href="javascript:void(0)" className="me-1">8 Months</a>
-                                    </div>
-                                  </div>
-                                  <div className="col-md-4">
-                                    <div className="text-md-end">
-                                      <div className="my-2 my-lg-6">
-                                        <button className="btn btn-outline-primary" data-bs-toggle="modal"
-                                          data-bs-target="#editPlanModal">Edit</button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </li>
-                        </ul>
-                      </div>
-                      {/* <!-- Confirmation total --> */}
-                      <div className="col-xl-4">
-                        <div className="border rounded-4 p-5">
-                          {/* <!-- Add Exercise Plan Form --> */}
-                          <h6>Add Exercise Plan</h6>
-                          <form id="exerciseForm"> 
-                            <div className="mb-3">
-                              <label for="planImage" className="form-label">Plan Image</label>
-                              <input type="file" className="form-control" id="planImage" name="planImage"
-                                accept="image/*" />
-                            </div>
-
-                            <div className="mb-3">
-                              <label for="planName" className="form-label">Plan Name</label>
-                              <input type="text" className="form-control" id="planName" name="planName"
-                                placeholder="e.g. Beginner Fitness Plan" required />
-                            </div>
-
-                            <div className="mb-3">
-                              <label for="duration" className="form-label">Duration</label>
-                              <input type="text" className="form-control" id="duration" name="duration"
-                                placeholder="e.g. 1 Month" required />
-                            </div>
-
-                            <div className="mb-3">
-                              <label for="features" className="form-label">Features</label>
-                              <textarea className="form-control" id="features" name="features" rows="4"
-                                placeholder="e.g. 3 Workouts/Week, Basic Nutrition Guide" required></textarea>
-                            </div>
-
-                            <button type="submit" className="btn btn-success w-100">Add Plan</button>
-                          </form>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-              </form>
-            </div>
-          </div>
-          {/* <!-- / Content --> */}
-
-          {/* <!-- Modal --> */}
-          <div className="modal fade" id="editPlanModal" tabindex="-1" aria-labelledby="editPlanModalLabel"
-            aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-            <div className="modal-dialog modal-sm modal-dialog-centered">
-              <div className="modal-content rounded-3 shadow">
-                <div className="modal-header">
-                  <h5 className="modal-title" id="editPlanModalLabel">Edit Plan</h5>
-                  <button type="button" className="btn-close modal-close" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
-                </div>
-                <div className="modal-body">
-                  {/* <!-- Your form or edit content --> */}
-                  <form id="editPlanForm">
-                    <div className="mb-3">
-                      <label for="editPlanName" className="form-label">Plan Name</label>
-                      <input type="text" className="form-control" id="editPlanName" />
-                    </div>
-                    <div className="mb-3">
-                      <label for="editDuration" className="form-label">Duration</label>
-                      <input type="text" className="form-control" id="editDuration" />
-                    </div>
-                    <div className="mb-3">
-                      <label for="editFeatures" className="form-label">Features</label>
-                      <textarea className="form-control" id="editFeatures" rows="3"></textarea>
-                    </div>
-                    <button type="submit" className="btn btn-primary w-100">Save Changes</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
+    // Ensure it's an array
+    if (Array.isArray(data)) {
+      setAllUsers(data);
+    } else if (Array.isArray(data.users)) {
+      // Sometimes APIs return { users: [...] }
+      setAllUsers(data.users);
+    } else {
+      console.error("Unexpected response format:", data);
+      setAllUsers([]); // fallback to empty array
+    }
+  } catch (err) {
+    console.error("User fetch error:", err);
+    alert("Error fetching users. Please try again later."); // User feedback
+    setAllUsers([]); // prevent .map crash
+  }
+};
 
 
-          {/* <!-- Overlay --> */}
-          <div className="layout-overlay layout-menu-toggle"></div>
+useEffect(() => {
+  fetchWorkouts();
+  fetchUsers();
+}, []);
 
-          {/* <!-- Footer --> */}
-          <footer className="content-footer footer bg-footer-theme">
-            <div className="container-xxl">
-              <div
-                className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
-                <div className="text-body mb-2 mb-md-0">
-                  ©
-                  <script>
-                    document.write(new Date().getFullYear());
-                  </script>
-                  , made with <span className="text-danger"><i className="tf-icons ri-heart-fill"></i></span> by
-                  <a href="https://www.coinagesoft.com/" target="_blank" className="footer-link">Coinage.in</a>
-                </div>
-               
-              </div>
-            </div>
-          </footer>
-          {/* <!-- / Footer --> */}
+const handleAddNewStep = () => {
+  const newStep = {
+    Title: '',
+    Description: '',
+    Duration: 0,
+    Order: newSteps.length + 1
+  };
+  setNewSteps([...newSteps, newStep]);
+};
 
-          <div className="content-backdrop fade"></div>
-        </div>
-          {/* <script>
-    // Select all answer buttons
-    document.querySelectorAll('.answer-btn').forEach((btn) => {
-      btn.addEventListener('click', function () {
-        const parent = btn.closest('.timeline-event');
-        const answerForm = parent.querySelector('.answer-form');
+  const fetchWorkouts = async () => {
+    try {
+      const response = await fetch('https://flow108.coinagesoft.com/api/AdminWorkout/workouts');
+      if (!response.ok) throw new Error('Failed to fetch workouts');
+      const data = await response.json();
+      setWorkouts(data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
 
-        // Toggle the form visibility
-        const isVisible = answerForm.style.display === 'block';
-        answerForm.style.display = isVisible ? 'none' : 'block';
-        btn.textContent = isVisible ? 'Answer' : 'Cancel';
-      });
+const handleAddWorkout = async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const newWorkout = {
+    Id: crypto.randomUUID(),
+    Name: formData.get('planName'),
+    Description: formData.get('features'),
+    Duration: parseInt(formData.get('duration')) || 0,
+    Intensity: formData.get('intensity') || "Medium",
+    ImageUrl: formData.get('imageUrl') || "https://example.com/images/default-workout.png",
+    Steps: newSteps
+  };
+
+  try {
+    const response = await fetch('https://flow108.coinagesoft.com/api/AdminWorkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'accept': '*/*'
+      },
+      body: JSON.stringify(newWorkout)
     });
 
-    // Select all submit buttons
-    document.querySelectorAll('.submit-answer').forEach((submitBtn) => {
-      submitBtn.addEventListener('click', function () {
-        const parent = submitBtn.closest('.answer-form');
-        const inputField = parent.querySelector('input');
-        const answer = inputField.value.trim();
+    if (!response.ok) throw new Error('Failed to add workout');
 
-        if (answer) {
-          console.log('Submitted Answer:', answer);
-          alert('Answer submitted successfully!');
-          inputField.value = '';
-          // Optional: Hide the form again
-          parent.style.display = 'none';
-          const answerBtn = parent.closest('.timeline-event').querySelector('.answer-btn');
-          answerBtn.textContent = 'Answer';
-        } else {
-          alert('Please type an answer before submitting.');
-        }
-      });
-    });
-
-    document.addEventListener("DOMContentLoaded", function () {
-      document.querySelectorAll(".toggle-comments").forEach(function (el) {
-        el.addEventListener("click", function () {
-          const cardBody = el.closest(".card-body");
-          const commentSection = cardBody.querySelector(".comments-section");
-
-          if (commentSection) {
-            const isVisible = commentSection.style.display === "block";
-            commentSection.style.display = isVisible ? "none" : "block";
-          }
-        });
-      });
-    });
-
-
-    document.querySelectorAll('.report-delete-btn').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        const postId = this.getAttribute('data-post-id');
-
-        if (confirm(`Are you sure you want to report and delete this post ${postId} ?`)) {
-          alert(`Post ${postId} reported and deleted.`);
-          // Place your logic here — e.g., hide the post, send a request, etc.
-          // document.getElementById(`post-${postId}`).remove();
-        } else {
-          console.log("User canceled.");
-        }
-      });
-    });
-  </script>
-
-<script>
-  document.getElementById("exerciseForm").addEventListener("submit", function (e) {
-    e.preventDefault(); // Prevent the default form submission (optional if you don’t want the page to reload)
-
-    // Show alert message
     alert("Exercise plan is added");
 
-    // You can optionally submit the form here manually if needed:
-    // this.submit();
-  });
-</script>
+    // ✅ Clear form + steps
+    e.target.reset();
+    setNewSteps([]);
 
-
-<script>
-  const modalElement = document.getElementById('editPlanModal');
-
-  // Show modal when edit button clicked
-  document.querySelectorAll('.btn-outline-primary').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const listItem = btn.closest('.list-group-item');
-      const title = listItem.querySelector('h6')?.textContent.trim() || '';
-      const duration = listItem.querySelector('.text-body a:nth-child(2)')?.textContent.trim() || '';
-      const features = listItem.querySelector('.badge')?.textContent.replace("features:", "").trim() || '';
-
-      document.getElementById('editPlanName').value = title;
-      document.getElementById('editDuration').value = duration;
-      document.getElementById('editFeatures').value = features;
-
-      const modal = new bootstrap.Modal(modalElement, {
-        backdrop: 'static',
-        keyboard: false
-      });
-      modal.show();
-    });
-  });
-
-  // Handle modal close cleanup
-  function cleanupModal() {
-    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
+    // ✅ Fetch again
+    fetchWorkouts();
+  } catch (err) {
+    alert("Error adding workout: " + err.message);
+  }
+};
+const handleAssignUsers = async (e) => {
+  e.preventDefault();
+  if (!assignWorkoutId || selectedUsers.length === 0) {
+    alert("Please select at least one user");
+    return;
   }
 
-  // Submit form
-  document.getElementById('editPlanForm').addEventListener('submit', function (e) {
+  try {
+    const response = await fetch("https://flow108.coinagesoft.com/api/AdminWorkout/assign-users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        accept: "*/*"
+      },
+      body: JSON.stringify({
+        workoutId: assignWorkoutId,
+        userIds: selectedUsers
+      })
+    });
+
+    if (!response.ok) throw new Error("Failed to assign users");
+
+    alert("Users assigned successfully!");
+    setSelectedUsers([]);
+    setAssignWorkoutId(null);
+    document.querySelector("#assignUserModal .btn-close")?.click(); // Close modal
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+};
+
+const handleDeleteWorkout = async (workoutId) => {
+  const confirmDelete = window.confirm("Are you sure you want to delete this workout?");
+  if (!confirmDelete) return;
+
+  try {
+    const response = await fetch(`https://flow108.coinagesoft.com/api/AdminWorkout/${workoutId}`, {
+      method: 'DELETE',
+      headers: {
+        'accept': '*/*',
+      }
+    });
+
+    if (!response.ok) throw new Error("Failed to delete workout");
+
+    const result = await response.json();
+    alert(result.Message || "Workout deleted successfully");
+
+    // Refresh workouts list
+    fetchWorkouts();
+  } catch (err) {
+    alert("Error deleting workout: " + err.message);
+  }
+};
+
+  const handleEditButtonClick = (workout) => {
+    setSelectedWorkout(workout);
+    setEditableSteps(workout.Steps || []);
+    setTimeout(() => {
+      document.getElementById('editWorkoutId').value = workout.WorkoutId;
+      document.getElementById('editPlanName').value = workout.Name;
+      document.getElementById('editDuration').value = workout.Duration;
+      document.getElementById('editFeatures').value = workout.Description;
+      document.getElementById('editImageUrl').value = workout.ImageUrl || "";
+      document.getElementById('editIntensity').value = workout.Intensity || "Medium";
+    }, 200);
+  };
+
+  const handleStepChange = (index, field, value) => {
+    const updatedSteps = [...editableSteps];
+    updatedSteps[index][field] = field === "Duration" || field === "Order" ? parseInt(value) : value;
+    setEditableSteps(updatedSteps);
+  };
+
+  const handleAddStep = () => {
+    const newStep = {
+      Id: crypto.randomUUID(),
+      WorkoutId: selectedWorkout?.WorkoutId,
+      Title: "",
+      Description: "",
+      Duration: 0,
+      Order: editableSteps.length + 1
+    };
+    setEditableSteps([...editableSteps, newStep]);
+  };
+
+  const handleEditWorkout = async (e) => {
     e.preventDefault();
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    modalInstance.hide();
-    alert("Plan updated!");
-  });
+    const formData = new FormData(e.target);
+    const workoutId = formData.get('workoutId');
 
-  // Close button
-  document.querySelector('.modal-close').addEventListener('click', function () {
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    modalInstance.hide();
-  });
+    const updatedWorkout = {
+      Name: formData.get('editPlanName'),
+      Description: formData.get('editFeatures'),
+      Duration: parseInt(formData.get('editDuration')) || 0,
+      Intensity: formData.get('editIntensity') || "Medium",
+      ImageUrl: formData.get('editImageUrl') || "https://example.com/images/default-workout.png",
+      Steps: editableSteps
+    };
 
-  // Modal hidden event: Cleanup backdrop and body scroll
-  modalElement.addEventListener('hidden.bs.modal', function () {
-    cleanupModal();
-  });
-</script> */}
+    try {
+      const response = await fetch(`https://flow108.coinagesoft.com/api/AdminWorkout/${workoutId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': '*/*'
+        },
+        body: JSON.stringify(updatedWorkout)
+      });
+      if (!response.ok) throw new Error('Failed to update workout');
+      alert("Workout plan updated successfully!");
+      const modal = document.getElementById('editPlanModal');
+      const modalInstance = bootstrap.Modal.getInstance(modal);
+      modalInstance?.hide();
+      fetchWorkouts();
+      e.target.reset();
+    } catch (err) {
+      alert("Error updating workout: " + err.message);
+    }
+  };
+
+  // Rendering loader or error
+  if (loading) {
+    return (
+      <div className="text-center p-5">
+        <div className="spinner-border" role="status"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger m-5">Error: {error}</div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="content-wrapper">
+        {/* <!-- Content --> */}
+        <div className="container-xxl flex-grow-1 container-p-y">
+          <div className="row mb-5">
+            <div className="col-6 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-primary h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-primary"><i
+                          className="tf-icons ri-user-add-line ri-24px"></i></span>
+                    </div>
+                    <h4 className="mb-0">{workouts.length}</h4>
+                  </div>
+                  <h6 className="mb-0 fw-normal">Total Workouts</h6>
+                  <p className="mb-0">
+                    <span className="me-1 fw-medium">Live Data</span>
+                    <small className="text-muted">from API</small>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="col-6 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-warning h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-warning"><i
+                          className="ri-user-star-line ri-24px"></i></span>
+                    </div>
+                    <h4 className="mb-0">{workouts.filter(w => w.Steps && w.Steps.length > 0).length}</h4>
+                  </div>
+                  <h6 className="mb-0 fw-normal">Plans with Steps</h6>
+                  <p className="mb-0">
+                    <span className="me-1 fw-medium">Live Data</span>
+                    <small className="text-muted">from API</small>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="col-6 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-danger h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-danger"><i
+                          className="ri-group-line ri-24px"></i></span>
+                    </div>
+                    <h4 className="mb-0">{workouts.filter(w => w.Duration > 30).length}</h4>
+                  </div>
+                  <h6 className="mb-0 fw-normal">Long Duration</h6>
+                  <p className="mb-0">
+                    <span className="me-1 fw-medium">30+ min</span>
+                    <small className="text-muted">workouts</small>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="col-6 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-info h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-info"><i
+                          className="ri-article-line ri-24px"></i></span>
+                    </div>
+                    <h4 className="mb-0">{workouts.filter(w => w.Intensity === 'High').length}</h4>
+                  </div>
+                  <h6 className="mb-0 fw-normal">High Intensity</h6>
+                  <p className="mb-0">
+                    <span className="me-1 fw-medium">Live Data</span>
+                    <small className="text-muted">from API</small>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bs-stepper-content rounded-0">
+           
+              {/* <!-- Cart --> */}
+              <div id="checkout-cart" className="content">
+                <div className="row">
+                  {/* <!-- Cart left --> */}
+                  <div className="col-xl-8 mb-4 mb-xl-0">
+                  </div>
+                </div>
+              </div>
+
+              {/* <!-- Confirmation --> */}
+              <div id="checkout-confirmation" className="content">
+                <div className="row">
+                  {/* <!-- Confirmation items --> */}
+                  <div className="col-xl-8 mb-4 mb-xl-0">
+                    <ul className="list-group">
+                      {workouts.map((workout) => (
+                        <li key={workout.WorkoutId} className="list-group-item p-5">
+                          <div className="d-flex gap-4">
+                            <div className="flex-shrink-0">
+                              <a href={`/WorkoutDetails?workoutId=${workout.WorkoutId}`}>
+                                <img 
+                                  src={workout.ImageUrl || "/assets/img/avatars/14.png"} 
+                                  alt={workout.Name}
+                                  className="w-px-75" 
+                                  onError={(e) => {
+                                    e.target.src = "/assets/img/avatars/14.png";
+                                  }}
+                                />
+                              </a>
+                            </div>
+                            <div className="flex-grow-1">
+                              <div className="row d-flex align-items-center">
+                                <div className="col-md-8 pt-2">
+                                  <a href={`/WorkoutDetails?workoutId=${workout.WorkoutId}`} className="text-body mt-1">
+                                    <h6 className="mb-2">{workout.Name}</h6>
+                                  </a>
+                                  <div className="text-body mb-2 d-flex flex-wrap">
+                                    <span className="me-1">Duration:</span>
+                                    <a href={`/WorkoutDetails?workoutId=${workout.WorkoutId}`} className="me-1">
+                                      {workout.Duration} minutes
+                                    </a>
+                                  </div>
+                                  <span className="badge bg-label-success rounded-pill mt-2 mt-sm-0">
+                                    Intensity: {workout.Intensity} - {workout.Description}
+                                  </span>
+                                </div>
+                                <div className="col-md-4">
+                                  <div className="text-md-end">
+                                    <div className="my-2 my-lg-6">
+                                      <button
+  className="btn btn-outline-success ms-2"
+  data-bs-toggle="modal"
+  data-bs-target="#assignUserModal"
+  onClick={() => setAssignWorkoutId(workout.WorkoutId)}
+>
+  Assign User
+</button>
+
+                                    <button
+  className="btn btn-outline-primary"
+  data-bs-toggle="modal"
+  data-bs-target="#editPlanModal"
+  onClick={() => handleEditButtonClick(workout)}
+>
+  Edit
+</button>
+<button
+  className="btn btn-outline-danger ms-2"
+  onClick={() => handleDeleteWorkout(workout.WorkoutId)}
+>
+  Delete
+</button>
+
+
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  {/* <!-- Confirmation total --> */}
+                  <div className="col-xl-4">
+                    <div className="border rounded-4 p-5">
+                      {/* <!-- Add Exercise Plan Form --> */}
+                      <h6>Add Exercise Plan</h6>
+                     <form id="exerciseForm" onSubmit={handleAddWorkout}>
+  <div className="mb-3">
+    <label htmlFor="imageUrl" className="form-label">Image URL</label>
+    <input type="url" className="form-control" id="imageUrl" name="imageUrl" placeholder="https://example.com/workout.jpg" />
+  </div>
+
+  <div className="mb-3">
+    <label htmlFor="planName" className="form-label">Plan Name</label>
+    <input type="text" className="form-control" id="planName" name="planName" placeholder="e.g. Beginner Fitness Plan" required />
+  </div>
+
+  <div className="mb-3">
+    <label htmlFor="duration" className="form-label">Duration (minutes)</label>
+    <input type="number" className="form-control" id="duration" name="duration" placeholder="e.g. 45" required />
+  </div>
+
+  <div className="mb-3">
+    <label htmlFor="intensity" className="form-label">Intensity</label>
+    <select className="form-select" id="intensity" name="intensity">
+      <option value="Low">Low</option>
+      <option value="Medium" selected>Medium</option>
+      <option value="High">High</option>
+    </select>
+  </div>
+
+  <div className="mb-3">
+    <label htmlFor="features" className="form-label">Description</label>
+    <textarea className="form-control" id="features" name="features" rows="3"
+      placeholder="e.g. A comprehensive workout plan for beginners" required></textarea>
+  </div>
+
+  {/* Steps Section */}
+  <div className="border-top pt-3">
+    <h6 className="mb-3">Workout Steps</h6>
+    {newSteps.map((step, index) => (
+      <div key={index} className="row mb-3">
+        <div className="col-md-3">
+          <label className="form-label">Title</label>
+          <input
+            type="text"
+            className="form-control"
+            value={step.Title}
+            onChange={(e) => handleNewStepChange(index, 'Title', e.target.value)}
+          />
+        </div>
+        <div className="col-md-4">
+          <label className="form-label">Description</label>
+          <input
+            type="text"
+            className="form-control"
+            value={step.Description}
+            onChange={(e) => handleNewStepChange(index, 'Description', e.target.value)}
+          />
+        </div>
+        <div className="col-md-2">
+          <label className="form-label">Duration</label>
+          <input
+            type="number"
+            className="form-control"
+            value={step.Duration}
+            onChange={(e) => handleNewStepChange(index, 'Duration', e.target.value)}
+          />
+        </div>
+        <div className="col-md-2">
+          <label className="form-label">Order</label>
+          <input
+            type="number"
+            className="form-control"
+            value={step.Order}
+            onChange={(e) => handleNewStepChange(index, 'Order', e.target.value)}
+          />
+        </div>
+      </div>
+    ))}
+    <button type="button" className="btn btn-outline-primary btn-sm" onClick={handleAddNewStep}>
+      + Add Step
+    </button>
+  </div>
+
+  <button type="submit" className="btn btn-success w-100 mt-3">Add Plan</button>
+</form>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            
+          </div>
+        </div>
+        {/* <!-- / Content --> */}
+
+        {/* <!-- Enhanced Edit Modal --> */}
+        <div className="modal fade" id="editPlanModal" tabIndex="-1" aria-labelledby="editPlanModalLabel"
+          aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content rounded-3 shadow">
+              <div className="modal-header">
+                <h5 className="modal-title" id="editPlanModalLabel">Edit Workout Plan</h5>
+                <button type="button" className="btn-close modal-close" data-bs-dismiss="modal"
+                  aria-label="Close"></button>
+              </div>
+              <div className="modal-body">
+                <form id="editPlanForm" onSubmit={handleEditWorkout}>
+                  <input type="hidden" id="editWorkoutId" name="workoutId" />
+                  
+                  {/* Basic Workout Info */}
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="editPlanName" className="form-label">Plan Name *</label>
+                      <input type="text" className="form-control" id="editPlanName" name="editPlanName" required />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="editDuration" className="form-label">Duration (minutes) *</label>
+                      <input type="number" className="form-control" id="editDuration" name="editDuration" required />
+                    </div>
+                  </div>
+                  
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="editIntensity" className="form-label">Intensity *</label>
+                      <select className="form-select" id="editIntensity" name="editIntensity" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label htmlFor="editImageUrl" className="form-label">Image URL</label>
+                      <input type="url" className="form-control" id="editImageUrl" name="editImageUrl" 
+                        placeholder="https://example.com/image.jpg" />
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <label htmlFor="editFeatures" className="form-label">Description *</label>
+                    <textarea className="form-control" id="editFeatures" name="editFeatures" rows="3" required></textarea>
+                  </div>
+                  
+                  {/* Steps Management */}
+                   <div className="border-top pt-3">
+        <h6 className="mb-3">Workout Steps</h6>
+        {editableSteps.map((step, index) => (
+          <div key={step.Id || index} className="row mb-3">
+            <div className="col-md-3">
+              <label className="form-label">Title</label>
+              <input
+                type="text"
+                className="form-control"
+                value={step.Title}
+                onChange={(e) => handleStepChange(index, 'Title', e.target.value)}
+              />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Description</label>
+              <input
+                type="text"
+                className="form-control"
+                value={step.Description}
+                onChange={(e) => handleStepChange(index, 'Description', e.target.value)}
+              />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label">Duration</label>
+              <input
+                type="number"
+                className="form-control"
+                value={step.Duration}
+                onChange={(e) => handleStepChange(index, 'Duration', e.target.value)}
+              />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label">Order</label>
+              <input
+                type="number"
+                className="form-control"
+                value={step.Order}
+                onChange={(e) => handleStepChange(index, 'Order', e.target.value)}
+              />
+            </div>
+          </div>
+        ))}
+        <button type="button" className="btn btn-outline-primary btn-sm" onClick={handleAddStep}>
+          + Add Step
+        </button>
+      </div>
+
+                  
+                  <div className="mt-4 d-flex gap-2">
+                    <button type="submit" className="btn btn-primary">Save Changes</button>
+                    <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+<div className="modal fade" id="assignUserModal" tabIndex="-1" aria-hidden="true">
+  <div className="modal-dialog modal-dialog-centered">
+    <div className="modal-content">
+      <div className="modal-header">
+        <h5 className="modal-title">Assign Users to Workout</h5>
+        <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+      </div>
+      <div className="modal-body">
+        <form onSubmit={handleAssignUsers}>
+          <div className="mb-3">
+            <label className="form-label">Select Users</label>
+            <select
+              multiple
+              className="form-select"
+              value={selectedUsers}
+              onChange={(e) => {
+                const selected = Array.from(e.target.selectedOptions, option => option.value);
+                setSelectedUsers(selected);
+              }}
+            >
+              {allUsers.map((user) => (
+                <option key={user.Id} value={user.Id}>
+                  {user.Name || user.Email}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn btn-primary w-100">Assign</button>
+        </form>
+      </div>
     </div>
-  )
+  </div>
+</div>
+
+        {/* <!-- Overlay --> */}
+        <div className="layout-overlay layout-menu-toggle"></div>
+
+        {/* <!-- Footer --> */}
+        <footer className="content-footer footer bg-footer-theme">
+          <div className="container-xxl">
+            <div
+              className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
+              <div className="text-body mb-2 mb-md-0">
+                ©
+                <script>
+                  document.write(new Date().getFullYear());
+                </script>
+                , made with <span className="text-danger"><i className="tf-icons ri-heart-fill"></i></span> by
+                <a href="https://www.coinagesoft.com/" target="_blank" className="footer-link">Coinage.in</a>
+              </div>
+            </div>
+          </div>
+        </footer>
+        {/* <!-- / Footer --> */}
+
+        <div className="content-backdrop fade"></div>
+      </div>
+    </div>
+  );
 }
+
+// Move all client-side JavaScript into React hooks and proper event handling
+// The problematic code has been moved into the React component structure
+// using useEffect and proper state management

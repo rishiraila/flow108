@@ -1,360 +1,856 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import AdminQuestionModal from "./AdminQuestionModal";
 
-const questionsData = [
-  {
-    id: 1,
-    text: "How much water should I drink daily?",
-    author: "Shreyas Kshirsagar",
-    date: "17-04-2025",
-    timeAgo: "12 min ago",
-    answer:
-      "On average, adults should drink about 8 glasses (2 liters) of water per day. However, needs vary depending on body size, activity level, and climate.",
-  },
-  {
-    id: 2,
-    text: "What is the best diet for weight loss?",
-    author: "Rishikesh Raila",
-    date: "01-04-2025",
-    timeAgo: "45 min ago",
-    answer:
-      "There’s no one-size-fits-all. Effective diets include Mediterranean, low-carb, intermittent fasting, and calorie-controlled diets. The best one is sustainable and matches your lifestyle.",
-  },
-  {
-    id: 3,
-    text: "What are some healthy snack options?",
-    author: "Shivraj Babar",
-    date: "29-03-2025",
-    timeAgo: "2 Day Ago",
-    answer:
-      "Try nuts, fruits, Greek yogurt, boiled eggs, vegetable sticks with hummus, or a smoothie. Avoid processed snacks high in sugar or sodium.",
-  },
-];
+const API_BASE_URL = "https://flow108.coinagesoft.com/api";
 
-export default function DashboardPage() {
-  const [questions, setQuestions] = useState(questionsData);
-  const [editingId, setEditingId] = useState(null);
-  const [editAnswer, setEditAnswer] = useState("");
-  const [answerInput, setAnswerInput] = useState({});
-  const [showAnswerForm, setShowAnswerForm] = useState({});
+// API functions for questions
+const fetchQuestions = async () => {
+  const response = await fetch(`${API_BASE_URL}/admin/community/questions`, {
+    method: "GET",
+    headers: {
+      accept: "*/*",
+    },
+  });
+  if (!response.ok) throw new Error("Failed to fetch questions");
+  const data = await response.json();
+  return data.data || [];
+};
 
-  const handleEditClick = (id, currentAnswer) => {
-    setEditingId(id);
-    setEditAnswer(currentAnswer);
+const answerQuestion = async (questionId, answerText) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/community/questions/${questionId}/answer`,
+    {
+      method: "POST",
+      headers: {
+        accept: "*/*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(answerText),
+    }
+  );
+  if (!response.ok) throw new Error("Failed to answer question");
+  return response.json();
+};
+
+const createQuestion = async (questionData) => {
+  const response = await fetch(`${API_BASE_URL}/admin/community/questions`, {
+    method: "POST",
+    headers: {
+      accept: "*/*",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(questionData),
+  });
+  if (!response.ok) throw new Error("Failed to create question");
+  return response.json();
+};
+
+const fetchQuestionById = async (id) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/community/questions/${id}`,
+    {
+      method: "GET",
+      headers: {
+        accept: "*/*",
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Failed to fetch question");
+  const data = await response.json();
+  return data.data || null;
+};
+
+const updateQuestion = async (id, questionData) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/community/questions/${id}`,
+    {
+      method: "PUT",
+      headers: {
+        accept: "*/*",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(questionData),
+    }
+  );
+  if (!response.ok) throw new Error("Failed to update question");
+  return response.json();
+};
+
+const deleteQuestion = async (id) => {
+  const response = await fetch(
+    `${API_BASE_URL}/admin/community/questions/delete/${id}`,
+    {
+      method: "DELETE",
+      headers: {
+        accept: "*/*",
+      },
+    }
+  );
+  if (!response.ok) throw new Error("Failed to delete question");
+  return response.json();
+};
+
+export default function QuestionsPage() {
+  const [filterType, setFilterType] = useState("all"); // values: "all", "public", "private"
+
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [newQuestion, setNewQuestion] = useState({
+    Content: "",
+    IsAnonymous: false,
+    Visibility: 0,
+    ViewCount: 0,
+    LikeCount: 0,
+    UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  });
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
+  const [editQuestion, setEditQuestion] = useState({
+    Content: "",
+    IsAnonymous: false,
+    Visibility: 0,
+  });
+  const [viewLoading, setViewLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [answerText, setAnswerText] = useState("");
+  const [answerLoading, setAnswerLoading] = useState(false);
+  const [questionToAnswer, setQuestionToAnswer] = useState(null);
+  const [openAnswerId, setOpenAnswerId] = useState(null);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [filterType]);
+
+  const loadQuestions = async () => {
+    try {
+      setLoading(true);
+      let data = [];
+
+      if (filterType === "public") {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/community/questions/public/all`
+        );
+        const json = await response.json();
+        data = json.data || [];
+      } else if (filterType === "private") {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/community/questions/private/all`
+        );
+        const json = await response.json();
+        data = json.data || [];
+      } else if (filterType === "unanswered") {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/community/questions/unanswered`
+        );
+        const json = await response.json();
+        data = json.data || [];
+      } else {
+        const response = await fetch(
+          `${API_BASE_URL}/admin/community/questions`
+        );
+        const json = await response.json();
+        data = json.data || [];
+      }
+
+      setQuestions(data);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSaveAnswer = (id) => {
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, answer: editAnswer } : q))
+  const handleAddQuestion = async (e) => {
+    e.preventDefault();
+    try {
+      await createQuestion(newQuestion);
+      setNewQuestion({
+        Content: "",
+        IsAnonymous: false,
+        Visibility: 0,
+        ViewCount: 0,
+        LikeCount: 0,
+        UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      });
+      loadQuestions();
+
+      // Close modal
+      const modal = document.getElementById("addQuestionModal");
+      const modalInstance = bootstrap.Modal.getInstance(modal);
+      modalInstance?.hide();
+    } catch (err) {
+      alert("Failed to add question: " + err.message);
+    }
+  };
+
+  const handleViewQuestion = async (id) => {
+    try {
+      setViewLoading(true);
+      const question = await fetchQuestionById(id);
+      setSelectedQuestion(question);
+      setEditQuestion({
+        Content: question.Content,
+        IsAnonymous: question.IsAnonymous,
+        Visibility: question.Visibility,
+      });
+
+      // Open view modal
+      const modal = new bootstrap.Modal(
+        document.getElementById("viewQuestionModal")
+      );
+      modal.show();
+    } catch (err) {
+      alert("Failed to load question: " + err.message);
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const handleEditQuestion = async (e) => {
+    e.preventDefault();
+    if (!selectedQuestion) return;
+
+    try {
+      setEditLoading(true);
+      await updateQuestion(selectedQuestion.Id, editQuestion);
+      loadQuestions();
+
+      // Close modal
+      const modal = bootstrap.Modal.getInstance(
+        document.getElementById("viewQuestionModal")
+      );
+      modal?.hide();
+
+      setSelectedQuestion(null);
+    } catch (err) {
+      alert("Failed to update question: " + err.message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteQuestion = async (id) => {
+    if (
+      window.confirm(
+        "Are you sure you want to delete this question? This action cannot be undone."
+      )
+    ) {
+      try {
+        await deleteQuestion(id);
+        loadQuestions();
+        alert("Question deleted successfully.");
+      } catch (err) {
+        alert("Failed to delete question: " + err.message);
+      }
+    }
+  };
+
+  const handleAnswerQuestion = (questionId) => {
+    setOpenAnswerId(openAnswerId === questionId ? null : questionId);
+    setAnswerText("");
+  };
+
+  const handleSubmitAnswer = async (questionId) => {
+    if (!answerText.trim()) return;
+
+    try {
+      setAnswerLoading(true);
+      await answerQuestion(questionId, answerText);
+      alert("Answer submitted successfully!");
+      loadQuestions();
+
+      // Reset states
+      setOpenAnswerId(null);
+      setAnswerText("");
+    } catch (err) {
+      alert("Failed to submit answer: " + err.message);
+    } finally {
+      setAnswerLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  };
+
+  if (loading) {
+    return (
+      <div className="container p-4">
+        <div className="text-center">
+          <div className="spinner-border" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      </div>
     );
-    setEditingId(null);
-  };
+  }
 
-  const handleToggleAnswerForm = (id) => {
-    setShowAnswerForm((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const handleSubmitAnswer = (id) => {
-    if (!answerInput[id]) return alert("Please type an answer");
-    setQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, answer: answerInput[id] } : q))
+  if (error) {
+    return (
+      <div className="container p-4">
+        <div className="alert alert-danger">
+          Error loading questions: {error}
+        </div>
+      </div>
     );
-    setAnswerInput((prev) => ({ ...prev, [id]: "" }));
-    setShowAnswerForm((prev) => ({ ...prev, [id]: false }));
-  };
+  }
 
   return (
-    <div className="container p-4">
-      <div className="row g-3">
-        {/* Card 1 */}
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-primary h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-primary">
-                    <i className="tf-icons ri-user-add-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">42</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">User Registered</h6>
-              <p className="mb-0">
-                <span className="me-1 fw-medium">+18.2%</span>
-                <small className="text-muted">than last week</small>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2 */}
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-warning h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-warning">
-                    <i className="ri-user-star-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">8</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Paid Members</h6>
-              <p className="mb-0">
-                <span className="me-1 fw-medium">-8.7%</span>
-                <small className="text-muted">than last week</small>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-danger h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-danger">
-                    <i className="ri-group-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">27</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Total Questions</h6>
-              <p className="mb-0">
-                <span className="me-1 fw-medium">+4.3%</span>
-                <small className="text-muted">than last week</small>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-info h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-info">
-                    <i className="ri-article-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">13</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Total Posts</h6>
-              <p className="mb-0">
-                <span className="me-1 fw-medium">-2.5%</span>
-                <small className="text-muted">than last week</small>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row g-4">
-        {/* Unanswered Questions */}
-        <div className="col-12 col-xxl-4">
-          <div className="card h-100">
-            <div className="card-header d-flex justify-content-between">
-              <h5 className="mb-0">List of Questions</h5>
-            </div>
-            <div className="card-body pt-4">
-              <ul className="timeline card-timeline mb-0">
-                {/* Question 1 */}
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-primary"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0 question-text">
-                        How much water should I drink daily?
-                      </h6>
-                      <small className="text-muted">12 min ago</small>
-                    </div>
-                    <p className="mb-2">Shreyas Kshirsagar | 17-04-2025</p>
-                    <div className="d-flex gap-2">
-                      <button className="btn btn-sm btn-outline-success">
-                        Answer
-                      </button>
-                      <button className="btn btn-sm btn-outline-warning">
-                        Edit Question
-                      </button>
-                    </div>
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary">Submit</button>
-                    </div>
-                    <div
-                      className="edit-question-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input type="text" className="form-control mb-2" />
-                      <button className="btn btn-sm btn-success">Save</button>
-                    </div>
+    <div className="content-wrapper">
+      <div className="container-xxl flex-grow-1 container-p-y">
+        {/* Stats Cards - Similar to Exercise page */}
+        <div className="row mb-5">
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-primary h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-primary">
+                      <i className="tf-icons ri-question-line ri-24px"></i>
+                    </span>
                   </div>
-                </li>
+                  <h4 className="mb-0">{questions.length}</h4>
+                </div>
+                <h6 className="mb-0 fw-normal">Total Questions</h6>
+                <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p>
+              </div>
+            </div>
+          </div>
 
-                {/* Question 2 */}
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-success"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0 question-text">
-                        What is the best diet for weight loss?
-                      </h6>
-                      <small className="text-muted">45 min ago</small>
-                    </div>
-                    <p className="mb-2">Rishikesh Raila | 01-04-2025</p>
-                    <div className="d-flex gap-2">
-                      <button className="btn btn-sm btn-outline-success">
-                        Answer
-                      </button>
-                      <button className="btn btn-sm btn-outline-warning">
-                        Edit Question
-                      </button>
-                    </div>
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary">Submit</button>
-                    </div>
-                    <div
-                      className="edit-question-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input type="text" className="form-control mb-2" />
-                      <button className="btn btn-sm btn-success">Save</button>
-                    </div>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-warning h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-warning">
+                      <i className="ri-heart-line ri-24px"></i>
+                    </span>
                   </div>
-                </li>
+                  <h4 className="mb-0">
+                    {questions.reduce((sum, q) => sum + q.LikeCount, 0)}
+                  </h4>
+                </div>
+                <h6 className="mb-0 fw-normal">Total Likes</h6>
+                <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p>
+              </div>
+            </div>
+          </div>
 
-                {/* Question 3 */}
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-info"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0 question-text">
-                        What are some healthy snack options?
-                      </h6>
-                      <small className="text-muted">2 Day Ago</small>
-                    </div>
-                    <p className="mb-2">Shivraj Babar | 29-03-2025</p>
-                    <div className="d-flex gap-2">
-                      <button className="btn btn-sm btn-outline-success">
-                        Answer
-                      </button>
-                      <button className="btn btn-sm btn-outline-warning">
-                        Edit Question
-                      </button>
-                    </div>
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary">Submit</button>
-                    </div>
-                    <div
-                      className="edit-question-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input type="text" className="form-control mb-2" />
-                      <button className="btn btn-sm btn-success">Save</button>
-                    </div>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-info h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-info">
+                      <i className="ri-user-line ri-24px"></i>
+                    </span>
                   </div>
-                </li>
-              </ul>
+                  <h4 className="mb-0">
+                    {questions.filter((q) => q.IsAnonymous).length}
+                  </h4>
+                </div>
+                <h6 className="mb-0 fw-normal">Anonymous Questions</h6>
+                <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-danger h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-danger">
+                      <i className="ri-admin-line ri-24px"></i>
+                    </span>
+                  </div>
+                  <h4 className="mb-0">
+                    {
+                      questions.filter((q) => q.CreatedByExpert === "Expert")
+                        .length
+                    }
+                  </h4>
+                </div>
+                <h6 className="mb-0 fw-normal">Admin Questions</h6>
+                <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Answered Questions */}
-        <div className="col-12 col-xl-8">
-          <div className="card">
-            <div className="card-header">
-              <h5>Answered Questions</h5>
-            </div>
-            <div className="card-body">
-              <ul className="list-group">
-                {questions.map(
-                  (q) =>
-                    q.answer && (
-                      <li className="list-group-item" key={q.id}>
-                        <h6>{q.text}</h6>
-                        <small>
-                          {q.author} | {q.date}
-                        </small>
-                        <div className="mt-2">
-                          {editingId === q.id ? (
-                            <>
-                              <input
-                                type="text"
-                                className="form-control mb-2"
-                                value={editAnswer}
-                                onChange={(e) => setEditAnswer(e.target.value)}
-                              />
-                              <button
-                                className="btn btn-sm btn-success"
-                                onClick={() => handleSaveAnswer(q.id)}
-                              >
-                                Save
-                              </button>
-                            </>
-                          ) : (
-                            <p className="mb-2">
-                              <b>Admin:</b> {q.answer}
-                            </p>
+        {/* Add Question Buttons */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4>Community Questions</h4>
+          <div className="d-flex gap-2">
+            {/* <button
+              className="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#addQuestionModal"
+            >
+              <i className="ri-add-line me-1"></i>Add Regular Question
+            </button> */}
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                const modal = new bootstrap.Modal(
+                  document.getElementById("adminQuestionModal")
+                );
+                modal.show();
+              }}
+            >
+              <i className="ri-admin-line me-1"></i>Post Admin Question
+            </button>
+          </div>
+        </div>
+
+        {/* Questions List */}
+        <div className="row">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header d-flex justify-content-between align-items-center flex-wrap">
+                <h5 className="mb-0">All Questions ({questions.length})</h5>
+                <div className="btn-group mt-2 mt-md-0" role="group">
+                  <button
+                    className={`btn btn-outline-primary ${
+                      filterType === "all" ? "active" : ""
+                    }`}
+                    onClick={() => setFilterType("all")}
+                  >
+                    All
+                  </button>
+                  <button
+                    className={`btn btn-outline-success ${
+                      filterType === "public" ? "active" : ""
+                    }`}
+                    onClick={() => setFilterType("public")}
+                  >
+                    Public
+                  </button>
+                  <button
+                    className={`btn btn-outline-warning ${
+                      filterType === "private" ? "active" : ""
+                    }`}
+                    onClick={() => setFilterType("private")}
+                  >
+                    Private
+                  </button>
+                  <button
+                    className={`btn btn-outline-danger ${
+                      filterType === "unanswered" ? "active" : ""
+                    }`}
+                    onClick={() => setFilterType("unanswered")}
+                  >
+                    Unanswered
+                  </button>
+                </div>
+              </div>
+
+              <div className="card-body">
+                <div className="row">
+                  {questions.map((question) => (
+                    <div key={question.Id} className="col-md-6 mb-4">
+                      <div className="card h-100">
+                        <div className="card-body">
+                          <h6 className="card-title">{question.Content}</h6>
+                          <p className="card-text">
+                            <small className="text-muted">
+                              {question.IsAnonymous ? "Anonymous User" : "User"}{" "}
+                              | {formatDate(question.CreatedOn)}
+                            </small>
+                          </p>
+                          <div className="d-flex justify-content-between">
+                            <small className="text-muted">
+                              Views: {question.ViewCount} | Likes:{" "}
+                              {question.LikeCount}
+                            </small>
+                            <small className="text-muted">
+                              {getTimeAgo(question.CreatedOn)}
+                            </small>
+                          </div>
+                          <div className="mt-2">
+                            <span
+                              className={`badge ${
+                                question.Visibility === 1
+                                  ? "bg-success"
+                                  : "bg-secondary"
+                              }`}
+                            >
+                              {question.Visibility === 1 ? "Public" : "Private"}
+                            </span>
+                            <span
+                              className={`badge ms-2 ${
+                                question.IsActive ? "bg-success" : "bg-danger"
+                              }`}
+                            >
+                              {question.IsActive ? "Active" : "Inactive"}
+                            </span>
+                            {question.AnswerByExpert && (
+                              <span className="badge bg-info ms-2">
+                                <i className="ri-check-line me-1"></i>Answered
+                              </span>
+                            )}
+                          </div>
+                          {question.AnswerByExpert && (
+                            <div className="mt-2 p-2  rounded">
+                              <small className="text-muted">Answer:</small>
+                              <p className="mb-0">{question.AnswerByExpert}</p>
+                              <small className="text-muted">
+                                Answered on: {formatDate(question.AnsweredAt)}
+                              </small>
+                            </div>
+                          )}
+                          <div className="mt-3">
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              onClick={() => handleViewQuestion(question.Id)}
+                              disabled={viewLoading}
+                            >
+                              <i className="ri-edit-line me-1"></i>Edit
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-success me-2"
+                              onClick={() => handleAnswerQuestion(question.Id)}
+                            >
+                              <i className="ri-message-line me-1"></i>Answer
+                            </button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteQuestion(question.Id)}
+                            >
+                              <i className="ri-delete-bin-line me-1"></i>Delete
+                            </button>
+                          </div>
+                          {openAnswerId === question.Id && (
+                            <div className="mt-3">
+                              <div className="mb-2">
+                                <label className="form-label">
+                                  Your Answer
+                                </label>
+                                <textarea
+                                  className="form-control"
+                                  rows="3"
+                                  value={answerText}
+                                  onChange={(e) =>
+                                    setAnswerText(e.target.value)
+                                  }
+                                  placeholder="Enter your answer here..."
+                                />
+                              </div>
+                              <div className="d-flex gap-2">
+                                <button
+                                  className="btn btn-sm btn-success"
+                                  onClick={() =>
+                                    handleSubmitAnswer(question.Id)
+                                  }
+                                  disabled={answerLoading || !answerText.trim()}
+                                >
+                                  {answerLoading ? (
+                                    <>
+                                      <span
+                                        className="spinner-border spinner-border-sm me-1"
+                                        role="status"
+                                      ></span>
+                                      Saving...
+                                    </>
+                                  ) : (
+                                    "Go"
+                                  )}
+                                </button>
+                                <button
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => setOpenAnswerId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <div className="d-flex gap-2">
-                          <button
-                            className="btn btn-outline-primary btn-sm"
-                            onClick={() => handleEditClick(q.id, q.answer)}
-                          >
-                            Edit
-                          </button>
-                          <button className="btn btn-outline-danger btn-sm">
-                            Delete
-                          </button>
-                        </div>
-                      </li>
-                    )
-                )}
-              </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <footer className="mt-5 text-center text-muted small">
-        © {new Date().getFullYear()}, made with{" "}
-        <span className="text-danger">❤</span> by{" "}
-        <a
-          href="https://www.coinagesoft.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Coinage.in
-        </a>
+      {/* Add Question Modal */}
+      <div
+        className="modal fade"
+        id="addQuestionModal"
+        tabIndex="-1"
+        aria-labelledby="addQuestionModalLabel"
+        aria-hidden="true"
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="addQuestionModalLabel">
+                Add New Question
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleAddQuestion}>
+                <div className="mb-3">
+                  <label className="form-label">Question Content</label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    value={newQuestion.Content}
+                    onChange={(e) =>
+                      setNewQuestion({
+                        ...newQuestion,
+                        Content: e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      checked={newQuestion.IsAnonymous}
+                      onChange={(e) =>
+                        setNewQuestion({
+                          ...newQuestion,
+                          IsAnonymous: e.target.checked,
+                        })
+                      }
+                    />
+                    <label className="form-check-label">Post Anonymously</label>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Visibility</label>
+                  <select
+                    className="form-select"
+                    value={newQuestion.Visibility}
+                    onChange={(e) =>
+                      setNewQuestion({
+                        ...newQuestion,
+                        Visibility: parseInt(e.target.value),
+                      })
+                    }
+                  >
+                    <option value={0}>Private</option>
+                    <option value={1}>Public</option>
+                  </select>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">User ID</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={newQuestion.UserId}
+                    onChange={(e) =>
+                      setNewQuestion({ ...newQuestion, UserId: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="d-flex gap-2">
+                  <button type="submit" className="btn btn-success">
+                    Submit Question
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* View/Edit Question Modal */}
+      <div
+        className="modal fade"
+        id="viewQuestionModal"
+        tabIndex="-1"
+        aria-labelledby="viewQuestionModalLabel"
+        aria-hidden="true"
+      >
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="viewQuestionModalLabel">
+                Edit Question
+              </h5>
+              <button
+                type="button"
+                className="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="modal-body">
+              {viewLoading ? (
+                <div className="text-center">
+                  <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                </div>
+              ) : (
+                selectedQuestion && (
+                  <form onSubmit={handleEditQuestion}>
+                    <div className="mb-3">
+                      <label className="form-label">Question Content</label>
+                      <textarea
+                        className="form-control"
+                        rows="3"
+                        value={editQuestion.Content}
+                        onChange={(e) =>
+                          setEditQuestion({
+                            ...editQuestion,
+                            Content: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+
+                    <div className="mb-3">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={editQuestion.IsAnonymous}
+                          onChange={(e) =>
+                            setEditQuestion({
+                              ...editQuestion,
+                              IsAnonymous: e.target.checked,
+                            })
+                          }
+                        />
+                        <label className="form-check-label">
+                          Post Anonymously
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label">Visibility</label>
+                      <select
+                        className="form-select"
+                        value={editQuestion.Visibility}
+                        onChange={(e) =>
+                          setEditQuestion({
+                            ...editQuestion,
+                            Visibility: parseInt(e.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>Private</option>
+                        <option value={1}>Public</option>
+                      </select>
+                    </div>
+
+                    <div className="d-flex gap-2">
+                      <button
+                        type="submit"
+                        className="btn btn-success"
+                        disabled={editLoading}
+                      >
+                        {editLoading ? (
+                          <>
+                            <span
+                              className="spinner-border spinner-border-sm me-1"
+                              role="status"
+                            ></span>
+                            Updating...
+                          </>
+                        ) : (
+                          "Update Question"
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        data-bs-dismiss="modal"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      <AdminQuestionModal onQuestionCreated={loadQuestions} />
+
+      {/* Footer */}
+      <footer className="content-footer footer bg-footer-theme">
+        <div className="container-xxl">
+          <div className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
+            <div className="text-body mb-2 mb-md-0">
+              © {new Date().getFullYear()}, made with{" "}
+              <span className="text-danger">
+                <i className="tf-icons ri-heart-fill"></i>
+              </span>{" "}
+              by
+              <a
+                href="https://www.coinagesoft.com/"
+                target="_blank"
+                className="footer-link"
+              >
+                Coinage.in
+              </a>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
