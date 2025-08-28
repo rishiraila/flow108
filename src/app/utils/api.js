@@ -79,6 +79,26 @@ export const fetchRecipesByMeal = async (mealId) => {
     throw new Error(`Failed to fetch recipes: ${error.message}`);
   }
 };
+// Removed duplicate fetchForumPosts function to fix redeclaration error
+export const fetchUserProfile = async (userId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/profile/profile/${userId}`
+    );
+    const data = await handleApiResponse(response);
+
+    return {
+      name: data.UserName || data.GivenName || "Unknown User",
+      email: data.Email || "",
+      avatar: data.ProfilePhotoUrl && data.ProfilePhotoUrl.trim() !== ""
+        ? data.ProfilePhotoUrl
+        : getDefaultAvatar(data.UserName),
+    };
+  } catch (error) {
+    console.error(`Error fetching user profile for ${userId}:`, error);
+    return { name: "Unknown User", avatar: getDefaultAvatar("Unknown") };
+  }
+};
 
 // Fetch all recipes
 export const fetchAllRecipes = async () => {
@@ -104,6 +124,29 @@ export const fetchAllRecipes = async () => {
   } catch (error) {
     console.error("Error fetching all recipes:", error);
     throw new Error(`Failed to fetch recipes: ${error.message}`);
+  }
+};
+
+export const fetchAllUsers = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminAccount/all-users`
+    );
+    const data = await handleApiResponse(response);
+    const users = data.Data || [];
+
+    // Build lookup object { userId: { name, avatar } }
+    const userMap = {};
+    users.forEach((u) => {
+      userMap[u.Id] = {
+        name: u.FullName || u.UserName || "Unknown",
+        avatar: u.ProfileImage || getDefaultAvatar(u.FullName || u.UserName),
+      };
+    });
+    return userMap;
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    return {};
   }
 };
 
@@ -166,3 +209,21 @@ export const fetchUserCount = async () => {
     return 0; // Return 0 instead of throwing for user count
   }
 };
+
+export const fetchForumPosts = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/community/forum/posts`
+    );
+    const data = await handleApiResponse(response);
+
+    // The API response has posts inside `data.data`
+    return Array.isArray(data.data) ? data.data : [];
+  } catch (error) {
+    console.error("Error fetching forum posts:", error);
+    throw new Error(`Failed to fetch forum posts: ${error.message}`);
+  }
+};
+
+
+

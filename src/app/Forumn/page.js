@@ -1,527 +1,321 @@
 "use client";
-// import usesta from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { fetchForumPosts } from "../utils/api";
+import AddPostModal from "./AddPostModal";
+
 export default function Page() {
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(null); // track dropdown for each post
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [commentInputs, setCommentInputs] = useState({});
+  const [editingPost, setEditingPost] = useState(null); // store the post being edited
+  const [editForm, setEditForm] = useState({
+    Title: "",
+    Description: "",
+    IsAnonymous: false,
+    Media: [],
+  });
+
+  const loadPosts = async () => {
+    try {
+      const response = await fetchForumPosts();
+      console.log("API response from fetchForumPosts:", response);
+
+      if (Array.isArray(response)) {
+        setPosts(response);
+      } else {
+        setError("Failed to load posts");
+      }
+    } catch (err) {
+      console.error("Error fetching posts:", err);
+      setError("Something went wrong while fetching posts");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const deleteComment = async (commentId) => {
+    try {
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/community/forum/comments/${commentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        // remove deleted comment from state without refetch
+        setPosts((prev) =>
+          prev.map((p) => ({
+            ...p,
+            Comments: p.Comments.filter((c) => c.Id !== commentId),
+          }))
+        );
+      } else {
+        console.error("Failed to delete comment");
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    }
+  };
+const updatePost = async () => {
+  if (!editingPost) return;
+
+  try {
+    const formData = new FormData();
+    formData.append("Title", editForm.Title);
+    formData.append("Description", editForm.Description);
+    formData.append("IsAnonymous", editForm.IsAnonymous);
+
+    // If you want to handle media uploads, append them here:
+    // editForm.Media.forEach((m, i) => {
+    //   formData.append(`Media[${i}].Url`, m.Url);
+    //   formData.append(`Media[${i}].Type`, m.Type);
+    // });
+
+    const res = await fetch(
+      `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${editingPost.Id}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          accept: "*/*",
+        },
+        body: formData,
+      }
+    );
+
+    if (res.ok) {
+      alert("✅ Post updated successfully!");
+      loadPosts();
+      setEditingPost(null);
+      bootstrap.Modal.getInstance(
+        document.getElementById("editPostModal")
+      ).hide();
+    } else {
+      alert("❌ Failed to update post");
+    }
+  } catch (err) {
+    console.error("Error updating post:", err);
+    alert("Something went wrong while updating");
+  }
+};
+
+  const deletePost = async (id) => {
+    if (!confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "application/json",
+          },
+        }
+      );
+
+      const result = await res.json();
+
+      if (res.ok && result.status) {
+        alert("✅ " + result.message);
+        loadPosts(); // reload posts
+      } else {
+        alert("❌ " + (result.message || "Failed to delete post"));
+      }
+    } catch (err) {
+      console.error("Error deleting post:", err);
+      alert("Something went wrong while deleting");
+    }
+  };
+  const postComment = async (postId) => {
+    const content = commentInputs[postId];
+    if (!content || content.trim() === "")
+      return alert("Please enter a comment");
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/community/forum/comments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            accept: "*/*",
+          },
+          body: JSON.stringify({
+            Content: content,
+            UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            PostId: postId,
+          }),
+        }
+      );
+
+      const result = await res.json();
+
+      if (res.ok && result.status) {
+        alert("✅ " + result.message);
+        setCommentInputs({ ...commentInputs, [postId]: "" }); // clear input
+        loadPosts(); // refresh comments
+      } else {
+        alert("❌ " + (result.message || "Failed to post comment"));
+      }
+    } catch (err) {
+      console.error("Error posting comment:", err);
+      alert("Something went wrong while posting comment");
+    }
+  };
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    if (diffInHours < 1) return "Just now";
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    return `${Math.floor(diffInHours / 24)} days ago`;
+  };
+
+  const toggleDropdown = (postId) => {
+    setShowDropdown(showDropdown === postId ? null : postId);
+  };
+
+  const getDefaultAvatar = (name) => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name
+    )}&background=random&size=50`;
+  };
 
   return (
-    <div>
-      <div className="content-wrapper">
-        {/* <!-- Content --> */}
-
-        <div className="container-xxl flex-grow-1 container-p-y">
-          {/* <!-- Card Border Shadow --> */}
-          <div className="row g-6">
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-primary h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-primary">
-                        <i className="tf-icons ri-user-add-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">42</h4>
+    <div className="content-wrapper">
+      <div className="container-xxl flex-grow-1 container-p-y">
+        {/* Stats Cards - Similar to Questions page */}
+        <div className="row mb-5">
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-primary h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-primary">
+                      <i className="tf-icons ri-chat-3-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">User Registered</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">+18.2%</span>
-                    <small className="text-muted">than last week</small>
-                  </p>
+                  <h4 className="mb-0">{posts.length}</h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Total Posts</h6>
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-warning h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-warning">
-                        <i className="ri-user-star-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">8</h4>
+          </div>
+
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-warning h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-warning">
+                      <i className="ri-heart-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Paid Members</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">-8.7%</span>
-                    <small className="text-muted">than last week</small>
-                  </p>
+                  <h4 className="mb-0">
+                    {posts.reduce(
+                      (sum, post) => sum + (post.LikeCount || 0),
+                      0
+                    )}
+                  </h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Total Likes</h6>
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-danger h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-danger">
-                        <i className="ri-group-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">27</h4>
+          </div>
+
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-info h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-info">
+                      <i className="ri-user-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Total Questions</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">+4.3%</span>
-                    <small className="text-muted">than last week</small>
-                  </p>
+                  <h4 className="mb-0">
+                    {posts.filter((post) => post.IsAnonymous).length}
+                  </h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Anonymous Posts</h6>
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-info h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-info">
-                        <i className="ri-article-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">13</h4>
+          </div>
+
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-danger h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-danger">
+                      <i className="ri-message-2-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Total Posts</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">-2.5%</span>
-                    <small className="text-muted">than last week</small>
-                  </p>
+                  <h4 className="mb-0">
+                    {posts.reduce(
+                      (sum, post) => sum + (post.Comments?.length || 0),
+                      0
+                    )}
+                  </h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Total Comments</h6>
               </div>
             </div>
-            {/* <!--/ Card Border Shadow --> */}
+          </div>
+        </div>
 
-            {/* <!-- Popular Instructors --> */}
-            <div className="col-md-8 col-xxl-8">
-              <div className="card h-100">
-                <div className="card-header d-flex align-items-center justify-content-between">
-                  <div className="card-title mb-0">
-                    <h5 className="m-0 me-2">Users</h5>
+        {/* Add Post Button */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4>Community Forum</h4>
+          <button
+            className="btn btn-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addPostModal"
+          >
+            <i className="ri-add-line me-1"></i>Add New Post
+          </button>
+        </div>
+
+        <div className="row g-6">
+          <div className="col-md-8 col-xxl-8">
+            <div className="card h-100">
+              <div className="card-body pt-4">
+                {loading ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-2">Loading posts...</p>
                   </div>
-
-                  <div style={{ display: "flex", alignItems: "center" }}>
-                    <div className="input-group w-auto">
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Search users..."
-                        id="userSearchInput"
-                      />
-                      <span className="input-text  ">
-                        {/* <!-- <i className="ri-search-line"></i> --> */}
-                      </span>
-                      <button
-                        className="btn btn-primary d-flex align-items-center"
-                        data-bs-toggle="modal"
-                        data-bs-target="#addPostModal"
-                      >
-                        <i className="ri-plus-line ri-16px lh-1 scaleX-n1-rtl"></i>
-                        Add Post
-                      </button>
-                    </div>
+                ) : error ? (
+                  <div className="alert alert-danger" role="alert">
+                    Error loading posts: {error}
                   </div>
-                </div>
-
-                {/* <!-- Column Headers (Desktop only) --> */}
-                <div
-                  className="px-4 py-3 border border-start-0 border-end-0 d-none d-md-block"
-                  style={{ fontSize: "12px" }}
-                >
-                  <div className="d-flex justify-content-between align-items-center flex-wrap text-uppercase fw-normal">
-                    <div style={{ width: "25%" }}>Users</div>
-                    <div style={{ width: "15%", textAlign: "center" }}>
-                      Posts
-                    </div>
-                    <div style={{ width: "15%", textAlign: "center" }}>
-                      Likes
-                    </div>
-                    <div style={{ width: "15%", textAlign: "center" }}>
-                      Comments
-                    </div>
-                    <div style={{ width: "15%", textAlign: "center" }}>
-                      Action
-                    </div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-5">
+                    <p>No posts found</p>
                   </div>
-                </div>
-
-                <div className="card-body pt-4">
-                  {/* <!-- Repeatable User Row --> */}
-                  <div
-                    className="mb-4 pb-3 border-bottom"
-                    style={{ borderColor: "rgba(0, 0, 0, 0.05)" }}
-                  >
-                    {/* <!-- Desktop layout --> */}
-                    <div className="d-none d-md-flex justify-content-between align-items-center flex-wrap">
-                      <div
-                        className="d-flex align-items-center gap-3"
-                        style={{ width: "25%" }}
-                      >
-                        <img
-                          src="/assets/img/avatars/1.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0 text-truncate">Sandeep Reddy</h6>
-                          <small className="text-truncate">
-                            Clinical Dietitian{" "}
-                          </small>
-                        </div>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">33</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">120</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">18</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#forumPostsModal"
-                        >
-                          See
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* <!-- Mobile layout --> */}
-                    <div className="d-block d-md-none">
-                      <div className="d-flex align-items-center gap-3 mb-2">
-                        <img
-                          src="/assets/img/avatars/1.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0">Maven Analytics</h6>
-                          <small>Business Intelligence</small>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "14px" }}>
-                        <div>
-                          <strong>Posts:</strong> 33
-                        </div>
-                        <div>
-                          <strong>Likes:</strong> 120
-                        </div>
-                        <div>
-                          <strong>Comments:</strong> 18
-                        </div>
-                        <div className="mt-2">
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#forumPostsModal"
-                          >
-                            See
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* <!-- Duplicate for another user --> */}
-                  <div
-                    className="mb-4 pb-3 border-bottom"
-                    style={{ borderColor: "rgba(0, 0, 0, 0.05)" }}
-                  >
-                    {/* <!-- Desktop --> */}
-                    <div className="d-none d-md-flex justify-content-between align-items-center flex-wrap">
-                      <div
-                        className="d-flex align-items-center gap-3"
-                        style={{ width: "25%" }}
-                      >
-                        <img
-                          src="/assets/img/avatars/2.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0 text-truncate">Neha Sharma</h6>
-                          <small className="text-truncate">
-                            Personal Trainer
-                          </small>
-                        </div>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">52</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">95</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">24</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#forumPostsModal"
-                        >
-                          See
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* <!-- Mobile --> */}
-                    <div className="d-block d-md-none">
-                      <div className="d-flex align-items-center gap-3 mb-2">
-                        <img
-                          src="/assets/img/avatars/2.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0">Bentlee Emblin</h6>
-                          <small>Digital Marketing</small>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "14px" }}>
-                        <div>
-                          <strong>Posts:</strong> 52
-                        </div>
-                        <div>
-                          <strong>Likes:</strong> 95
-                        </div>
-                        <div>
-                          <strong>Comments:</strong> 24
-                        </div>
-                        <div className="mt-2">
-                          <button
-                            className="btn btn-outline-info btn-sm see-posts-btn"
-                            data-username="JohnDoe"
-                          >
-                            See
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="mb-4 pb-3 border-bottom"
-                    style={{ borderColor: "rgba(0, 0, 0, 0.05)" }}
-                  >
-                    {/* <!-- Desktop --> */}
-                    <div className="d-none d-md-flex justify-content-between align-items-center flex-wrap">
-                      <div
-                        className="d-flex align-items-center gap-3"
-                        style={{ width: "25%" }}
-                      >
-                        <img
-                          src="/assets/img/avatars/3.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0 text-truncate">Manoj Kulkarni</h6>
-                          <small className="text-truncate">
-                            Panchakarma Specialist
-                          </small>
-                        </div>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">12</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">75</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">14</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#forumPostsModal"
-                        >
-                          See
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* <!-- Mobile --> */}
-                    <div className="d-block d-md-none">
-                      <div className="d-flex align-items-center gap-3 mb-2">
-                        <img
-                          src="/assets/img/avatars/3.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0">John Deo</h6>
-                          <small>Digital Marketing</small>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "14px" }}>
-                        <div>
-                          <strong>Posts:</strong> 41
-                        </div>
-                        <div>
-                          <strong>Likes:</strong> 60
-                        </div>
-                        <div>
-                          <strong>Comments:</strong> 30
-                        </div>
-                        <div className="mt-2">
-                          <button className="btn btn-sm btn-outline-primary">
-                            See
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="mb-4 pb-3 border-bottom"
-                    style={{ borderColor: "rgba(0, 0, 0, 0.05)" }}
-                  >
-                    {/* <!-- Desktop --> */}
-                    <div className="d-none d-md-flex justify-content-between align-items-center flex-wrap">
-                      <div
-                        className="d-flex align-items-center gap-3"
-                        style={{ width: "25%" }}
-                      >
-                        <img
-                          src="/assets/img/avatars/4.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0 text-truncate">Pooja Nair</h6>
-                          <small className="text-truncate">
-                            CrossFit Level-1 Trainer
-                          </small>
-                        </div>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">17</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">15</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <h6 className="mb-0">24</h6>
-                      </div>
-                      <div className="text-center" style={{ width: "15%" }}>
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#forumPostsModal"
-                        >
-                          See
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* <!-- Mobile --> */}
-                    <div className="d-block d-md-none">
-                      <div className="d-flex align-items-center gap-3 mb-2">
-                        <img
-                          src="/assets/img/avatars/3.png"
-                          alt="Avatar"
-                          style={{ width: "40px", height: "40px" }}
-                          className="rounded-circle"
-                        />
-                        <div>
-                          <h6 className="mb-0">Norbit Smith</h6>
-                          <small>Digital Marketing</small>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: "14px" }}>
-                        <div>
-                          <strong>Posts:</strong> 41
-                        </div>
-                        <div>
-                          <strong>Likes:</strong> 60
-                        </div>
-                        <div>
-                          <strong>Comments:</strong> 30
-                        </div>
-                        <div className="mt-2">
-                          <button
-                            type="button"
-                            className="btn btn-outline-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#forumPostsModal"
-                          >
-                            See
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* <!-- More rows can be added following the same pattern --> */}
-                </div>
-              </div>
-            </div>
-            {/* <!--/ Popular Instructors --> */}
-
-            <div className="col-md-4 col-xxl-4">
-              <div className="row gy-4 mb-6">
-                <div className="card h-100">
-                  <div className="card-header d-flex align-items-center justify-content-between px-5 py-5 border border-start-0 border-end-0 border-top-0">
-                    <div className="card-title mb-0">
-                      <h5 className="m-0 me-2">Recent Posts</h5>
-                    </div>
-                    <div className="dropdown">
-                      <button
-                        className="btn btn-text-secondary rounded-pill text-muted border-0 p-1"
-                        type="button"
-                        id="popularInstructors"
-                        data-bs-toggle="dropdown"
-                        aria-haspopup="true"
-                        aria-expanded="false"
-                      >
-                        <i className="ri-more-2-line ri-20px"></i>
-                      </button>
-                      <div
-                        className="dropdown-menu dropdown-menu-end"
-                        aria-labelledby="popularInstructors"
-                      >
-                        <a className="dropdown-item" href="javascript:void(0);">
-                          Select All
-                        </a>
-                        <a className="dropdown-item" href="javascript:void(0);">
-                          Refresh
-                        </a>
-                        <a className="dropdown-item" href="javascript:void(0);">
-                          Share
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="card-body pt-5"
-                    style={{ overflowY: "scroll", height: "90vh" }}
-                  >
-                    {/* <!-- Post Card with Admin Dropdown --> */}
+                ) : (
+                  posts.map((post) => (
                     <div
+                      key={post.Id}
                       className="border"
                       style={{
                         borderRadius: "12px",
                         padding: "16px",
                         marginBottom: "24px",
                         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                        position: "relative",
                       }}
                     >
+                      {/* User info */}
                       <div
                         style={{
                           display: "flex",
@@ -531,145 +325,54 @@ export default function Page() {
                         }}
                       >
                         <img
-                          src="/assets/img/avatars/woman-4127336_1280.jpg"
-                          alt="User"
+                          src={
+                            post.IsAnonymous
+                              ? getDefaultAvatar("Anonymous")
+                              : post.User?.ProfilePictureUrl ||
+                                getDefaultAvatar(post.User?.Name || "User")
+                          }
+                          alt={
+                            post.IsAnonymous
+                              ? "Anonymous"
+                              : post.User?.Name || "User"
+                          }
                           style={{
                             borderRadius: "50%",
                             width: "50px",
                             height: "50px",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            e.target.src = getDefaultAvatar(
+                              post.IsAnonymous
+                                ? "Anonymous"
+                                : post.User?.Name || "User"
+                            );
                           }}
                         />
                         <div>
                           <h6 style={{ margin: "0", fontSize: "16px" }}>
-                            Rahul Verma
+                            {post.IsAnonymous
+                              ? "Anonymous User"
+                              : post.User?.Name || "Unknown User"}
                           </h6>
-                          <small>2 hours ago</small>
+                          <small style={{ color: "#6c757d" }}>
+                            {formatDate(post.CreatedAt)}
+                          </small>
                         </div>
                       </div>
 
+                      {/* Post content */}
                       <div style={{ marginBottom: "12px" }}>
-                        <p style={{ margin: "0 0 12px", fontSize: "14px" }}>
-                          Exploring the beauty of nature 🌿 — such a peaceful
-                          moment!
-                        </p>
-                        <img
-                          src="/assets/img/avatars/the-worthy-goods-Tuy2n9md0AI-unsplash.jpg"
-                          alt="Post"
-                          style={{ width: "100%", borderRadius: "8px" }}
-                        />
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        <div
+                        <h6
                           style={{
-                            display: "flex",
-                            gap: "16px",
-                            fontSize: "14px",
-                            color: "#6c757d",
+                            margin: "0 0 8px",
+                            fontSize: "16px",
+                            fontWeight: "bold",
                           }}
                         >
-                          <span>
-                            <i className="bi bi-heart-fill"></i> 120 Likes
-                          </span>
-                          <span>
-                            <i className="bi bi-chat-left-dots-fill"></i> 34
-                            Comments
-                          </span>
-                        </div>
-                        <div className="position-relative">
-                          <button
-                            onClick={() => toggleDropdown()}
-                            className="btn btn-sm text-muted p-0 border-0 bg-transparent fs-3"
-                          >
-                            ⋯
-                          </button>
-                          <div
-                            className="admin-dropdown dropdown-menu show"
-                            style={{
-                              display: "none",
-                              position: "absolute",
-                              top: "24px",
-                              right: 0,
-                            }}
-                          >
-                            <a
-                              href="./updatePost.html"
-                              className="dropdown-item"
-                            >
-                              Update Post
-                            </a>
-                            <a
-                              href="javascript:void(0);"
-                              onClick={() => alert("Delete clicked")}
-                              className="dropdown-item text-danger"
-                            >
-                              Delete Post
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div
-                        style={{ paddingTop: "12px" }}
-                        className="border border-bottom-0 border-start-0 border-end-0"
-                      >
-                        <input
-                          type="text"
-                          placeholder="Add a comment..."
-                          className="border bg-light"
-                          style={{
-                            width: "100%",
-                            padding: "8px 12px",
-                            borderRadius: "20px",
-                            fontSize: "14px",
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className="border"
-                      style={{
-                        borderRadius: "12px",
-                        padding: "16px",
-                        marginBottom: "24px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        <img
-                          src="/assets//img/avatars/nikola-murniece-XpBI38qtskw-unsplash.jpg"
-                          alt="User"
-                          style={{
-                            borderRadius: "50%",
-                            width: "50px",
-                            height: "50px",
-                          }}
-                        />
-                        <div>
-                          <h6 style={{ margin: "0", fontSize: "16px" }}>
-                            Karan Arora
-                          </h6>
-                          <small>2 hours ago</small>
-                        </div>
-                      </div>
-
-                      <div style={{ marginBottom: "12px" }}>
+                          {post.Title}
+                        </h6>
                         <p
                           style={{
                             margin: "0 0 12px",
@@ -677,27 +380,103 @@ export default function Page() {
                             color: "#333",
                           }}
                         >
-                          Exploring the beauty of nature 🌿 — such a peaceful
-                          moment!
+                          {post.Description}
                         </p>
-                        <img
-                          src="/assets/img/avatars/meagan-stone-r951FqxHTao-unsplash.jpg"
-                          alt="Post"
-                          style={{
-                            width: "100%",
-                            borderRadius: "8px",
-                            objectFit: "cover",
-                            maxHeight: "300px",
-                          }}
-                        />
+
+                        {/* Media gallery */}
+                        {post.Media && post.Media.length > 0 && (
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns:
+                                post.Media.length > 1
+                                  ? "repeat(2, 1fr)"
+                                  : "1fr",
+                              gap: "8px",
+                              marginBottom: "12px",
+                            }}
+                          >
+                            {post.Media.map(
+                              (media, index) =>
+                                media.Url && (
+                                  <div
+                                    key={index}
+                                    style={{ position: "relative" }}
+                                  >
+                                    {media.Type === 0 ? ( // Image
+                                      <img
+                                        src={media.Url}
+                                        alt={`Post media ${index + 1}`}
+                                        style={{
+                                          width: "100%",
+                                          borderRadius: "8px",
+                                          objectFit: "cover",
+                                          maxHeight: "300px",
+                                        }}
+                                        onError={(e) => {
+                                          e.target.style.display = "none";
+                                        }}
+                                      />
+                                    ) : media.Type === 1 ? ( // Video
+                                      <video
+                                        controls
+                                        style={{
+                                          width: "100%",
+                                          borderRadius: "8px",
+                                          maxHeight: "300px",
+                                        }}
+                                      >
+                                        <source
+                                          src={media.Url}
+                                          type="video/mp4"
+                                        />
+                                        Your browser does not support the video
+                                        tag.
+                                      </video>
+                                    ) : (
+                                      // Document or other
+                                      <div
+                                        style={{
+                                          padding: "16px",
+                                          backgroundColor: "#f8f9fa",
+                                          borderRadius: "8px",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        <i className="ri-file-text-line ri-2x text-muted"></i>
+                                        <p
+                                          style={{
+                                            margin: "8px 0 0",
+                                            fontSize: "12px",
+                                          }}
+                                        >
+                                          <a
+                                            href={media.Url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                          >
+                                            View Document
+                                          </a>
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                            )}
+                          </div>
+                        )}
                       </div>
 
+                      {/* Post stats */}
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
                           marginBottom: "12px",
+                          padding: "8px 0",
+                          borderTop: "1px solid #eee",
+                          borderBottom: "1px solid #eee",
                         }}
                       >
                         <div
@@ -709,346 +488,273 @@ export default function Page() {
                           }}
                         >
                           <span>
-                            <i className="bi bi-heart-fill"></i> 120 Likes
+                            <i className="bi bi-heart-fill text-danger"></i>{" "}
+                            {post.LikeCount || 0} Likes
                           </span>
                           <span>
-                            <i className="bi bi-chat-left-dots-fill"></i> 34
-                            Comments
+                            <i className="bi bi-chat-left-dots-fill text-primary"></i>{" "}
+                            {post.Comments?.length || 0} Comments
                           </span>
                         </div>
 
-                        <div style={{ position: "relative" }}>
+                        <div className="d-flex justify-content-end gap-2">
                           <button
-                            onClick={() => console.log("Toggle dropdown")}
-                            className="btn btn-sm text-muted p-0 border-0 bg-transparent"
-                            style={{ fontSize: "20px", cursor: "pointer" }}
-                          >
-                            ⋯
-                          </button>
-
-                          <div
-                            className="admin-dropdown dropdown-menu"
-                            style={{
-                              display: "none", // toggle to 'block' dynamically
-                              position: "absolute",
-                              top: "24px",
-                              right: "0",
-                              backgroundColor: "#fff",
-                              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-                              borderRadius: "6px",
-                              zIndex: 10,
+                            className="btn btn-outline-primary btn-sm"
+                            onClick={() => {
+                              setEditingPost(post);
+                              setEditForm({
+                                Title: post.Title,
+                                Description: post.Description,
+                                IsAnonymous: post.IsAnonymous,
+                                Media: post.Media || [],
+                              });
+                              new bootstrap.Modal(
+                                document.getElementById("editPostModal")
+                              ).show();
                             }}
                           >
-                            <a
-                              href="./updatePost.html"
-                              className="dropdown-item"
-                              style={{
-                                padding: "8px 16px",
-                                display: "block",
-                                textDecoration: "none",
-                                color: "#333",
-                              }}
-                            >
-                              Update Post
-                            </a>
-                            <a
-                              href="#"
-                              onClick={() => alert("Delete clicked")}
-                              className="dropdown-item"
-                              style={{
-                                padding: "8px 16px",
-                                display: "block",
-                                textDecoration: "none",
-                                color: "red",
-                              }}
-                            >
-                              Delete Post
-                            </a>
-                          </div>
+                            Edit
+                          </button>
+
+                          <button
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => deletePost(post.Id)} // delete function
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
 
+                      {/* Comments section */}
+                      {post.Comments && post.Comments.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: "12px",
+                            padding: "12px",
+                            backgroundColor: "#f8f9fa",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          <h6
+                            style={{
+                              margin: "0 0 8px",
+                              fontSize: "14px",
+                              fontWeight: "bold",
+                              color: "#333",
+                            }}
+                          >
+                            Comments ({post.Comments.length})
+                          </h6>
+                          {post.Comments.map((comment) => (
+                            <div
+                              key={comment.Id}
+                              style={{
+                                padding: "8px",
+                                marginBottom: "8px",
+                                backgroundColor: "white",
+                                borderRadius: "6px",
+                                border: "1px solid #e9ecef",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: "32px",
+                                    height: "32px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#dee2e6",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "12px",
+                                    fontWeight: "bold",
+                                    color: "#6c757d",
+                                  }}
+                                >
+                                  {comment.UserId
+                                    ? comment.UserId.substring(
+                                        0,
+                                        2
+                                      ).toUpperCase()
+                                    : "U"}
+                                </div>
+                                <small style={{ color: "#6c757d" }}>
+                                  {comment.UserId
+                                    ? `User ${comment.UserId.substring(0, 8)}`
+                                    : "Unknown User"}
+                                </small>
+                                <small style={{ color: "#adb5bd" }}>
+                                  {formatDate(comment.CreatedAt)}
+                                </small>
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  marginTop: "4px",
+                                }}
+                              >
+                                <p
+                                  style={{
+                                    margin: "0",
+                                    fontSize: "14px",
+                                    color: "#333",
+                                    lineHeight: "1.4",
+                                    flex: 1,
+                                  }}
+                                >
+                                  {comment.Content}
+                                </p>
+
+                                <button
+                                  className="btn btn-outline-danger btn-sm ms-2"
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        "⚠️ Are you sure you want to delete this comment?"
+                                      )
+                                    ) {
+                                      deleteComment(comment.Id);
+                                      alert("🗑️ Comment deleted successfully!");
+                                    }
+                                  }}
+                                >
+                                  <i className="ri-delete-bin-line"></i>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Comment input */}
+                      {/* Comment input */}
                       <div
-                        style={{ paddingTop: "12px" }}
-                        className="border border-bottom-0 border-start-0 border-end-0"
+                        style={{
+                          marginTop: "12px",
+                          display: "flex",
+                          gap: "8px",
+                        }}
                       >
                         <input
                           type="text"
+                          value={commentInputs[post.Id] || ""} // track input for each post
+                          onChange={(e) =>
+                            setCommentInputs({
+                              ...commentInputs,
+                              [post.Id]: e.target.value,
+                            })
+                          }
                           placeholder="Add a comment..."
-                          className="border bg-light"
                           style={{
-                            width: "100%",
+                            flex: 1,
                             padding: "8px 12px",
+                            border: "1px solid #ddd",
                             borderRadius: "20px",
                             fontSize: "14px",
                           }}
                         />
+                        <button
+                          onClick={() => postComment(post.Id)} // call API
+                          style={{
+                            padding: "8px 16px",
+                            backgroundColor: "#007bff",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "20px",
+                            fontSize: "14px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Post
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
         </div>
-
-        {/* <!-- / Content --> */}
         <div
-          className="modal fade"
-          id="addPostModal"
-          tabindex="-1"
-          aria-labelledby="addPostModalLabel"
-          aria-hidden="true"
-          data-bs-backdrop="static"
-          data-bs-keyboard="false"
-        >
-          <div className="modal-dialog modal-md modal-dialog-centered">
-            <div className="modal-content rounded-3 shadow">
-              <div className="modal-header">
-                <h5 className="modal-title" id="addPostModalLabel">
-                  Add New Post
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div className="modal-body">
-                <form id="addPostForm">
-                  <div className="mb-3">
-                    <label for="postImage" className="form-label">
-                      Image
-                    </label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      id="postImage"
-                      accept="image/*"
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label for="postName" className="form-label">
-                      Post Name
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="postName"
-                      placeholder="Enter post title"
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label for="postDescription" className="form-label">
-                      Description
-                    </label>
-                    <textarea
-                      className="form-control"
-                      id="postDescription"
-                      rows="3"
-                      placeholder="Brief description of the post"
-                    ></textarea>
-                  </div>
-                  <div className="mb-3">
-                    <label for="postUrl" className="form-label">
-                      URL
-                    </label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      id="postUrl"
-                      placeholder="Enter related URL (optional)"
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label for="postComment" className="form-label">
-                      Comment
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="postComment"
-                      placeholder="Add a comment (optional)"
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary w-100">
-                    Save Post
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* <!-- Footer --> */}
-        <footer className="content-footer footer bg-footer-theme">
-          <div className="container-xxl">
-            <div className="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
-              <div className="text-body mb-2 mb-md-0">
-                ©<script>document.write(new Date().getFullYear());</script>,
-                made with{" "}
-                <span className="text-danger">
-                  <i className="tf-icons ri-heart-fill"></i>
-                </span>{" "}
-                by
-                <a
-                  href="https://www.coinagesoft.com/"
-                  target="_blank"
-                  className="footer-link"
-                >
-                  Coinage.in
-                </a>
-              </div>
-            </div>
-          </div>
-        </footer>
-        {/* <!-- / Footer --> */}
-
-        <div className="content-backdrop fade"></div>
+  className="modal fade"
+  id="editPostModal"
+  tabIndex="-1"
+  aria-hidden="true"
+>
+  <div className="modal-dialog modal-lg modal-dialog-centered">
+    <div className="modal-content">
+      <div className="modal-header">
+        <h5 className="modal-title">Edit Post</h5>
+        <button
+          type="button"
+          className="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
-      <div
-        className="modal fade"
-        id="forumPostsModal"
-        tabindex="-1"
-        aria-labelledby="forumPostsModalLabel"
-        aria-hidden="true"
-      >
-        <div
-          className="modal fade"
-          id="forumPostsModal"
-          tabIndex="-1"
-          aria-labelledby="forumPostsModalLabel"
-          aria-hidden="true"
-        >
-          <div className="modal-dialog modal-xl modal-dialog-scrollable">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Forum Posts</h5>
-                <div className="d-flex align-items-center ms-auto gap-2">
-                  <input
-                    type="text"
-                    className="form-control form-control-sm"
-                    id="postSearch"
-                    placeholder="Search..."
-                    style={{ minWidth: "200px" }}
-                  />
-                  <button
-                    type="button"
-                    className="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close"
-                  ></button>
-                </div>
-              </div>
 
-              <div className="modal-body">
-                <div className="row" id="postContainer">
-                  {[1, 2, 3].map((_, index) => (
-                    <div className="col-md-4 mb-4 post-card" key={index}>
-                      <div className="card h-100">
-                        <div className="card-body">
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "12px",
-                              marginBottom: "12px",
-                            }}
-                          >
-                            <img
-                              src="/assets/img/avatars/woman-4127336_1280.jpg"
-                              alt="User"
-                              style={{
-                                borderRadius: "50%",
-                                width: "50px",
-                                height: "50px",
-                              }}
-                            />
-                            <div>
-                              <h6 style={{ margin: 0, fontSize: "16px" }}>
-                                Rahul Verma
-                              </h6>
-                              <small>2 hours ago</small>
-                            </div>
-                          </div>
-
-                          <p style={{ fontSize: "14px" }}>
-                            Exploring the beauty of nature 🌿 — such a peaceful
-                            moment!
-                          </p>
-
-                          <img
-                            src="/assets/img/avatars/the-worthy-goods-Tuy2n9md0AI-unsplash.jpg"
-                            alt="Post"
-                            style={{ width: "100%", borderRadius: "8px" }}
-                          />
-
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              marginBottom: "12px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "16px",
-                                fontSize: "14px",
-                                color: "#6c757d",
-                              }}
-                            >
-                              <span>
-                                <i className="bi bi-heart-fill"></i> 120 Likes
-                              </span>
-                              <span>
-                                <i className="bi bi-chat-left-dots-fill"></i> 34
-                                Comments
-                              </span>
-                            </div>
-                            <div className="position-relative">
-                              <button
-                                onClick={() => alert("Options toggled")}
-                                className="btn btn-sm text-muted p-0 border-0 bg-transparent fs-3"
-                              >
-                                ⋯
-                              </button>
-                              <div
-                                className="admin-dropdown dropdown-menu show"
-                                style={{
-                                  display: "none",
-                                  position: "absolute",
-                                  top: "24px",
-                                  right: 0,
-                                }}
-                              >
-                                <a
-                                  href="./updatePost.html"
-                                  className="dropdown-item"
-                                >
-                                  Update Post
-                                </a>
-                                <a
-                                  href="#"
-                                  onClick={() => alert("Delete clicked")}
-                                  className="dropdown-item text-danger"
-                                >
-                                  Delete Post
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="modal-body">
+        <div className="mb-3">
+          <label className="form-label">Title</label>
+          <input
+            type="text"
+            className="form-control"
+            value={editForm.Title}
+            onChange={(e) =>
+              setEditForm({ ...editForm, Title: e.target.value })
+            }
+          />
         </div>
+
+        <div className="mb-3">
+          <label className="form-label">Description</label>
+          <textarea
+            className="form-control"
+            rows="3"
+            value={editForm.Description}
+            onChange={(e) =>
+              setEditForm({ ...editForm, Description: e.target.value })
+            }
+          ></textarea>
+        </div>
+
+        <div className="form-check mb-3">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            checked={editForm.IsAnonymous}
+            onChange={(e) =>
+              setEditForm({ ...editForm, IsAnonymous: e.target.checked })
+            }
+          />
+          <label className="form-check-label">Post Anonymously</label>
+        </div>
+      </div>
+
+      <div className="modal-footer">
+        <button
+          className="btn btn-secondary"
+          data-bs-dismiss="modal"
+        >
+          Cancel
+        </button>
+        <button className="btn btn-primary" onClick={updatePost}>
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+        <AddPostModal onPostCreated={loadPosts} />
       </div>
     </div>
   );

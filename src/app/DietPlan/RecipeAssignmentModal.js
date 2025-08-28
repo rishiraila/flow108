@@ -16,10 +16,6 @@ export default function RecipeAssignmentModal({
   const [formData, setFormData] = useState({
     FoodName: "",
     Quantity: "",
-    Calories: 0,
-    Fats: 0,
-    Carbs: 0,
-    Protein: 0,
     recipeId: "",
   });
 
@@ -31,7 +27,6 @@ export default function RecipeAssignmentModal({
         ...prev,
         recipeId: selectedRecipe.Id,
         FoodName: selectedRecipe.Name,
-        Calories: selectedRecipe.Calories || 0,
       }));
     }
   }, [selectedRecipeId, recipes]);
@@ -40,10 +35,7 @@ export default function RecipeAssignmentModal({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        ["Calories", "Fats", "Carbs", "Protein"].includes(name)
-          ? parseFloat(value) || 0
-          : value,
+      [name]: value,
     }));
   };
 
@@ -67,10 +59,6 @@ export default function RecipeAssignmentModal({
           body: JSON.stringify({
             FoodName: formData.FoodName,
             Quantity: formData.Quantity,
-            Calories: formData.Calories,
-            Fats: formData.Fats,
-            Carbs: formData.Carbs,
-            Protein: formData.Protein,
           }),
         }
       );
@@ -89,10 +77,6 @@ export default function RecipeAssignmentModal({
           setFormData({
             FoodName: "",
             Quantity: "",
-            Calories: 0,
-            Fats: 0,
-            Carbs: 0,
-            Protein: 0,
             recipeId: "",
           });
           setSelectedRecipeId("");
@@ -184,88 +168,6 @@ export default function RecipeAssignmentModal({
                     onChange={handleInputChange}
                     required
                     placeholder="e.g., 1 serving, 200g"
-                  />
-                </div>
-
-                <div className="col-md-3 mb-3">
-                  <label htmlFor="Calories" className="form-label">
-                    Calories
-                  </label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    id="Calories"
-                    name="Calories"
-                    value={formData.Calories}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                  />
-                </div>
-
-                <div className="col-md-3 mb-3">
-                  <label htmlFor="Protein" className="form-label">
-                    Protein (g)
-                  </label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    id="Protein"
-                    name="Protein"
-                    value={formData.Protein}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                    step="0.1"
-                  />
-                </div>
-
-                <div className="col-md-3 mb-3">
-                  <label htmlFor="Carbs" className="form-label">
-                    Carbs (g)
-                  </label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    id="Carbs"
-                    name="Carbs"
-                    value={formData.Carbs}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                    step="0.1"
-                  />
-                </div>
-
-                <div className="col-md-3 mb-3">
-                  <label htmlFor="Fats" className="form-label">
-                    Fats (g)
-                  </label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    id="Fats"
-                    name="Fats"
-                    value={formData.Fats}
-                    onChange={handleInputChange}
-                    required
-                    min="0"
-                    step="0.1"
-                  />
-                </div>
-
-                <div className="col-md-12 mb-3">
-                  <label htmlFor="recipeId" className="form-label">
-                    Recipe ID (Manual Entry)
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    id="recipeId"
-                    name="recipeId"
-                    value={formData.recipeId}
-                    onChange={handleInputChange}
-                    placeholder="UUID (e.g., 665d27b7-7429-4ab6-8ff3-1316b54b6282)"
                   />
                 </div>
               </div>

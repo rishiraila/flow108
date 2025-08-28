@@ -24,6 +24,10 @@ export default function DietPlanDetails() {
   const [mealFormData, setMealFormData] = useState({
     MealType: "",
     Features: "",
+    Calories: 0,
+    Fats: 0,
+    Carbs: 0,
+    Protein: 0,
   });
   const [addMealLoading, setAddMealLoading] = useState(false);
   const [addMealError, setAddMealError] = useState(null);
@@ -49,6 +53,18 @@ export default function DietPlanDetails() {
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [showEditMealModal, setShowEditMealModal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState(null);
+  const [editMealFormData, setEditMealFormData] = useState({
+    MealType: "",
+    Features: "",
+    Calories: 0,
+    Fats: 0,
+    Carbs: 0,
+    Protein: 0,
+  });
+  const [editMealLoading, setEditMealLoading] = useState(false);
+  const [editMealError, setEditMealError] = useState(null);
 
   // Fetch diet plan details and meals
   useEffect(() => {
@@ -56,6 +72,7 @@ export default function DietPlanDetails() {
       fetchDietPlanDetails();
       fetchAllRecipes();
       fetchUserCount();
+      fetchAssignedUsers();
     }
   }, [planId]);
 
@@ -63,7 +80,7 @@ export default function DietPlanDetails() {
     try {
       setLoading(true);
 
-      // Fetch diet plan details
+      // Get plan details (includes meals + nutrition)
       const planResponse = await fetch(
         `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}`
       );
@@ -72,26 +89,9 @@ export default function DietPlanDetails() {
       const planData = await planResponse.json();
       if (planData.Status && planData.Data) {
         setDietPlan(planData.Data);
+        setMeals(planData.Data.Meals || []); // ✅ meals come with calories/fats/carbs/protein
       } else {
         throw new Error("Invalid diet plan data");
-      }
-
-      // Fetch all meals with recipes for this diet plan
-      const mealsResponse = await fetch(
-        "https://flow108.coinagesoft.com/api/AllMealsWithRecipes"
-      );
-      if (!mealsResponse.ok)
-        throw new Error("Failed to fetch meals with recipes");
-
-      const mealsData = await mealsResponse.json();
-      if (mealsData.Status && mealsData.Data) {
-        // Filter meals for this specific diet plan
-        const filteredMeals = mealsData.Data.filter(
-          (meal) => meal.DietPlanId === planId
-        );
-        setMeals(filteredMeals);
-      } else {
-        throw new Error("Failed to fetch meals");
       }
     } catch (err) {
       console.error("Error fetching diet plan:", err);
@@ -101,75 +101,98 @@ export default function DietPlanDetails() {
     }
   };
 
- const fetchAllRecipes = async () => {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+  const fetchAllRecipes = async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    const response = await fetch(
-      "https://flow108.coinagesoft.com/api/recipes",
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        signal: controller.signal,
+      const response = await fetch(
+        "https://flow108.coinagesoft.com/api/recipes",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    );
 
-    clearTimeout(timeoutId);
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+      const recipesData = data?.data?.Data || data?.Data || [];
 
-    const data = await response.json();
+      if (!Array.isArray(recipesData)) {
+        console.warn("Invalid recipe data format:", data);
+        setAllRecipes([]);
+        return;
+      }
 
-    const recipesData = data?.data?.Data || data?.Data || [];
+      const validRecipes = recipesData
+        .filter(
+          (recipe) =>
+            recipe &&
+            (recipe.Id || recipe.id) &&
+            recipe.Name &&
+            recipe.Name !== "string"
+        )
+        .map((recipe) => ({
+          Id: recipe.Id || recipe.id,
+          Name: recipe.Name,
+          Description: recipe.Description || "",
+          Calories: recipe.Calories || 0,
+          Fats: recipe.Fats || 0,
+          Carbs: recipe.Carbs || 0,
+          Protein: recipe.Protein || 0,
+        }));
 
-    if (!Array.isArray(recipesData)) {
-      console.warn("Invalid recipe data format:", data);
+      console.log("Fetched valid recipes:", validRecipes); // ✅ Add this
+
+      setAllRecipes(validRecipes);
+      setRecipesError(null);
+    } catch (err) {
+      console.error("Error fetching recipes:", err);
+      let errorMessage = "Failed to load recipes";
+      if (err.name === "AbortError") {
+        errorMessage = "Request timeout - please check your connection";
+      } else if (err.message.includes("Failed to fetch")) {
+        errorMessage =
+          "Network error - please check your connection or try again later";
+      } else if (err.message.includes("HTTP error")) {
+        errorMessage = `Server error (${
+          err.message.match(/\d+/)?.[0] || "unknown"
+        })`;
+      }
+      setRecipesError(errorMessage);
       setAllRecipes([]);
-      return;
     }
-
-    const validRecipes = recipesData
-      .filter(
-        (recipe) =>
-          recipe &&
-          (recipe.Id || recipe.id) &&
-          recipe.Name &&
-          recipe.Name !== "string"
-      )
-      .map((recipe) => ({
-        Id: recipe.Id || recipe.id,
-        Name: recipe.Name,
-        Description: recipe.Description || "",
-        Calories: recipe.Calories || 0,
-        Fats: recipe.Fats || 0,
-        Carbs: recipe.Carbs || 0,
-        Protein: recipe.Protein || 0,
-      }));
-
-    console.log("Fetched valid recipes:", validRecipes); // ✅ Add this
-
-    setAllRecipes(validRecipes);
-    setRecipesError(null);
-  } catch (err) {
-    console.error("Error fetching recipes:", err);
-    let errorMessage = "Failed to load recipes";
-    if (err.name === "AbortError") {
-      errorMessage = "Request timeout - please check your connection";
-    } else if (err.message.includes("Failed to fetch")) {
-      errorMessage = "Network error - please check your connection or try again later";
-    } else if (err.message.includes("HTTP error")) {
-      errorMessage = `Server error (${err.message.match(/\d+/)?.[0] || "unknown"})`;
+  };
+  const getColorFromName = (name = "") => {
+    const colors = [
+      "#1abc9c",
+      "#3498db",
+      "#9b59b6",
+      "#e67e22",
+      "#e74c3c",
+      "#2ecc71",
+      "#f39c12",
+      "#d35400",
+      "#8e44ad",
+      "#16a085",
+      "#27ae60",
+      "#2980b9",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-    setRecipesError(errorMessage);
-    setAllRecipes([]);
-  }
-};
-
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   const fetchUserCount = async () => {
     try {
@@ -240,7 +263,12 @@ export default function DietPlanDetails() {
 
   const closeUsersModal = () => {
     setShowUsersModal(false);
-    setAssignedUsers([]);
+  };
+  const getInitials = (name = "") => {
+    if (!name) return "?";
+    const parts = name.trim().split(" ");
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   };
 
   // Add meal to diet plan
@@ -269,7 +297,14 @@ export default function DietPlanDetails() {
       fetchDietPlanDetails();
 
       // Reset form and close modal
-      setMealFormData({ MealType: "", Features: "" });
+      setMealFormData({
+        MealType: "",
+        Features: "",
+        Calories: 0,
+        Fats: 0,
+        Carbs: 0,
+        Protein: 0,
+      });
       setShowAddMealModal(false);
     } catch (err) {
       console.error("Error adding meal:", err);
@@ -388,10 +423,7 @@ export default function DietPlanDetails() {
           body: JSON.stringify({
             FoodName: recipeAssignmentForm.FoodName,
             Quantity: recipeAssignmentForm.Quantity,
-            Calories: parseInt(recipeAssignmentForm.Calories),
-            Fats: parseInt(recipeAssignmentForm.Fats),
-            Carbs: parseInt(recipeAssignmentForm.Carbs),
-            Protein: parseInt(recipeAssignmentForm.Protein),
+            // Nutrition data should come from the recipe itself, not manual input
           }),
         }
       );
@@ -419,20 +451,151 @@ export default function DietPlanDetails() {
     }
   };
 
-  // Calculate total nutrition for a meal
-  const calculateMealNutrition = (recipes) => {
-    if (!recipes || recipes.length === 0)
-      return { calories: 0, fats: 0, carbs: 0, protein: 0 };
+  // Edit meal functionality
+  const openEditMealModal = (meal) => {
+    setEditingMeal(meal);
+    setEditMealFormData({
+      MealType: meal.MealType || "",
+      Features: meal.Features || "",
+      Calories: meal.Calories || 0,
+      Fats: meal.Fats || 0,
+      Carbs: meal.Carbs || 0,
+      Protein: meal.Protein || 0,
+    });
+    setShowEditMealModal(true);
+    setEditMealError(null);
+  };
 
-    return recipes.reduce(
-      (total, recipe) => ({
-        calories: total.calories + (recipe.Calories || 0),
-        fats: total.fats + (recipe.Fats || 0),
-        carbs: total.carbs + (recipe.Carbs || 0),
-        protein: total.protein + (recipe.Protein || 0),
-      }),
-      { calories: 0, fats: 0, carbs: 0, protein: 0 }
-    );
+  const closeEditMealModal = () => {
+    setShowEditMealModal(false);
+    setEditingMeal(null);
+    setEditMealFormData({
+      MealType: "",
+      Features: "",
+      Calories: 0,
+      Fats: 0,
+      Carbs: 0,
+      Protein: 0,
+    });
+    setEditMealError(null);
+  };
+
+  const handleEditMealFormChange = (e) => {
+    const { name, value } = e.target;
+    setEditMealFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const editMeal = async (e) => {
+    e.preventDefault();
+    try {
+      setEditMealLoading(true);
+      setEditMealError(null);
+
+      console.log("Sending update data:", editMealFormData);
+
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/update/${editingMeal.Id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            accept: "*/*",
+          },
+          body: JSON.stringify(editMealFormData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API Error Response:", errorData);
+        throw new Error(
+          `Failed to update meal: ${response.status} - ${errorData}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Update response:", result);
+
+      if (result.Status) {
+        alert("Meal updated successfully!");
+
+        // Try to fetch the updated meal data directly
+        try {
+          const mealResponse = await fetch(
+            `https://flow108.coinagesoft.com/api/meals/${editingMeal.Id}`
+          );
+          if (mealResponse.ok) {
+            const mealData = await mealResponse.json();
+            console.log("Updated meal data:", mealData);
+
+            // Update the specific meal in the state
+            setMeals((prevMeals) =>
+              prevMeals.map((meal) =>
+                meal.Id === editingMeal.Id
+                  ? { ...meal, ...editMealFormData }
+                  : meal
+              )
+            );
+          }
+        } catch (fetchError) {
+          console.log(
+            "Could not fetch updated meal data, falling back to full refresh"
+          );
+          // Fall back to full refresh
+          await fetchDietPlanDetails();
+        }
+
+        closeEditMealModal();
+      } else {
+        throw new Error(result.Message || "Failed to update meal");
+      }
+    } catch (err) {
+      console.error("Error updating meal:", err);
+      setEditMealError(err.message || "Failed to update meal");
+    } finally {
+      setEditMealLoading(false);
+    }
+  };
+
+  // Get nutrition from meal data instead of calculating from recipes
+  const getMealNutrition = (meal) => {
+    return {
+      calories: meal.Calories || 0,
+      fats: meal.Fats || 0,
+      carbs: meal.Carbs || 0,
+      protein: meal.Protein || 0,
+    };
+  };
+
+  const deleteMeal = async (mealId) => {
+    if (confirm("Are you sure you want to delete this meal?")) {
+      try {
+        const response = await fetch(
+          `https://flow108.coinagesoft.com/api/AdminDietPlan/meals/delete/${mealId}`,
+          {
+            method: "DELETE",
+            headers: {
+              accept: "*/*",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to delete meal");
+        }
+
+        const result = await response.json();
+        if (result.Status) {
+          alert(result.Message);
+          fetchDietPlanDetails(); // Refresh the meal list
+        } else {
+          throw new Error(result.Message);
+        }
+      } catch (err) {
+        console.error("Error deleting meal:", err);
+        alert(err.message || "Failed to delete meal");
+      }
+    }
   };
 
   if (loading) {
@@ -523,6 +686,18 @@ export default function DietPlanDetails() {
                     <p>
                       <strong>Number of Meals:</strong> {meals.length}
                     </p>
+                    <p>
+                      <strong>Assigned Users:</strong>{" "}
+                      <button
+                        className="btn btn-link p-0"
+                        onClick={openUsersModal}
+                        disabled={usersLoading}
+                      >
+                        {usersLoading
+                          ? "Loading..."
+                          : `${assignedUsers.length} users`}
+                      </button>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -547,9 +722,12 @@ export default function DietPlanDetails() {
                 ) : (
                   <div className="accordion" id="mealsAccordion">
                     {meals.map((meal) => {
-                      const nutrition = calculateMealNutrition(
-                        meal.MealRecipes
-                      );
+                      const nutrition = {
+                        calories: meal.Calories || 0,
+                        fats: meal.Fats || 0,
+                        carbs: meal.Carbs || 0,
+                        protein: meal.Protein || 0,
+                      };
                       return (
                         <div className="accordion-item" key={meal.Id}>
                           <h2 className="accordion-header">
@@ -567,8 +745,10 @@ export default function DietPlanDetails() {
                                   </span>
                                 </div>
                                 <div className="text-muted small">
-                                  {nutrition.calories} cal | {nutrition.protein}
-                                  g protein
+                                  {getMealNutrition(meal).calories} cal |{" "}
+                                  {getMealNutrition(meal).protein}g protein |{" "}
+                                  {getMealNutrition(meal).fats}g fats |{" "}
+                                  {getMealNutrition(meal).carbs}g carbs
                                 </div>
                               </div>
                             </button>
@@ -591,6 +771,18 @@ export default function DietPlanDetails() {
                                     >
                                       Assign Recipe
                                     </button>
+                                    <button
+                                      className="btn btn-sm btn-warning ms-2"
+                                      onClick={() => openEditMealModal(meal)}
+                                    >
+                                      Edit Meal
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-danger ms-2"
+                                      onClick={() => deleteMeal(meal.Id)}
+                                    >
+                                      Delete Meal
+                                    </button>
                                   </div>
                                 </div>
 
@@ -604,20 +796,6 @@ export default function DietPlanDetails() {
                                       >
                                         <div className="card">
                                           <div className="card-body">
-                                            <h6 className="card-title">
-                                              {mealRecipe.FoodName}
-                                            </h6>
-                                            <p className="card-text">
-                                              <small className="text-muted">
-                                                Quantity: {mealRecipe.Quantity}
-                                                <br />
-                                                Calories: {mealRecipe.Calories}
-                                                <br />
-                                                Protein: {mealRecipe.Protein}g |
-                                                Carbs: {mealRecipe.Carbs}g |
-                                                Fats: {mealRecipe.Fats}g
-                                              </small>
-                                            </p>
                                             {mealRecipe.Recipe && (
                                               <div className="mt-2">
                                                 <h6 className="text-primary">
@@ -751,6 +929,74 @@ export default function DietPlanDetails() {
                         required
                       />
                     </div>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="Calories" className="form-label">
+                          Calories
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="Calories"
+                          name="Calories"
+                          placeholder="Enter calories"
+                          min="0"
+                          value={mealFormData.Calories}
+                          onChange={handleMealFormChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="Fats" className="form-label">
+                          Fats (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="Fats"
+                          name="Fats"
+                          placeholder="Enter fats"
+                          min="0"
+                          value={mealFormData.Fats}
+                          onChange={handleMealFormChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="Carbs" className="form-label">
+                          Carbs (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="Carbs"
+                          name="Carbs"
+                          placeholder="Enter carbs"
+                          min="0"
+                          value={mealFormData.Carbs}
+                          onChange={handleMealFormChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="Protein" className="form-label">
+                          Protein (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="Protein"
+                          name="Protein"
+                          placeholder="Enter protein"
+                          min="0"
+                          value={mealFormData.Protein}
+                          onChange={handleMealFormChange}
+                          required
+                        />
+                      </div>
+                    </div>
                     <div className="modal-footer">
                       <button
                         type="button"
@@ -775,7 +1021,6 @@ export default function DietPlanDetails() {
         )}
 
         {/* Recipe Assignment Modal */}
-
         {showRecipeAssignmentModal && (
           <RecipeAssignmentModal
             isOpen={showRecipeAssignmentModal}
@@ -784,6 +1029,254 @@ export default function DietPlanDetails() {
             onRecipeAssigned={fetchDietPlanDetails}
             recipes={allRecipes}
           />
+        )}
+        {/* Users Assigned Modal */}
+        {showUsersModal && (
+          <div
+            className="modal fade show d-block"
+            tabIndex="-1"
+            role="dialog"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-lg" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    Users Assigned to {dietPlan.Name}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={closeUsersModal}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  {usersLoading ? (
+                    <div className="text-center py-4">
+                      <div
+                        className="spinner-border text-primary"
+                        role="status"
+                      >
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                  ) : assignedUsers.length > 0 ? (
+                    <ul className="list-group">
+                      {assignedUsers.map((user) => (
+                        <li
+                          key={user.Id}
+                          className="list-group-item d-flex align-items-center"
+                        >
+                          {user.ProfilePictureUrl ? (
+                            <img
+                              src={user.ProfilePictureUrl}
+                              alt={user.Name}
+                              className="rounded-circle me-3"
+                              width="40"
+                              height="40"
+                              onError={(e) => {
+                                // if image fails to load → fallback to initials
+                                e.target.style.display = "none";
+                                const fallback = document.createElement("div");
+                                fallback.className =
+                                  "rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3";
+                                fallback.style.width = "40px";
+                                fallback.style.height = "40px";
+                                fallback.style.fontWeight = "bold";
+                                fallback.innerText = getInitials(user.Name);
+                                e.target.parentNode.prepend(fallback);
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="rounded-circle text-white d-flex align-items-center justify-content-center me-3"
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                fontWeight: "bold",
+                                backgroundColor: getColorFromName(user.Name),
+                              }}
+                            >
+                              {getInitials(user.Name)}
+                            </div>
+                          )}
+
+                          <div>
+                            <strong>{user.Name}</strong>
+                            <div className="text-muted small">{user.Email}</div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No users assigned to this plan.</p>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={closeUsersModal}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Meal Modal */}
+        {showEditMealModal && (
+          <div
+            className="modal fade show d-block"
+            tabIndex="-1"
+            role="dialog"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Edit Meal</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={closeEditMealModal}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  {editMealError && (
+                    <div className="alert alert-danger" role="alert">
+                      {editMealError}
+                    </div>
+                  )}
+                  <form onSubmit={editMeal}>
+                    <div className="mb-3">
+                      <label htmlFor="editMealType" className="form-label">
+                        Meal Type
+                      </label>
+                      <select
+                        className="form-select"
+                        id="editMealType"
+                        name="MealType"
+                        value={editMealFormData.MealType}
+                        onChange={handleEditMealFormChange}
+                        required
+                      >
+                        <option value="">Select meal type</option>
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Dinner">Dinner</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Pre-workout">Pre-workout</option>
+                        <option value="Post-workout">Post-workout</option>
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <label htmlFor="editFeatures" className="form-label">
+                        Features
+                      </label>
+                      <textarea
+                        className="form-control"
+                        id="editFeatures"
+                        name="Features"
+                        rows="3"
+                        placeholder="Enter meal features (e.g., high protein, low carb, vegan)"
+                        value={editMealFormData.Features}
+                        onChange={handleEditMealFormChange}
+                        required
+                      />
+                    </div>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="editCalories" className="form-label">
+                          Calories
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="editCalories"
+                          name="Calories"
+                          placeholder="Enter calories"
+                          min="0"
+                          value={editMealFormData.Calories}
+                          onChange={handleEditMealFormChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="editFats" className="form-label">
+                          Fats (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="editFats"
+                          name="Fats"
+                          placeholder="Enter fats"
+                          min="0"
+                          value={editMealFormData.Fats}
+                          onChange={handleEditMealFormChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="editCarbs" className="form-label">
+                          Carbs (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="editCarbs"
+                          name="Carbs"
+                          placeholder="Enter carbs"
+                          min="0"
+                          value={editMealFormData.Carbs}
+                          onChange={handleEditMealFormChange}
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="editProtein" className="form-label">
+                          Protein (g)
+                        </label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          id="editProtein"
+                          name="Protein"
+                          placeholder="Enter protein"
+                          min="0"
+                          value={editMealFormData.Protein}
+                          onChange={handleEditMealFormChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={closeEditMealModal}
+                        disabled={editMealLoading}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={editMealLoading}
+                      >
+                        {editMealLoading ? "Updating..." : "Update Meal"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

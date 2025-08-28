@@ -493,7 +493,7 @@ export default function QuestionsPage() {
                           </p>
                           <div className="d-flex justify-content-between">
                             <small className="text-muted">
-                              Views: {question.ViewCount} | Likes:{" "}
+                              Likes:{" "}
                               {question.LikeCount}
                             </small>
                             <small className="text-muted">
@@ -510,13 +510,13 @@ export default function QuestionsPage() {
                             >
                               {question.Visibility === 1 ? "Public" : "Private"}
                             </span>
-                            <span
+                            {/* <span
                               className={`badge ms-2 ${
                                 question.IsActive ? "bg-success" : "bg-danger"
                               }`}
                             >
                               {question.IsActive ? "Active" : "Inactive"}
-                            </span>
+                            </span> */}
                             {question.AnswerByExpert && (
                               <span className="badge bg-info ms-2">
                                 <i className="ri-check-line me-1"></i>Answered
