@@ -249,6 +249,52 @@ export const recipeApi = {
   }
 };
 
+// Diet Plan Assignment related APIs
+export const dietAssignmentApi = {
+  // Get all diet plan assignments for all users
+  getAllAssignments: async () => {
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/AllDietUserAssignments`);
+    return handleApiResponse(response);
+  },
+  
+  // Get diet plan assignments for a specific user
+  getUserAssignments: async (userId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/diet-assignments`);
+    return handleApiResponse(response);
+  },
+  
+  // Assign diet plan to user
+  assignToUser: async (userId, planId, phase = "string") => {
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/assign-diet-plan`, {
+      method: 'POST',
+      body: JSON.stringify({
+        PlanId: planId,
+        Phase: phase
+      })
+    });
+    return handleApiResponse(response);
+  },
+  
+  // Remove diet plan assignment from user
+  removeAssignment: async (userId, planId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/diet-plans/${planId}`, {
+      method: 'DELETE'
+    });
+    return handleApiResponse(response);
+  },
+  
+  // Get user count for a specific diet plan
+  getUserCountForPlan: async (planId) => {
+    try {
+      const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/user-count`);
+      return response.Data || 0;
+    } catch (error) {
+      logger.warn(`Failed to get user count for diet plan ${planId}:`, error);
+      return 0;
+    }
+  }
+};
+
 // User related APIs
 export const userApi = {
   getAll: async () => {
@@ -272,6 +318,7 @@ export default {
   dietPlanApi,
   mealApi,
   recipeApi,
+  dietAssignmentApi,
   userApi,
   fetchUserCountForPlan,
   fetchUserCount,

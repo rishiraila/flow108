@@ -294,6 +294,12 @@ export default function QuestionsPage() {
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
+  const getDefaultAvatar = (name) => {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name
+    )}&background=random&size=50`;
+  };
+
   if (loading) {
     return (
       <div className="container p-4">
@@ -485,12 +491,44 @@ export default function QuestionsPage() {
                       <div className="card h-100">
                         <div className="card-body">
                           <h6 className="card-title">{question.Content}</h6>
-                          <p className="card-text">
-                            <small className="text-muted">
-                              {question.IsAnonymous ? "Anonymous User" : "User"}{" "}
-                              | {formatDate(question.CreatedOn)}
-                            </small>
-                          </p>
+                          <div className="d-flex align-items-center mb-2">
+                            <img
+                              src={
+                                question.IsAnonymous
+                                  ? getDefaultAvatar("Anonymous")
+                                  : question.ProfilePictureUrl ||
+                                    getDefaultAvatar(question.UserName || "User")
+                              }
+                              alt={
+                                question.IsAnonymous
+                                  ? "Anonymous"
+                                  : question.UserName || "User"
+                              }
+                              className="rounded-circle me-2"
+                              style={{
+                                width: "40px",
+                                height: "40px",
+                                objectFit: "cover"
+                              }}
+                              onError={(e) => {
+                                e.target.src = getDefaultAvatar(
+                                  question.IsAnonymous
+                                    ? "Anonymous"
+                                    : question.UserName || "User"
+                                );
+                              }}
+                            />
+                            <div>
+                              <small className="d-block fw-medium">
+                                {question.IsAnonymous
+                                  ? "Anonymous User"
+                                  : question.UserName || "User"}
+                              </small>
+                              <small className="text-muted">
+                                {formatDate(question.CreatedOn)}
+                              </small>
+                            </div>
+                          </div>
                           <div className="d-flex justify-content-between">
                             <small className="text-muted">
                               Likes:{" "}

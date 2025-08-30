@@ -2,23 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
+import { removeWorkoutFromPlan } from "../utils/api";
 
 export default function WorkoutDetailsPage() {
-  const [workout, setWorkout] = useState(null);
+  const [workoutPlan, setWorkoutPlan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [editableSteps, setEditableSteps] = useState([]);
+  const [editableWorkouts, setEditableWorkouts] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
   const [error, setError] = useState(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [allWorkouts, setAllWorkouts] = useState([]);
+  const [workoutsLoading, setWorkoutsLoading] = useState(false);
 
-  const [newStep, setNewStep] = useState({
-    Title: "",
+  const [newWorkout, setNewWorkout] = useState({
+    WorkoutName: "",
     Description: "",
-    Duration: 0,
-    Repets: 0,
-    VideoUrl: "",
-    ImageUrl: "",
+    Time: "",
+    Category: "",
+    Format: "",
+    Intensity: "",
+    Image: "",
   });
 
   const searchParams = useSearchParams();
@@ -33,7 +39,7 @@ export default function WorkoutDetailsPage() {
   const fetchWorkoutDetails = async () => {
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminWorkout/${workoutId}`,
+        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
         {
           method: "GET",
           headers: {
@@ -45,8 +51,24 @@ export default function WorkoutDetailsPage() {
       if (!response.ok) throw new Error("Failed to fetch workout details");
 
       const data = await response.json();
-      setWorkout(data.Data);
-      setEditableSteps(data.Data.Steps || []);
+      
+      // Convert relative image URLs to absolute URLs
+      const baseDomain = "https://flow108.coinagesoft.com";
+      if (data.data && data.data.Workouts && Array.isArray(data.data.Workouts)) {
+        data.data.Workouts = data.data.Workouts.map(workout => {
+          const updatedWorkout = { ...workout };
+          
+          // Convert Image if it's a relative path
+          if (workout.Image && workout.Image.startsWith('/')) {
+            updatedWorkout.Image = baseDomain + workout.Image;
+          }
+          
+          return updatedWorkout;
+        });
+      }
+      
+      setWorkoutPlan(data.data);
+      setEditableWorkouts(data.data.Workouts || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -54,16 +76,16 @@ export default function WorkoutDetailsPage() {
     }
   };
 
-  const handleStepChange = (index, field, value) => {
-    const updatedSteps = [...editableSteps];
-    updatedSteps[index][field] = field === "Duration" ? parseInt(value) : value;
-    setEditableSteps(updatedSteps);
+  const handleWorkoutChange = (index, field, value) => {
+    const updatedWorkouts = [...editableWorkouts];
+    updatedWorkouts[index][field] = value;
+    setEditableWorkouts(updatedWorkouts);
   };
 
-  const handleSaveStep = async (step) => {
+  const handleSaveWorkout = async (workout) => {
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/WorkoutStep/${step.Id}`,
+        `https://flow108.coinagesoft.com/api/admin/workout/${workout.WorkoutId}`,
         {
           method: "PATCH",
           headers: {
@@ -71,32 +93,33 @@ export default function WorkoutDetailsPage() {
             accept: "*/*",
           },
           body: JSON.stringify({
-            Title: step.Title,
-            Description: step.Description,
-            Duration: step.Duration,
-            Repets: step.Repets,
-            VideoUrl: step.VideoUrl,
-            ImageUrl: step.ImageUrl,
+            WorkoutName: workout.WorkoutName,
+            Description: workout.Description,
+            Time: workout.Time,
+            Category: workout.Category,
+            Format: workout.Format,
+            Intensity: workout.Intensity,
+            Image: workout.Image,
           }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to update step");
+      if (!response.ok) throw new Error("Failed to update workout");
 
-      alert("Step updated successfully");
+      alert("Workout updated successfully");
       setEditIndex(null);
       fetchWorkoutDetails();
     } catch (err) {
-      alert("Error updating step: " + err.message);
+      alert("Error updating workout: " + err.message);
     }
   };
 
-  const handleDeleteStep = async (stepId) => {
-    if (!window.confirm("Are you sure you want to delete this step?")) return;
+  const handleDeleteWorkout = async (workoutId) => {
+    if (!window.confirm("Are you sure you want to delete this workout?")) return;
 
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminWorkout/steps/${stepId}`,
+        `https://flow108.coinagesoft.com/api/admin/workout/${workoutId}`,
         {
           method: "DELETE",
           headers: {
@@ -105,24 +128,24 @@ export default function WorkoutDetailsPage() {
         }
       );
 
-      if (!response.ok) throw new Error("Failed to delete step");
+      if (!response.ok) throw new Error("Failed to delete workout");
 
       const result = await response.json();
-      alert(result.message || "Step deleted successfully");
+      alert(result.message || "Workout deleted successfully");
 
-      const updatedSteps = editableSteps.filter((step) => step.Id !== stepId);
-      setEditableSteps(updatedSteps);
+      const updatedWorkouts = editableWorkouts.filter((workout) => workout.WorkoutId !== workoutId);
+      setEditableWorkouts(updatedWorkouts);
 
       fetchWorkoutDetails();
     } catch (err) {
-      alert("Error deleting step: " + err.message);
+      alert("Error deleting workout: " + err.message);
     }
   };
 
-  const handleAddStep = async (step) => {
+  const handleAddWorkout = async (workout) => {
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/WorkoutStep/${workoutId}`,
+        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
         {
           method: "POST",
           headers: {
@@ -130,34 +153,88 @@ export default function WorkoutDetailsPage() {
             accept: "*/*",
           },
           body: JSON.stringify({
-            Title: step.Title,
-            Description: step.Description,
-            Duration: step.Duration,
-            Repets: step.Repets,
-            VideoUrl: step.VideoUrl,
-            ImageUrl: step.ImageUrl,
+            WorkoutName: workout.WorkoutName,
+            Description: workout.Description,
+            Time: workout.Time,
+            Category: workout.Category,
+            Format: workout.Format,
+            Intensity: workout.Intensity,
+            Image: workout.Image,
           }),
         }
       );
 
-      if (!response.ok) throw new Error("Failed to add step");
+      if (!response.ok) throw new Error("Failed to add workout");
 
-      alert("Step added successfully!");
+      alert("Workout added successfully!");
       fetchWorkoutDetails();
 
-      setNewStep({
-        Title: "",
+      setNewWorkout({
+        WorkoutName: "",
         Description: "",
-        Duration: 0,
-        Repets: 0,
-        VideoUrl: "",
-        ImageUrl: "",
+        Time: "",
+        Category: "",
+        Format: "",
+        Intensity: "",
+        Image: "",
       });
       setImageFile(null);
       setVideoFile(null);
     } catch (err) {
-      alert("Error adding step: " + err.message);
+      alert("Error adding workout: " + err.message);
     }
+  };
+
+  const fetchAllWorkouts = async () => {
+    try {
+      setWorkoutsLoading(true);
+      const response = await fetch(
+        "https://flow108.coinagesoft.com/api/admin/workouts",
+        {
+          method: "GET",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch workouts");
+
+      const data = await response.json();
+      const workouts = data.data || data.Data || [];
+      
+      // Convert relative image URLs to absolute URLs
+      const baseDomain = "https://flow108.coinagesoft.com";
+      const updatedWorkouts = workouts.map(workout => {
+        const updatedWorkout = { ...workout };
+        
+        // Convert Image if it's a relative path
+        if (workout.Image && workout.Image.startsWith('/')) {
+          updatedWorkout.Image = baseDomain + workout.Image;
+        }
+        
+        return updatedWorkout;
+      });
+
+      setAllWorkouts(updatedWorkouts);
+    } catch (err) {
+      console.error("Error fetching workouts:", err);
+      alert("Failed to fetch workouts: " + err.message);
+    } finally {
+      setWorkoutsLoading(false);
+    }
+  };
+
+  const handleOpenAssignmentModal = async () => {
+    if (allWorkouts.length === 0) {
+      await fetchAllWorkouts();
+    }
+    setShowAssignmentModal(true);
+  };
+
+  const handleWorkoutAssigned = (result) => {
+    alert("Workout assigned successfully!");
+    fetchWorkoutDetails(); // Refresh the workout plan details
   };
 
   if (loading) {
@@ -178,10 +255,10 @@ export default function WorkoutDetailsPage() {
     );
   }
 
-  if (!workout) {
+  if (!workoutPlan) {
     return (
       <div className="container-xxl flex-grow-1 container-p-y">
-        <div className="alert alert-warning">No workout details found.</div>
+        <div className="alert alert-warning">No workout plan details found.</div>
       </div>
     );
   }
@@ -189,72 +266,43 @@ export default function WorkoutDetailsPage() {
   return (
     <div className="content-wrapper">
       <div className="container-xxl flex-grow-1 container-p-y">
-        {/* Workout Details */}
+        {/* Workout Plan Details */}
         <div className="card mb-4">
           <div className="card-header">
-            <h5 className="mb-0">{workout.Name}</h5>
-            <p className="text-muted mb-0">{workout.Description}</p>
-          </div>
-          <div className="card-body row">
-            <div className="col-md-4">
-              <img
-                src={
-                  workout.ImageUrl || "/assets/img/avatars/default-workout.jpg"
-                }
-                alt={workout.Name}
-                className="img-fluid rounded mb-3"
-                style={{ maxHeight: "200px", objectFit: "cover" }}
-              />
-            </div>
-            <div className="col-md-8">
-              <div className="d-flex flex-wrap gap-4 mb-3">
-                <div>
-                  <span className="text-muted">Duration:</span>
-                  <h6 className="mb-0">{workout.Duration} minutes</h6>
-                </div>
-                <div>
-                  <span className="text-muted">Intensity:</span>
-                  <h6 className="mb-0">
-                    <span
-                      className={`badge bg-${
-                        workout.Intensity === "High"
-                          ? "danger"
-                          : workout.Intensity === "Medium"
-                          ? "warning"
-                          : "success"
-                      }`}
-                    >
-                      {workout.Intensity}
-                    </span>
-                  </h6>
-                </div>
-              </div>
-            </div>
+            <h5 className="mb-0">{workoutPlan.PlanName}</h5>
+            <p className="text-muted mb-0">Plan ID: {workoutPlan.PlanId}</p>
           </div>
         </div>
 
-        {/* Steps Section */}
+        {/* Workouts Section */}
         <div className="card">
           <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">Workout Steps</h5>
-            <button
-              className="btn btn-sm btn-outline-success"
-              data-bs-toggle="modal"
-              data-bs-target="#addStepModal"
-            >
-              <i className="ri-add-line me-1"></i> Add Step
-            </button>
+            <h5 className="mb-0">Workouts in this Plan</h5>
+            <div className="d-flex gap-2">
+              <button
+                className="btn btn-sm btn-outline-primary"
+                onClick={handleOpenAssignmentModal}
+                disabled={workoutsLoading}
+              >
+                <i className="ri-link me-1"></i> Assign Existing Workout
+              </button>
+              <button
+                className="btn btn-sm btn-outline-success"
+                data-bs-toggle="modal"
+                data-bs-target="#addWorkoutModal"
+              >
+                <i className="ri-add-line me-1"></i> Add New Workout
+              </button>
+            </div>
           </div>
           <div className="card-body">
             <div className="row">
-              {editableSteps.map((step, index) => (
-                <div className="col-md-4 mb-4" key={step.Id}>
+              {editableWorkouts.map((workout, index) => (
+                <div className="col-md-4 mb-4" key={workout.WorkoutId}>
                   <div className="card h-100">
                     <div className="card-body">
                       <div className="d-flex justify-content-between align-items-start">
-                        <h6 className="card-title mb-1">
-                          Step {step.Order}: {step.Title}
-                        </h6>
+                        <h6 className="card-title mb-1">{workout.WorkoutName}</h6>
                         <div className="dropdown">
                           <button
                             className="btn btn-sm btn-icon dropdown-toggle hide-arrow"
@@ -271,12 +319,30 @@ export default function WorkoutDetailsPage() {
                                 ✏️ Edit
                               </button>
                             </li>
+                            
                             <li>
                               <button
                                 className="dropdown-item text-danger"
-                                onClick={() => handleDeleteStep(step.Id)}
+                                onClick={async () => {
+                                  if (
+                                    window.confirm(
+                                      "Are you sure you want to remove this workout from the plan?"
+                                    )
+                                  ) {
+                                    try {
+                                      await removeWorkoutFromPlan(workoutPlan.PlanId, workout.WorkoutId);
+                                      alert("Workout removed from plan successfully");
+                                      // Update UI after removal
+                                      setEditableWorkouts((prev) =>
+                                        prev.filter((w) => w.WorkoutId !== workout.WorkoutId)
+                                      );
+                                    } catch (error) {
+                                      alert("Failed to remove workout from plan: " + error.message);
+                                    }
+                                  }
+                                }}
                               >
-                                🗑️ Delete
+                                🛑 Remove from Plan
                               </button>
                             </li>
                           </ul>
@@ -288,18 +354,18 @@ export default function WorkoutDetailsPage() {
                           <input
                             type="text"
                             className="form-control mb-2"
-                            placeholder="Title"
-                            value={step.Title}
+                            placeholder="Workout Name"
+                            value={workout.WorkoutName}
                             onChange={(e) =>
-                              handleStepChange(index, "Title", e.target.value)
+                              handleWorkoutChange(index, "WorkoutName", e.target.value)
                             }
                           />
                           <textarea
                             className="form-control mb-2"
                             placeholder="Description"
-                            value={step.Description}
+                            value={workout.Description}
                             onChange={(e) =>
-                              handleStepChange(
+                              handleWorkoutChange(
                                 index,
                                 "Description",
                                 e.target.value
@@ -307,14 +373,53 @@ export default function WorkoutDetailsPage() {
                             }
                           />
                           <input
-                            type="number"
+                            type="text"
                             className="form-control mb-2"
-                            placeholder="Duration"
-                            value={step.Duration}
+                            placeholder="Time (e.g., 30 mins)"
+                            value={workout.Time}
                             onChange={(e) =>
-                              handleStepChange(
+                              handleWorkoutChange(
                                 index,
-                                "Duration",
+                                "Time",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Category"
+                            value={workout.Category}
+                            onChange={(e) =>
+                              handleWorkoutChange(
+                                index,
+                                "Category",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Format"
+                            value={workout.Format}
+                            onChange={(e) =>
+                              handleWorkoutChange(
+                                index,
+                                "Format",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <input
+                            type="text"
+                            className="form-control mb-2"
+                            placeholder="Intensity"
+                            value={workout.Intensity}
+                            onChange={(e) =>
+                              handleWorkoutChange(
+                                index,
+                                "Intensity",
                                 e.target.value
                               )
                             }
@@ -322,7 +427,7 @@ export default function WorkoutDetailsPage() {
                           <div className="d-flex gap-2">
                             <button
                               className="btn btn-success btn-sm"
-                              onClick={() => handleSaveStep(step)}
+                              onClick={() => handleSaveWorkout(workout)}
                             >
                               Save
                             </button>
@@ -337,24 +442,22 @@ export default function WorkoutDetailsPage() {
                       ) : (
                         <>
                           <small className="text-muted">
-                            {step.Duration} min &bull; {step.Repets || 0} reps
+                            {workout.Time} &bull; {workout.Category} &bull; {workout.Format}
                           </small>
-                          <p className="card-text mt-2">{step.Description}</p>
-                          {step.ImageUrl && (
+                          <p className="card-text mt-2">{workout.Description}</p>
+                          <span className={`badge bg-${
+                            workout.Intensity === "High"
+                              ? "danger"
+                              : workout.Intensity === "Medium"
+                              ? "warning"
+                              : "success"
+                          }`}>
+                            {workout.Intensity}
+                          </span>
+                          {workout.Image && (
                             <img
-                              src={step.ImageUrl}
+                              src={workout.Image}
                               className="img-fluid rounded mb-2"
-                              style={{
-                                maxHeight: "150px",
-                                objectFit: "cover",
-                              }}
-                            />
-                          )}
-                          {step.VideoUrl && (
-                            <video
-                              src={step.VideoUrl}
-                              controls
-                              className="w-100 rounded"
                               style={{
                                 maxHeight: "150px",
                                 objectFit: "cover",
@@ -374,15 +477,15 @@ export default function WorkoutDetailsPage() {
         {/* Modal */}
         <div
           className="modal fade"
-          id="addStepModal"
+          id="addWorkoutModal"
           tabIndex="-1"
-          aria-labelledby="addStepModalLabel"
+          aria-labelledby="addWorkoutModalLabel"
           aria-hidden="true"
         >
           <div className="modal-dialog modal-lg">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Add New Step</h5>
+                <h5 className="modal-title">Add New Workout</h5>
                 <button
                   type="button"
                   className="btn-close"
@@ -394,48 +497,81 @@ export default function WorkoutDetailsPage() {
                 <input
                   type="text"
                   className="form-control mb-3"
-                  placeholder="Title"
-                  value={newStep.Title}
+                  placeholder="Workout Name"
+                  value={newWorkout.WorkoutName}
                   onChange={(e) =>
-                    setNewStep({ ...newStep, Title: e.target.value })
+                    setNewWorkout({ ...newWorkout, WorkoutName: e.target.value })
                   }
                 />
                 <textarea
                   className="form-control mb-3"
                   placeholder="Description"
-                  value={newStep.Description}
+                  value={newWorkout.Description}
                   onChange={(e) =>
-                    setNewStep({ ...newStep, Description: e.target.value })
+                    setNewWorkout({ ...newWorkout, Description: e.target.value })
                   }
                 />
                 <div className="row">
-                  <div className="col-md-3 mb-3">
+                  <div className="col-md-4 mb-3">
                     <input
-                      type="number"
+                      type="text"
                       className="form-control"
-                      placeholder="Duration (min)"
-                      value={newStep.Duration}
+                      placeholder="Time (e.g., 30 mins)"
+                      value={newWorkout.Time}
                       onChange={(e) =>
-                        setNewStep({
-                          ...newStep,
-                          Duration: parseInt(e.target.value),
+                        setNewWorkout({
+                          ...newWorkout,
+                          Time: e.target.value,
                         })
                       }
                     />
                   </div>
-                  <div className="col-md-3 mb-3">
+                  <div className="col-md-4 mb-3">
                     <input
-                      type="number"
+                      type="text"
                       className="form-control"
-                      placeholder="Repetitions"
-                      value={newStep.Repets}
+                      placeholder="Category"
+                      value={newWorkout.Category}
                       onChange={(e) =>
-                        setNewStep({
-                          ...newStep,
-                          Repets: parseInt(e.target.value),
+                        setNewWorkout({
+                          ...newWorkout,
+                          Category: e.target.value,
                         })
                       }
                     />
+                  </div>
+                  <div className="col-md-4 mb-3">
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Format"
+                      value={newWorkout.Format}
+                      onChange={(e) =>
+                        setNewWorkout({
+                          ...newWorkout,
+                          Format: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <select
+                      className="form-control"
+                      value={newWorkout.Intensity}
+                      onChange={(e) =>
+                        setNewWorkout({
+                          ...newWorkout,
+                          Intensity: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Select Intensity</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
                   </div>
                 </div>
 
@@ -450,43 +586,15 @@ export default function WorkoutDetailsPage() {
                       setImageFile(file);
                       if (file) {
                         const imageUrl = URL.createObjectURL(file);
-                        setNewStep((prev) => ({ ...prev, ImageUrl: imageUrl }));
+                        setNewWorkout((prev) => ({ ...prev, Image: imageUrl }));
                       }
                     }}
                   />
-                  {newStep.ImageUrl && (
+                  {newWorkout.Image && (
                     <img
-                      src={newStep.ImageUrl}
+                      src={newWorkout.Image}
                       className="img-fluid mt-2 rounded"
                       style={{ maxHeight: "150px", objectFit: "cover" }}
-                    />
-                  )}
-                </div>
-
-                {/* Video Upload */}
-                <div className="mb-3">
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="form-control"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      setVideoFile(file);
-                      if (file) {
-                        const videoUrl = URL.createObjectURL(file);
-                        setNewStep((prev) => ({
-                          ...prev,
-                          VideoUrl: videoUrl,
-                        }));
-                      }
-                    }}
-                  />
-                  {newStep.VideoUrl && (
-                    <video
-                      src={newStep.VideoUrl}
-                      controls
-                      className="w-100 mt-2 rounded"
-                      style={{ maxHeight: "200px", objectFit: "cover" }}
                     />
                   )}
                 </div>
@@ -500,9 +608,9 @@ export default function WorkoutDetailsPage() {
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={() => handleAddStep(newStep)}
+                  onClick={() => handleAddWorkout(newWorkout)}
                 >
-                  <i className="ri-check-line me-1"></i> Add Step
+                  <i className="ri-check-line me-1"></i> Add Workout
                 </button>
               </div>
             </div>
@@ -515,9 +623,18 @@ export default function WorkoutDetailsPage() {
             className="btn btn-primary"
             onClick={() => window.history.back()}
           >
-            <i className="ri-arrow-left-line me-1"></i> Back to Workouts
+            <i className="ri-arrow-left-line me-1"></i> Back to Workout Plans
           </button>
         </div>
+
+        {/* Workout Assignment Modal */}
+        <WorkoutAssignmentModal
+          isOpen={showAssignmentModal}
+          onClose={() => setShowAssignmentModal(false)}
+          planId={workoutId}
+          workouts={allWorkouts}
+          onWorkoutAssigned={handleWorkoutAssigned}
+        />
       </div>
     </div>
   );

@@ -25,7 +25,15 @@ export default function Sidebar() {
       icon: "ri-vip-crown-line",
       label: "Subscriptions",
     },
-    { href: "/Exercise", icon: "ri-run-line", label: "Exercise" },
+    
+     {
+      label: "Workouts",
+      icon: "ri-run-line",
+      submenu: [
+      { href: "/Exercise", icon: "ri-run-line", label: "Plans" },
+        { href: "/Workouts", label: "Exercise", icon: "ri-run-line" },
+      ],
+    },
     { href: "/Forumn", icon: "ri-discuss-line", label: "Forum" },
     { href: "/Questions", icon: "ri-question-answer-line", label: "Questions" },
     { href: "/Coupons", icon: "ri-coupon-3-line", label: "Coupons" },
@@ -39,7 +47,9 @@ export default function Sidebar() {
       icon: "ri-restaurant-line",
       submenu: [
         { href: "/DietPlan", label: "Diet Plans", icon: "ri-clipboard-line" },
+       
         { href: "/Recipies", label: "Recipes", icon: "ri-knife-line" },
+       
       ],
     },
   ];

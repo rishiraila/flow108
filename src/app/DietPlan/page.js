@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { fetchUserCount, fetchForumPosts, fetchQuestions } from "../utils/api";
 
 export default function Page() {
   const [search, setSearch] = useState("");
@@ -52,11 +53,85 @@ export default function Page() {
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [stats, setStats] = useState({
+    totalPlans: 0,
+    totalMeals: 0,
+    avgCalories: 0,
+    popularMealType: "None"
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Fetch diet plans from API
+  // Fetch diet plans and calculate stats
   useEffect(() => {
     fetchDietPlans();
   }, []);
+
+  // Calculate diet plan statistics from the fetched data
+  const calculateDietStats = (plans) => {
+    if (!plans || plans.length === 0) {
+      return {
+        totalPlans: 0,
+        totalMeals: 0,
+        avgCalories: 0,
+        popularMealType: "None"
+      };
+    }
+
+    const totalPlans = plans.length;
+    const totalMeals = plans.reduce((sum, plan) => sum + (plan.Meals?.length || 0), 0);
+    
+    const totalCalories = plans.reduce((sum, plan) => {
+      const planCalories = Number(plan.TotalCalories) || 0;
+      return sum + (planCalories > 0 ? planCalories : 0);
+    }, 0);
+    
+    const avgCalories = totalPlans > 0 ? Math.round(totalCalories / totalPlans) : 0;
+
+    // Calculate most popular meal type
+    const mealTypeCounts = {};
+    plans.forEach(plan => {
+      if (plan.Meals && Array.isArray(plan.Meals)) {
+        plan.Meals.forEach(meal => {
+          if (meal.MealType) {
+            mealTypeCounts[meal.MealType] = (mealTypeCounts[meal.MealType] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    let popularMealType = "None";
+    let maxCount = 0;
+    Object.entries(mealTypeCounts).forEach(([type, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        popularMealType = type;
+      }
+    });
+
+    return {
+      totalPlans,
+      totalMeals,
+      avgCalories,
+      popularMealType
+    };
+  };
+
+  // Update stats when dietPlans change
+  useEffect(() => {
+    if (dietPlans.length > 0) {
+      const newStats = calculateDietStats(dietPlans);
+      setStats(newStats);
+      setStatsLoading(false);
+    } else {
+      setStats({
+        totalPlans: 0,
+        totalMeals: 0,
+        avgCalories: 0,
+        popularMealType: "None"
+      });
+      setStatsLoading(false);
+    }
+  }, [dietPlans]);
   const calculateTotalNutrition = () => {
     return meals.reduce(
       (totals, meal) => {
@@ -602,58 +677,88 @@ export default function Page() {
       <div className="container-xxl flex-grow-1 container-p-y">
         <div className="row mb-6 g-6">
           {/* Dashboard Cards */}
-          {[
-            {
-              title: "User Registered",
-              count: 42,
-              trend: "+18.2%",
-              color: "primary",
-              icon: "ri-user-add-line",
-            },
-            {
-              title: "Paid Members",
-              count: 8,
-              trend: "-8.7%",
-              color: "warning",
-              icon: "ri-user-star-line",
-            },
-            {
-              title: "Total Questions",
-              count: 27,
-              trend: "+4.3%",
-              color: "danger",
-              icon: "ri-group-line",
-            },
-            {
-              title: "Total Posts",
-              count: 13,
-              trend: "-2.5%",
-              color: "info",
-              icon: "ri-article-line",
-            },
-          ].map((stat, index) => (
-            <div key={index} className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className={`card card-border-shadow-${stat.color} h-100`}>
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span
-                        className={`avatar-initial rounded-3 bg-label-${stat.color}`}
-                      >
-                        <i className={`tf-icons ${stat.icon} ri-24px`}></i>
-                      </span>
+          {statsLoading ? (
+            // Show loading state for stats
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="col-6 col-sm-6 col-lg-3 mb-2">
+                <div className={`card card-border-shadow-primary h-100`}>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <div className="avatar me-4">
+                        <span className="avatar-initial rounded-3 bg-label-primary">
+                          <i className="tf-icons ri-loader-2-line ri-24px"></i>
+                        </span>
+                      </div>
+                      <h4 className="mb-0">
+                        <div className="spinner-border spinner-border-sm" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      </h4>
                     </div>
-                    <h4 className="mb-0">{stat.count}</h4>
+                    <h6 className="mb-0 fw-normal">Loading...</h6>
+                    <p className="mb-0">
+                      <span className="me-1 fw-medium">0%</span>
+                      <small className="text-muted">than last week</small>
+                    </p>
                   </div>
-                  <h6 className="mb-0 fw-normal">{stat.title}</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">{stat.trend}</span>
-                    <small className="text-muted">than last week</small>
-                  </p>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            // Show actual diet plan stats data
+            [
+              {
+                title: "Total Plans",
+                count: stats.totalPlans,
+                trend: "+0%", // Placeholder trend since we don't have historical data
+                color: "primary",
+                icon: "ri-restaurant-line",
+              },
+              {
+                title: "Total Meals",
+                count: stats.totalMeals,
+                trend: "+0%", // Placeholder trend
+                color: "warning",
+                icon: "ri-bowl-line",
+              },
+              {
+                title: "Avg Calories",
+                count: stats.avgCalories,
+                trend: "+0%", // Placeholder trend
+                color: "danger",
+                icon: "ri-fire-line",
+              },
+              {
+                title: "Popular Meal",
+                count: stats.popularMealType,
+                trend: "+0%", // Placeholder trend
+                color: "info",
+                icon: "ri-star-line",
+              },
+            ].map((stat, index) => (
+              <div key={index} className="col-6 col-sm-6 col-lg-3 mb-2">
+                <div className={`card card-border-shadow-${stat.color} h-100`}>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <div className="avatar me-4">
+                        <span
+                          className={`avatar-initial rounded-3 bg-label-${stat.color}`}
+                        >
+                          <i className={`tf-icons ${stat.icon} ri-24px`}></i>
+                        </span>
+                      </div>
+                      <h4 className="mb-0">{stat.count}</h4>
+                    </div>
+                    <h6 className="mb-0 fw-normal">{stat.title}</h6>
+                    <p className="mb-0">
+                      <span className="me-1 fw-medium">{stat.trend}</span>
+                      <small className="text-muted">than last week</small>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
           <div className="col-md-6">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">

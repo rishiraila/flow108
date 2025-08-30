@@ -8,13 +8,18 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   try {
+    // Don't set Content-Type header automatically for multipart/form-data requests
+    const headers = options.body instanceof FormData 
+      ? { ...options.headers } // Don't set Content-Type for FormData (let browser set it)
+      : {
+          "Content-Type": "application/json",
+          ...options.headers,
+        };
+
     const response = await fetch(url, {
       ...options,
       signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers: headers,
     });
 
     clearTimeout(timeoutId);
@@ -79,6 +84,74 @@ export const fetchRecipesByMeal = async (mealId) => {
     throw new Error(`Failed to fetch recipes: ${error.message}`);
   }
 };
+
+// Fetch all diet plan user assignments
+export const fetchAllDietUserAssignments = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/AllDietUserAssignments`
+    );
+    const data = await handleApiResponse(response);
+    
+    // The API should return data in the same format as workout assignments
+    // { status: true, message: "Assignments fetched successfully", data: [...] }
+    return data;
+  } catch (error) {
+    console.error("Error fetching diet plan assignments:", error);
+    throw new Error(`Failed to fetch diet plan assignments: ${error.message}`);
+  }
+};
+
+// Fetch diet plan assignments for a specific user
+export const fetchUserDietAssignments = async (userId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/users/${userId}/diet-assignments`
+    );
+    const data = await handleApiResponse(response);
+    return data.Data || [];
+  } catch (error) {
+    console.error("Error fetching user diet assignments:", error);
+    throw new Error(`Failed to fetch user diet assignments: ${error.message}`);
+  }
+};
+
+// Assign diet plan to user
+export const assignDietPlanToUser = async (userId, planId, phase = "string") => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/users/${userId}/assign-diet-plan`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          PlanId: planId,
+          Phase: phase
+        }),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error assigning diet plan to user:", error);
+    throw new Error(`Failed to assign diet plan: ${error.message}`);
+  }
+};
+
+// Remove diet plan assignment from user
+export const removeDietPlanAssignment = async (userId, planId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/users/${userId}/diet-plans/${planId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error removing diet plan assignment:", error);
+    throw new Error(`Failed to remove diet plan assignment: ${error.message}`);
+  }
+};
+
 // Removed duplicate fetchForumPosts function to fix redeclaration error
 export const fetchUserProfile = async (userId) => {
   try {
@@ -150,7 +223,6 @@ export const fetchAllUsers = async () => {
   }
 };
 
-
 // Add meal to diet plan
 export const addMealToPlan = async (planId, mealData) => {
   try {
@@ -218,12 +290,369 @@ export const fetchForumPosts = async () => {
     const data = await handleApiResponse(response);
 
     // The API response has posts inside `data.data`
-    return Array.isArray(data.data) ? data.data : [];
+    const posts = Array.isArray(data.data) ? data.data : [];
+    
+    // Convert relative image URLs to absolute URLs
+    const baseDomain = "https://flow108.coinagesoft.com";
+    return posts.map(post => {
+      const updatedPost = { ...post };
+      
+      // Convert Media.Url if it's a relative path
+      if (post.Media && post.Media.Url && post.Media.Url.startsWith('/')) {
+        updatedPost.Media = {
+          ...post.Media,
+          Url: baseDomain + post.Media.Url
+        };
+      }
+      
+      // Convert ProfilePictureUrl if it's a relative path
+      if (post.ProfilePictureUrl && post.ProfilePictureUrl.startsWith('/')) {
+        updatedPost.ProfilePictureUrl = baseDomain + post.ProfilePictureUrl;
+      }
+      
+      return updatedPost;
+    });
   } catch (error) {
     console.error("Error fetching forum posts:", error);
     throw new Error(`Failed to fetch forum posts: ${error.message}`);
   }
 };
 
+// Fetch all questions
+export const fetchQuestions = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/community/questions`
+    );
+    const data = await handleApiResponse(response);
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    throw new Error(`Failed to fetch questions: ${error.message}`);
+  }
+};
 
+// Fetch all workout plans
+export const fetchWorkoutPlans = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan`
+    );
+    const data = await handleApiResponse(response);
+    
+    // API returns { status, message, data: [...] }
+    const plans = data.data || data.Data || [];
+    
+    // Convert relative image URLs to absolute URLs for workout plans
+    const baseDomain = "https://flow108.coinagesoft.com";
+    return plans.map(plan => {
+      const updatedPlan = { ...plan };
+      
+      // Convert Image if it's a relative path
+      if (plan.Image && plan.Image.startsWith('/')) {
+        updatedPlan.Image = baseDomain + plan.Image;
+      }
+      
+      return updatedPlan;
+    });
+  } catch (error) {
+    console.error("Error fetching workout plans:", error);
+    throw new Error(`Failed to fetch workout plans: ${error.message}`);
+  }
+};
 
+// Add new workout plan
+export const addWorkoutPlan = async (workoutData) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan`,
+      {
+        method: "POST",
+        body: JSON.stringify(workoutData),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error adding workout plan:", error);
+    throw new Error(`Failed to add workout plan: ${error.message}`);
+  }
+};
+
+/**
+ * Update an existing workout plan
+ * @param {string} workoutId - The UUID of the workout plan to update
+ * @param {Object} workoutData - The workout data to update (should include Name field)
+ * @returns {Promise<Object>} - Returns the updated workout plan data with status, message, and data properties
+ * @throws {Error} - Throws an error if the update fails
+ * 
+ * Example response format:
+ * {
+ *   "status": true,
+ *   "message": "Workout plan updated successfully.",
+ *   "data": {
+ *     "Id": "56166e2f-0c64-4271-81bd-ee7de92f8cc6",
+ *     "Name": "weight",
+ *     "CreatedOn": "2025-08-30T04:42:08.0233543",
+ *     "ModifiedOn": "2025-08-30T05:36:08.7306108Z"
+ *   }
+ * }
+ */
+export const updateWorkoutPlan = async (workoutId, workoutData) => {
+  try {
+    // Validate input parameters
+    console.log('updateWorkoutPlan called with:', { workoutId, workoutData });
+    
+    if (!workoutId || typeof workoutId !== 'string' || workoutId.trim() === '') {
+      console.error('Invalid workout ID:', workoutId);
+      throw new Error('Valid workout ID is required');
+    }
+    
+    if (!workoutData || typeof workoutData !== 'object') {
+      console.error('Invalid workout data:', workoutData);
+      throw new Error('Workout data object is required');
+    }
+    
+    if (!workoutData.Name || typeof workoutData.Name !== 'string' || workoutData.Name.trim() === '') {
+      console.error('Invalid workout name:', workoutData.Name);
+      throw new Error('Workout name is required and cannot be empty');
+    }
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan/${workoutId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(workoutData),
+      }
+    );
+    
+    const result = await handleApiResponse(response);
+    
+    // Ensure the response has the expected structure
+    if (!result || typeof result !== 'object') {
+      throw new Error('Invalid response format from server');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error updating workout plan:", error);
+    
+    // Provide more specific error messages based on error type
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please check your connection and try again');
+    } else if (error.message.includes('HTTP error')) {
+      throw new Error(`Server error: ${error.message}`);
+    } else {
+      throw new Error(`Failed to update workout plan: ${error.message}`);
+    }
+  }
+};
+
+// Delete workout plan
+export const deleteWorkoutPlan = async (workoutId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan/${workoutId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error deleting workout plan:", error);
+    throw new Error(`Failed to delete workout plan: ${error.message}`);
+  }
+};
+
+// Fetch workouts of a specific workout plan
+export const fetchWorkoutsByPlan = async (planId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan/${planId}/workouts`
+    );
+    const data = await handleApiResponse(response);
+    
+    // API returns { status, data: { PlanId, PlanName, Workouts: [...] } }
+    const result = data.data || data.Data || { Workouts: [] };
+    
+    // Convert relative image URLs to absolute URLs for workouts
+    const baseDomain = "https://flow108.coinagesoft.com";
+    if (result.Workouts && Array.isArray(result.Workouts)) {
+      result.Workouts = result.Workouts.map(workout => {
+        const updatedWorkout = { ...workout };
+        
+        // Convert Image if it's a relative path
+        if (workout.Image && workout.Image.startsWith('/')) {
+          updatedWorkout.Image = baseDomain + workout.Image;
+        }
+        
+        return updatedWorkout;
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error("Error fetching workouts by plan:", error);
+    throw new Error(`Failed to fetch workouts: ${error.message}`);
+  }
+};
+
+// Assign users to workout plan
+export const assignUsersToWorkout = async (workoutId, userIds) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout_plan/${workoutId}/assign-users`,
+      {
+        method: "POST",
+        body: JSON.stringify({ userIds }),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error assigning users to workout:", error);
+    throw new Error(`Failed to assign users to workout: ${error.message}`);
+  }
+};
+
+// Assign workout to workout plan
+export const assignWorkoutToPlan = async (planId, workoutId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout-plans/${planId}/assign-workout`,
+      {
+        method: "POST",
+        body: JSON.stringify({ WorkoutId: workoutId }),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error assigning workout to plan:", error);
+    throw new Error(`Failed to assign workout to plan: ${error.message}`);
+  }
+};
+
+// Fetch all workouts
+export const fetchAllWorkouts = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workouts`
+    );
+    const data = await handleApiResponse(response);
+    
+    // API returns { status, message, data: [...] }
+    const workouts = data.data || data.Data || [];
+    
+    // Convert relative image URLs to absolute URLs
+    const baseDomain = "https://flow108.coinagesoft.com";
+    return workouts.map(workout => {
+      const updatedWorkout = { ...workout };
+      
+      // Convert Image if it's a relative path
+      if (workout.Image && workout.Image.startsWith('/')) {
+        updatedWorkout.Image = baseDomain + workout.Image;
+      }
+      
+      return updatedWorkout;
+    });
+  } catch (error) {
+    console.error("Error fetching workouts:", error);
+    throw new Error(`Failed to fetch workouts: ${error.message}`);
+  }
+};
+
+// Add new workout
+export const addWorkout = async (workoutData) => {
+  try {
+    // Create FormData object for multipart/form-data
+    const formData = new FormData();
+    
+    // Append all fields to formData
+    Object.keys(workoutData).forEach(key => {
+      if (workoutData[key] !== undefined && workoutData[key] !== null) {
+        formData.append(key, workoutData[key]);
+      }
+    });
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workouts`,
+      {
+        method: "POST",
+        headers: {
+          accept: "*/*",
+        },
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error adding workout:", error);
+    throw new Error(`Failed to add workout: ${error.message}`);
+  }
+};
+
+// Update workout
+export const updateWorkout = async (workoutId, workoutData) => {
+  try {
+    // Create FormData object for multipart/form-data
+    const formData = new FormData();
+    
+    // Append all fields to formData
+    Object.keys(workoutData).forEach(key => {
+      if (workoutData[key] !== undefined && workoutData[key] !== null) {
+        formData.append(key, workoutData[key]);
+      }
+    });
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workouts/${workoutId}`,
+      {
+        method: "PATCH",
+        headers: {
+          accept: "*/*",
+        },
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error updating workout:", error);
+    throw new Error(`Failed to update workout: ${error.message}`);
+  }
+};
+
+// Delete workout
+export const deleteWorkout = async (workoutId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workouts/${workoutId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error deleting workout:", error);
+    throw new Error(`Failed to delete workout: ${error.message}`);
+  }
+};
+
+// Remove workout from workout plan
+export const removeWorkoutFromPlan = async (planId, workoutId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/workout-plans/${planId}/remove-workout/${workoutId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error removing workout from plan:", error);
+    throw new Error(`Failed to remove workout from plan: ${error.message}`);
+  }
+};
+
+// Helper function for default avatar (needed by fetchUserProfile)
+const getDefaultAvatar = (name) => {
+  // Simple default avatar implementation
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+};
