@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
 import { removeWorkoutFromPlan } from "../utils/api";
 
-export default function WorkoutDetailsPage() {
+// Main content component that uses useSearchParams
+function WorkoutDetailsContent() {
   const [workoutPlan, setWorkoutPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editableWorkouts, setEditableWorkouts] = useState([]);
@@ -637,5 +638,20 @@ export default function WorkoutDetailsPage() {
         />
       </div>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function WorkoutDetailsPage() {
+  return (
+    <Suspense fallback={
+      <div className="container-xxl flex-grow-1 container-p-y text-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    }>
+      <WorkoutDetailsContent />
+    </Suspense>
   );
 }
