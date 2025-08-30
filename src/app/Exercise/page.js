@@ -407,7 +407,7 @@ export default function ExercisePage() {
                   </nav>
                 </div>
 
-                {/* New Workout Plan Form on the right */}
+                {/* New Workout Plan Form on the right  here */}
                 <div className="col-xl-4">
                   <div className="card">
                     <div className="card-header">
