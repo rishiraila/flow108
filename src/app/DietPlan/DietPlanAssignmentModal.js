@@ -1,18 +1,20 @@
 "use client";
 import { useState, useEffect } from "react";
 
-export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignmentSuccess }) {
+export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAssignmentSuccess }) {
   const [users, setUsers] = useState([]);
+  const [assignedUsers, setAssignedUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
   const [assignSuccess, setAssignSuccess] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && planId) {
       fetchUsers();
+      fetchAssignedUsers();
     }
-  }, [isOpen]);
+  }, [isOpen, planId]);
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
@@ -26,6 +28,28 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
       setAssignError(error.message || "Failed to load users");
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  const fetchAssignedUsers = async () => {
+    try {
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/users`
+      );
+      if (!response.ok) {
+        console.warn(`Failed to fetch assigned users: ${response.status}`);
+        setAssignedUsers([]);
+        return;
+      }
+      const data = await response.json();
+      if (data.Status && Array.isArray(data.Data)) {
+        setAssignedUsers(data.Data);
+      } else {
+        setAssignedUsers([]);
+      }
+    } catch (error) {
+      console.error("Error fetching assigned users:", error);
+      setAssignedUsers([]);
     }
   };
 
@@ -52,6 +76,8 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
       if (result.status) {
         setAssignSuccess(true);
         onAssignmentSuccess();
+        // Refresh assigned users list to update the filtered display
+        fetchAssignedUsers();
         setTimeout(() => {
           setAssignSuccess(false);
           onClose();
@@ -78,7 +104,7 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
       <div className="modal-dialog modal-lg" role="document">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Assign Workout Plan to User</h5>
+            <h5 className="modal-title">Assign Diet Plan to User</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
@@ -103,6 +129,15 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
               <div className="text-center py-4">
                 <p className="text-muted">No users found.</p>
               </div>
+            ) : users.filter(
+                (user) =>
+                  !assignedUsers.some(
+                    (assigned) => assigned.Id === user.Id
+                  )
+              ).length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-muted">All users are already assigned to this diet plan.</p>
+              </div>
             ) : (
               <div className="table-responsive">
                 <table className="table table-hover">
@@ -114,21 +149,28 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
-                      <tr key={user.Id}>
-                        <td>{user.Name || "N/A"}</td>
-                        <td>{user.Email || "N/A"}</td>
-                        <td>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => assignPlanToUser(user.Id)}
-                            disabled={assignLoading}
-                          >
-                            {assignLoading ? "Assigning..." : "Assign Plan"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {users
+                      .filter(
+                        (user) =>
+                          !assignedUsers.some(
+                            (assigned) => assigned.Id === user.Id
+                          )
+                      )
+                      .map((user) => (
+                        <tr key={user.Id}>
+                          <td>{user.Name || "N/A"}</td>
+                          <td>{user.Email || "N/A"}</td>
+                          <td>
+                            <button
+                              className="btn btn-primary btn-sm"
+                              onClick={() => assignPlanToUser(user.Id)}
+                              disabled={assignLoading}
+                            >
+                              {assignLoading ? "Assigning..." : "Assign Plan"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

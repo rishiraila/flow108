@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
-import { removeWorkoutFromPlan } from "../utils/api";
+import { removeWorkoutFromPlan, fetchAllWorkoutUserAssignments, fetchUserProfile, updateWorkout } from "../utils/api";
+import { getImageUrl } from "../utils/imageUtils";
 
 // Main content component that uses useSearchParams
 function WorkoutDetailsContent() {
@@ -20,13 +21,15 @@ function WorkoutDetailsContent() {
 
   const [newWorkout, setNewWorkout] = useState({
     WorkoutName: "",
-    Description: "",
     Time: "",
-    Category: "",
     Format: "",
-    Intensity: "",
     Image: "",
   });
+
+  // State for assigned users functionality
+  const [assignedUsers, setAssignedUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [showUsersModal, setShowUsersModal] = useState(false);
 
   const searchParams = useSearchParams();
   const workoutId = searchParams.get("workoutId");
@@ -52,22 +55,7 @@ function WorkoutDetailsContent() {
       if (!response.ok) throw new Error("Failed to fetch workout details");
 
       const data = await response.json();
-      
-      // Convert relative image URLs to absolute URLs
-      const baseDomain = "https://flow108.coinagesoft.com";
-      if (data.data && data.data.Workouts && Array.isArray(data.data.Workouts)) {
-        data.data.Workouts = data.data.Workouts.map(workout => {
-          const updatedWorkout = { ...workout };
-          
-          // Convert Image if it's a relative path
-          if (workout.Image && workout.Image.startsWith('/')) {
-            updatedWorkout.Image = baseDomain + workout.Image;
-          }
-          
-          return updatedWorkout;
-        });
-      }
-      
+
       setWorkoutPlan(data.data);
       setEditableWorkouts(data.data.Workouts || []);
     } catch (err) {
@@ -85,31 +73,29 @@ function WorkoutDetailsContent() {
 
   const handleSaveWorkout = async (workout) => {
     try {
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/workout/${workout.WorkoutId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            accept: "*/*",
-          },
-          body: JSON.stringify({
-            WorkoutName: workout.WorkoutName,
-            Description: workout.Description,
-            Time: workout.Time,
-            Category: workout.Category,
-            Format: workout.Format,
-            Intensity: workout.Intensity,
-            Image: workout.Image,
-          }),
-        }
-      );
+      // Process Time field to append " min" if only a number is entered
+      let processedTime = workout.Time.trim();
+      if (/^\d+$/.test(processedTime)) {
+        processedTime = processedTime + " min";
+      }
 
-      if (!response.ok) throw new Error("Failed to update workout");
+      // Prepare data for the API - map WorkoutName to Title
+      const workoutData = {
+        Title: workout.WorkoutName,
+        Time: processedTime,
+        Format: workout.Format,
+        Image: workout.Image,
+      };
 
-      alert("Workout updated successfully");
-      setEditIndex(null);
-      fetchWorkoutDetails();
+      const response = await updateWorkout(workout.WorkoutId, workoutData);
+
+      if (response.status) {
+        alert("Workout updated successfully");
+        setEditIndex(null);
+        fetchWorkoutDetails();
+      } else {
+        throw new Error(response.message || "Failed to update workout");
+      }
     } catch (err) {
       alert("Error updating workout: " + err.message);
     }
@@ -145,6 +131,12 @@ function WorkoutDetailsContent() {
 
   const handleAddWorkout = async (workout) => {
     try {
+      // Process Time field to append " min" if only a number is entered
+      let processedTime = workout.Time.trim();
+      if (/^\d+$/.test(processedTime)) {
+        processedTime = processedTime + " min";
+      }
+
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
         {
@@ -155,11 +147,8 @@ function WorkoutDetailsContent() {
           },
           body: JSON.stringify({
             WorkoutName: workout.WorkoutName,
-            Description: workout.Description,
-            Time: workout.Time,
-            Category: workout.Category,
+            Time: processedTime,
             Format: workout.Format,
-            Intensity: workout.Intensity,
             Image: workout.Image,
           }),
         }
@@ -172,11 +161,8 @@ function WorkoutDetailsContent() {
 
       setNewWorkout({
         WorkoutName: "",
-        Description: "",
         Time: "",
-        Category: "",
         Format: "",
-        Intensity: "",
         Image: "",
       });
       setImageFile(null);
@@ -203,21 +189,8 @@ function WorkoutDetailsContent() {
 
       const data = await response.json();
       const workouts = data.data || data.Data || [];
-      
-      // Convert relative image URLs to absolute URLs
-      const baseDomain = "https://flow108.coinagesoft.com";
-      const updatedWorkouts = workouts.map(workout => {
-        const updatedWorkout = { ...workout };
-        
-        // Convert Image if it's a relative path
-        if (workout.Image && workout.Image.startsWith('/')) {
-          updatedWorkout.Image = baseDomain + workout.Image;
-        }
-        
-        return updatedWorkout;
-      });
 
-      setAllWorkouts(updatedWorkouts);
+      setAllWorkouts(workouts);
     } catch (err) {
       console.error("Error fetching workouts:", err);
       alert("Failed to fetch workouts: " + err.message);
@@ -236,6 +209,83 @@ function WorkoutDetailsContent() {
   const handleWorkoutAssigned = (result) => {
     alert("Workout assigned successfully!");
     fetchWorkoutDetails(); // Refresh the workout plan details
+  };
+
+  // Function to fetch assigned users for this workout plan
+  const fetchAssignedUsers = async () => {
+    try {
+      setUsersLoading(true);
+      const assignments = await fetchAllWorkoutUserAssignments();
+      
+      // Filter assignments for this specific workout plan
+      const planAssignments = assignments.filter(
+        assignment => assignment.WorkoutPlanId === workoutId
+      );
+      
+      // Fetch user profiles for each assignment
+      const usersWithProfiles = await Promise.all(
+        planAssignments.map(async (assignment) => {
+          try {
+            const profile = await fetchUserProfile(assignment.UserId);
+            return {
+              ...assignment,
+              userName: profile.name,
+              userAvatar: profile.avatar
+            };
+          } catch (error) {
+            console.error(`Error fetching profile for user ${assignment.UserId}:`, error);
+            return {
+              ...assignment,
+              userName: "Unknown User",
+              userAvatar: "https://ui-avatars.com/api/?name=Unknown&background=random"
+            };
+          }
+        })
+      );
+      
+      setAssignedUsers(usersWithProfiles);
+    } catch (error) {
+      console.error("Error fetching assigned users:", error);
+      alert("Failed to fetch assigned users: " + error.message);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Function to open the assigned users modal
+  const handleShowAssignedUsers = async () => {
+    setShowUsersModal(true);
+    await fetchAssignedUsers();
+  };
+
+  // Function to unassign user from workout plan
+  const handleUnassignUser = async (userId, planId) => {
+    if (!window.confirm("Are you sure you want to unassign this user from the workout plan?")) return;
+
+    try {
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${planId}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to unassign user");
+
+      const result = await response.json();
+      alert(result.message || "User unassigned successfully");
+
+      // Remove the user from the assignedUsers state to update UI immediately
+      setAssignedUsers((prevUsers) => prevUsers.filter(user => user.UserId !== userId));
+
+      // Refresh the assigned users list from server to ensure consistency
+      await fetchAssignedUsers();
+    } catch (err) {
+      alert("Error unassigning user: " + err.message);
+    }
   };
 
   if (loading) {
@@ -269,9 +319,18 @@ function WorkoutDetailsContent() {
       <div className="container-xxl flex-grow-1 container-p-y">
         {/* Workout Plan Details */}
         <div className="card mb-4">
-          <div className="card-header">
-            <h5 className="mb-0">{workoutPlan.PlanName}</h5>
-            <p className="text-muted mb-0">Plan ID: {workoutPlan.PlanId}</p>
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <h5 className="mb-0">{workoutPlan.PlanName}</h5>
+              <p className="text-muted mb-0">Plan ID: {workoutPlan.PlanId}</p>
+            </div>
+            <button
+              className="btn btn-sm btn-outline-info"
+              onClick={handleShowAssignedUsers}
+              disabled={usersLoading}
+            >
+              <i className="ri-user-line me-1"></i> View Assigned Users
+            </button>
           </div>
         </div>
 
@@ -287,13 +346,7 @@ function WorkoutDetailsContent() {
               >
                 <i className="ri-link me-1"></i> Assign Existing Workout
               </button>
-              <button
-                className="btn btn-sm btn-outline-success"
-                data-bs-toggle="modal"
-                data-bs-target="#addWorkoutModal"
-              >
-                <i className="ri-add-line me-1"></i> Add New Workout
-              </button>
+             
             </div>
           </div>
           <div className="card-body">
@@ -361,18 +414,6 @@ function WorkoutDetailsContent() {
                               handleWorkoutChange(index, "WorkoutName", e.target.value)
                             }
                           />
-                          <textarea
-                            className="form-control mb-2"
-                            placeholder="Description"
-                            value={workout.Description}
-                            onChange={(e) =>
-                              handleWorkoutChange(
-                                index,
-                                "Description",
-                                e.target.value
-                              )
-                            }
-                          />
                           <input
                             type="text"
                             className="form-control mb-2"
@@ -389,38 +430,12 @@ function WorkoutDetailsContent() {
                           <input
                             type="text"
                             className="form-control mb-2"
-                            placeholder="Category"
-                            value={workout.Category}
-                            onChange={(e) =>
-                              handleWorkoutChange(
-                                index,
-                                "Category",
-                                e.target.value
-                              )
-                            }
-                          />
-                          <input
-                            type="text"
-                            className="form-control mb-2"
                             placeholder="Format"
                             value={workout.Format}
                             onChange={(e) =>
                               handleWorkoutChange(
                                 index,
                                 "Format",
-                                e.target.value
-                              )
-                            }
-                          />
-                          <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="Intensity"
-                            value={workout.Intensity}
-                            onChange={(e) =>
-                              handleWorkoutChange(
-                                index,
-                                "Intensity",
                                 e.target.value
                               )
                             }
@@ -443,21 +458,11 @@ function WorkoutDetailsContent() {
                       ) : (
                         <>
                           <small className="text-muted">
-                            {workout.Time} &bull; {workout.Category} &bull; {workout.Format}
+                            {workout.Time} &bull; {workout.Format}
                           </small>
-                          <p className="card-text mt-2">{workout.Description}</p>
-                          <span className={`badge bg-${
-                            workout.Intensity === "High"
-                              ? "danger"
-                              : workout.Intensity === "Medium"
-                              ? "warning"
-                              : "success"
-                          }`}>
-                            {workout.Intensity}
-                          </span>
                           {workout.Image && (
                             <img
-                              src={workout.Image}
+                              src={getImageUrl(workout.Image)}
                               className="img-fluid rounded mb-2"
                               style={{
                                 maxHeight: "150px",
@@ -504,16 +509,8 @@ function WorkoutDetailsContent() {
                     setNewWorkout({ ...newWorkout, WorkoutName: e.target.value })
                   }
                 />
-                <textarea
-                  className="form-control mb-3"
-                  placeholder="Description"
-                  value={newWorkout.Description}
-                  onChange={(e) =>
-                    setNewWorkout({ ...newWorkout, Description: e.target.value })
-                  }
-                />
                 <div className="row">
-                  <div className="col-md-4 mb-3">
+                  <div className="col-md-6 mb-3">
                     <input
                       type="text"
                       className="form-control"
@@ -527,21 +524,7 @@ function WorkoutDetailsContent() {
                       }
                     />
                   </div>
-                  <div className="col-md-4 mb-3">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Category"
-                      value={newWorkout.Category}
-                      onChange={(e) =>
-                        setNewWorkout({
-                          ...newWorkout,
-                          Category: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="col-md-4 mb-3">
+                  <div className="col-md-6 mb-3">
                     <input
                       type="text"
                       className="form-control"
@@ -554,25 +537,6 @@ function WorkoutDetailsContent() {
                         })
                       }
                     />
-                  </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-6 mb-3">
-                    <select
-                      className="form-control"
-                      value={newWorkout.Intensity}
-                      onChange={(e) =>
-                        setNewWorkout({
-                          ...newWorkout,
-                          Intensity: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="">Select Intensity</option>
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                    </select>
                   </div>
                 </div>
 
@@ -593,7 +557,7 @@ function WorkoutDetailsContent() {
                   />
                   {newWorkout.Image && (
                     <img
-                      src={newWorkout.Image}
+                      src={getImageUrl(newWorkout.Image)}
                       className="img-fluid mt-2 rounded"
                       style={{ maxHeight: "150px", objectFit: "cover" }}
                     />
@@ -636,6 +600,106 @@ function WorkoutDetailsContent() {
           workouts={allWorkouts}
           onWorkoutAssigned={handleWorkoutAssigned}
         />
+
+        {/* Assigned Users Modal */}
+        {showUsersModal && (
+          <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Users Assigned to {workoutPlan.PlanName}</h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setShowUsersModal(false)}
+                    aria-label="Close"
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  {usersLoading ? (
+                    <div className="text-center">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <p className="mt-2">Loading assigned users...</p>
+                    </div>
+                  ) : assignedUsers.length === 0 ? (
+                    <div className="text-center text-muted">
+                      <i className="ri-user-unfollow-line" style={{ fontSize: '3rem' }}></i>
+                      <p className="mt-2">No users assigned to this workout plan yet.</p>
+                    </div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead>
+                          <tr>
+                            <th>User</th>
+                            <th>Assigned Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assignedUsers.map((user) => (
+                            <tr key={user.AssignmentId}>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  <img
+                                    src={getImageUrl(user.userAvatar)}
+                                    alt={user.userName}
+                                    className="rounded-circle me-2"
+                                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                                  />
+                                  <div>
+                                    <div className="fw-semibold">{user.userName}</div>
+                                    <small className="text-muted">Email: {user.userEmail || user.UserId}</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                {new Date(user.AssignedDate).toLocaleDateString()}
+                              </td>
+                              <td>
+                                <span className={`badge bg-${
+                                  user.Status === 'Active' ? 'success' :
+                                  user.Status === 'Completed' ? 'primary' : 'secondary'
+                                }`}>
+                                  {user.Status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleUnassignUser(user.UserId, workoutId)}
+                                >
+                                  Unassign
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setShowUsersModal(false)}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal backdrop */}
+        {showUsersModal && (
+          <div className="modal-backdrop fade show"></div>
+        )}
       </div>
     </div>
   );

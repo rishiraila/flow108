@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { fetchForumPosts, fetchQuestions } from "../utils/api";
 
 export default function Page() {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,12 @@ export default function Page() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    paidMembers: 0,
+    totalQuestions: 0,
+    totalPosts: 0
+  });
 
   const usersPerPage = 10;
 
@@ -83,8 +90,39 @@ export default function Page() {
       .catch((error) => console.error("Error fetching users:", error));
   };
 
+  const loadStats = async () => {
+    try {
+      // Fetch all users from API
+      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const data = await response.json();
+      let usersArray = [];
+      if (Array.isArray(data)) {
+        usersArray = data;
+      } else if (data?.Data && Array.isArray(data.Data)) {
+        usersArray = data.Data;
+      }
+      const totalUsers = usersArray.length;
+      const paidMembers = usersArray.filter(user => user.IsApproved).length;
+
+      // Get total questions and posts for the other stats
+      const allQuestions = await fetchQuestions();
+      const allPosts = await fetchForumPosts();
+
+      // Set stats with all four values
+      setStats({
+        totalUsers,
+        paidMembers,
+        totalQuestions: allQuestions.length,
+        totalPosts: allPosts.length
+      });
+    } catch (err) {
+      console.error("Error loading stats:", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    loadStats();
   }, []);
 
   const handleSubmitUser = async (e) => {
@@ -240,30 +278,26 @@ export default function Page() {
           <div className="row g-6 mb-6">
             {[
               {
-                count: 42,
+                count: stats.totalUsers,
                 label: "User Registered",
-                percent: "+18.2%",
                 class: "primary",
                 icon: "ri-user-add-line",
               },
               {
-                count: 8,
+                count: stats.paidMembers,
                 label: "Paid Members",
-                percent: "-8.7%",
                 class: "warning",
                 icon: "ri-user-star-line",
               },
               {
-                count: 27,
+                count: stats.totalQuestions,
                 label: "Total Questions",
-                percent: "+4.3%",
                 class: "danger",
                 icon: "ri-group-line",
               },
               {
-                count: 13,
+                count: stats.totalPosts,
                 label: "Total Posts",
-                percent: "-2.5%",
                 class: "info",
                 icon: "ri-article-line",
               },
@@ -282,10 +316,6 @@ export default function Page() {
                       <h4 className="mb-0">{item.count}</h4>
                     </div>
                     <h6 className="mb-0 fw-normal">{item.label}</h6>
-                    <p className="mb-0">
-                      <span className="me-1 fw-medium">{item.percent}</span>
-                      <small className="text-muted">than last week</small>
-                    </p>
                   </div>
                 </div>
               </div>

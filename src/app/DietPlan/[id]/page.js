@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import RecipeAssignmentModal from "../RecipeAssignmentModal";
+import DietPlanAssignmentModal from "../DietPlanAssignmentModal";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -53,6 +54,7 @@ export default function DietPlanDetails() {
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showEditMealModal, setShowEditMealModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState(null);
   const [editMealFormData, setEditMealFormData] = useState({
@@ -65,6 +67,45 @@ export default function DietPlanDetails() {
   });
   const [editMealLoading, setEditMealLoading] = useState(false);
   const [editMealError, setEditMealError] = useState(null);
+  const [unassignLoading, setUnassignLoading] = useState(null); // Track which user is being unassigned
+
+  // Function to unassign user from diet plan
+  const handleUnassignUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to unassign this user from the diet plan?")) return;
+
+    try {
+      setUnassignLoading(userId);
+      const response = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminDietPlan/unassignplans/${userId}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to unassign user");
+
+      const result = await response.json();
+      if (result.Status) {
+        alert(result.Message || "User unassigned successfully");
+
+        // Remove the user from the assignedUsers state to update UI immediately
+        setAssignedUsers((prevUsers) => prevUsers.filter(user => user.Id !== userId));
+
+        // Refresh the assigned users list from server to ensure consistency
+        await fetchAssignedUsers();
+      } else {
+        throw new Error(result.Message || "Failed to unassign user");
+      }
+    } catch (err) {
+      console.error("Error unassigning user:", err);
+      alert("Error unassigning user: " + err.message);
+    } finally {
+      setUnassignLoading(null);
+    }
+  };
 
   // Fetch diet plan details and meals
   useEffect(() => {
@@ -237,15 +278,24 @@ export default function DietPlanDetails() {
   const fetchAssignedUsers = async () => {
     try {
       setUsersLoading(true);
+
+      // Use the correct API endpoint for diet plan assignments
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/users`
       );
-      if (!response.ok) throw new Error("Failed to fetch assigned users");
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch assigned users: ${response.status}`);
+        setAssignedUsers([]);
+        return;
+      }
 
       const data = await response.json();
-      if (data.Status && data.Data) {
+
+      if (data.Status && Array.isArray(data.Data)) {
         setAssignedUsers(data.Data);
       } else {
+        console.warn("Invalid assigned users data format:", data);
         setAssignedUsers([]);
       }
     } catch (err) {
@@ -494,12 +544,11 @@ export default function DietPlanDetails() {
       console.log("Sending update data:", editMealFormData);
 
       const response = await fetch(
-        `https://flow108.coinagesoft.com/update/${editingMeal.Id}`,
+        `https://flow108.coinagesoft.com/api/AdminDietPlan/meals/${editingMeal.Id}`,
         {
-          method: "PATCH",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            accept: "*/*",
           },
           body: JSON.stringify(editMealFormData),
         }
@@ -658,6 +707,12 @@ export default function DietPlanDetails() {
                 >
                   Back to Plans
                 </Link>
+                <button
+                  className="btn btn-success me-2"
+                  onClick={() => setShowAssignmentModal(true)}
+                >
+                  <i className="bi bi-person-plus"></i> Assign User
+                </button>
                 <button
                   className="btn btn-primary"
                   onClick={() => setShowAddMealModal(true)}
@@ -1065,46 +1120,59 @@ export default function DietPlanDetails() {
                       {assignedUsers.map((user) => (
                         <li
                           key={user.Id}
-                          className="list-group-item d-flex align-items-center"
+                          className="list-group-item d-flex align-items-center justify-content-between"
                         >
-                          {user.ProfilePictureUrl ? (
-                            <img
-                              src={user.ProfilePictureUrl}
-                              alt={user.Name}
-                              className="rounded-circle me-3"
-                              width="40"
-                              height="40"
-                              onError={(e) => {
-                                // if image fails to load → fallback to initials
-                                e.target.style.display = "none";
-                                const fallback = document.createElement("div");
-                                fallback.className =
-                                  "rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3";
-                                fallback.style.width = "40px";
-                                fallback.style.height = "40px";
-                                fallback.style.fontWeight = "bold";
-                                fallback.innerText = getInitials(user.Name);
-                                e.target.parentNode.prepend(fallback);
-                              }}
-                            />
-                          ) : (
-                            <div
-                              className="rounded-circle text-white d-flex align-items-center justify-content-center me-3"
-                              style={{
-                                width: "40px",
-                                height: "40px",
-                                fontWeight: "bold",
-                                backgroundColor: getColorFromName(user.Name),
-                              }}
-                            >
-                              {getInitials(user.Name)}
-                            </div>
-                          )}
+                          <div className="d-flex align-items-center">
+                            {user.ProfilePictureUrl ? (
+                              <img
+                                src={user.ProfilePictureUrl}
+                                alt={user.Name}
+                                className="rounded-circle me-3"
+                                width="40"
+                                height="40"
+                                onError={(e) => {
+                                  // if image fails to load → fallback to initials
+                                  e.target.style.display = "none";
+                                  const fallback = document.createElement("div");
+                                  fallback.className =
+                                    "rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3";
+                                  fallback.style.width = "40px";
+                                  fallback.style.height = "40px";
+                                  fallback.style.fontWeight = "bold";
+                                  fallback.innerText = getInitials(user.Name);
+                                  e.target.parentNode.prepend(fallback);
+                                }}
+                              />
+                            ) : (
+                              <div
+                                className="rounded-circle text-white d-flex align-items-center justify-content-center me-3"
+                                style={{
+                                  width: "40px",
+                                  height: "40px",
+                                  fontWeight: "bold",
+                                  backgroundColor: getColorFromName(user.Name),
+                                }}
+                              >
+                                {getInitials(user.Name)}
+                              </div>
+                            )}
 
-                          <div>
-                            <strong>{user.Name}</strong>
-                            <div className="text-muted small">{user.Email}</div>
+                            <div>
+                              <strong>{user.Name}</strong>
+                              <div className="text-muted small">{user.Email}</div>
+                            </div>
                           </div>
+                          <button
+                            className="btn btn-sm btn-danger"
+                            onClick={() => handleUnassignUser(user.Id)}
+                            disabled={unassignLoading === user.Id}
+                          >
+                            {unassignLoading === user.Id ? (
+                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            ) : (
+                              "Unassign"
+                            )}
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -1277,6 +1345,17 @@ export default function DietPlanDetails() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Diet Plan Assignment Modal */}
+        {showAssignmentModal && (
+          <DietPlanAssignmentModal
+            isOpen={showAssignmentModal}
+            onClose={() => setShowAssignmentModal(false)}
+            planId={planId}
+            planName={dietPlan?.Name}
+            onAssignmentSuccess={fetchAssignedUsers}
+          />
         )}
       </div>
     </div>

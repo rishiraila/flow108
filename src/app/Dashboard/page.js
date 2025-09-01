@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import { fetchForumPosts, fetchQuestions, fetchUserCount } from "../utils/api";
 import Link from "next/link";
 
+
+
 // API function to answer a question
 const answerQuestion = async (questionId, answerText) => {
   const API_BASE_URL = "https://flow108.coinagesoft.com/api";
@@ -30,7 +32,7 @@ export default function Page() {
   const [errorQuestions, setErrorQuestions] = useState(null);
   const [stats, setStats] = useState({
     totalUsers: 0,
-    paidMembers: 0,
+    pendingApprovals: 0,
     totalQuestions: 0,
     totalPosts: 0
   });
@@ -71,14 +73,26 @@ export default function Page() {
 
     const loadStats = async () => {
       try {
-        const allPosts = await fetchForumPosts();
+        // Fetch all users from API
+        const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+        const data = await response.json();
+        let usersArray = [];
+        if (Array.isArray(data)) {
+          usersArray = data;
+        } else if (data?.Data && Array.isArray(data.Data)) {
+          usersArray = data.Data;
+        }
+        const totalUsers = usersArray.length;
+        const pendingApprovals = usersArray.filter(user => !user.IsApproved).length;
+
+        // Get total questions and posts for the other stats
         const allQuestions = await fetchQuestions();
-        const userCount = await fetchUserCount();
-        
-        // Calculate statistics
+        const allPosts = await fetchForumPosts();
+
+        // Set stats with all four values
         setStats({
-          totalUsers: userCount,
-          paidMembers: Math.floor(userCount * 0.2), // Estimate 20% as paid members
+          totalUsers,
+          pendingApprovals,
           totalQuestions: allQuestions.length,
           totalPosts: allPosts.length
         });
@@ -138,82 +152,82 @@ export default function Page() {
         <div className="container-xxl flex-grow-1 container-p-y">
           {/* <!-- Card Border Shadow --> */}
           <div className="row g-6">
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-primary h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-primary">
-                        <i className="tf-icons ri-user-add-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">{stats.totalUsers}</h4>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-primary h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-primary">
+                      <i className="tf-icons ri-user-add-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">User Registered</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">Live Data</span>
-                    <small className="text-muted">from API</small>
-                  </p>
+                  <h4 className="mb-0">{stats.totalUsers}</h4>
                 </div>
+                <h6 className="mb-0 fw-normal">User Registered</h6>
+                {/* <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p> */}
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-warning h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-warning">
-                        <i className="ri-user-star-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">{stats.paidMembers}</h4>
+          </div>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-warning h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-warning">
+                      <i className="ri-time-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Paid Members</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">Live Data</span>
-                    <small className="text-muted">from API</small>
-                  </p>
+                  <h4 className="mb-0">{stats.pendingApprovals}</h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Pending Approvals</h6>
+                {/* <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p> */}
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-danger h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-danger">
-                        <i className="ri-group-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">{stats.totalQuestions}</h4>
+          </div>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-info h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-info">
+                      <i className="ri-question-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Total Questions</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">Live Data</span>
-                    <small className="text-muted">from API</small>
-                  </p>
+                  <h4 className="mb-0">{stats.totalQuestions}</h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Total Questions</h6>
+                {/* <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p> */}
               </div>
             </div>
-            <div className="col-6 col-sm-6 col-lg-3 mb-2">
-              <div className="card card-border-shadow-info h-100">
-                <div className="card-body">
-                  <div className="d-flex align-items-center mb-2">
-                    <div className="avatar me-4">
-                      <span className="avatar-initial rounded-3 bg-label-info">
-                        <i className="ri-article-line ri-24px"></i>
-                      </span>
-                    </div>
-                    <h4 className="mb-0">{stats.totalPosts}</h4>
+          </div>
+          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+            <div className="card card-border-shadow-success h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-success">
+                      <i className="ri-chat-1-line ri-24px"></i>
+                    </span>
                   </div>
-                  <h6 className="mb-0 fw-normal">Total Posts</h6>
-                  <p className="mb-0">
-                    <span className="me-1 fw-medium">Live Data</span>
-                    <small className="text-muted">from API</small>
-                  </p>
+                  <h4 className="mb-0">{stats.totalPosts}</h4>
                 </div>
+                <h6 className="mb-0 fw-normal">Total Posts</h6>
+                {/* <p className="mb-0">
+                  <span className="me-1 fw-medium">Live Data</span>
+                  <small className="text-muted">from API</small>
+                </p> */}
               </div>
             </div>
+          </div>
             {/* <!--/ Card Border Shadow -->
 
               <!-- Latest Forum Posts --> */}
@@ -381,8 +395,8 @@ export default function Page() {
             {/* <!--/ Latest Forum Posts --> */}
 
             {/* <!-- Activity Timeline --> */}
-            <div className="col-12 col-xxl-8">
-              <div className="card h-100">
+            <div className="col-12 col-xxl-8" style={{ height: "485px", overflowY: "scroll" }}>
+              <div className="card">
                 <div className="card-header">
                   <div className="d-flex justify-content-between">
                     <h5 className="mb-0">List of questions</h5>

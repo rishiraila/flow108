@@ -13,8 +13,8 @@ const CONFIG = {
 // Logger utility
 const logger = {
   log: (...args) => CONFIG.enableLogging && console.log('[API]', ...args),
-  error: (...args) => CONFIG.enableLogging && console.error('[API]', ...args),
-  warn: (...args) => CONFIG.enableLogging && console.warn('[API]', ...args)
+  error: (...args) => CONFIG.enableLogging && console.warn('[API] ERROR:', ...args),
+  warn: (...args) => CONFIG.enableLogging && console.warn('[API] WARN:', ...args)
 };
 
 // Network connectivity check
@@ -262,15 +262,42 @@ export const dietAssignmentApi = {
     const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/diet-assignments`);
     return handleApiResponse(response);
   },
+
+  // Get users assigned to a specific diet plan
+  getPlanAssignments: async (planId) => {
+    try {
+      // Check API health before making the request
+      const healthCheck = await checkApiHealth();
+      if (!healthCheck.connected) {
+        logger.warn(`API health check failed: ${healthCheck.error || 'Unknown error'}`);
+        return []; // Return empty array for offline/network issues
+      }
+
+      // Use fallback endpoint primarily due to primary endpoint network issues
+      const response = await enhancedFetch(`${API_BASE_URL}/admin/AllDietUserAssignments`);
+      const allAssignments = handleApiResponse(response);
+
+      // Filter assignments for this specific plan
+      if (Array.isArray(allAssignments)) {
+        const filteredAssignments = allAssignments.filter(assignment => assignment.DietPlanId === planId);
+        logger.log(`Found ${filteredAssignments.length} assignments for plan ${planId}`);
+        return filteredAssignments;
+      }
+
+      logger.warn(`No assignments found for plan ${planId}`);
+      return [];
+    } catch (error) {
+      logger.error(`Failed to get assignments for plan ${planId}:`, error.message || error);
+      // Return empty array instead of throwing to prevent UI crash
+      return [];
+    }
+  },
   
   // Assign diet plan to user
-  assignToUser: async (userId, planId, phase = "string") => {
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/assign-diet-plan`, {
+  assignToUser: async (userId, planId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/users/${userId}/dietplans/${planId}`, {
       method: 'POST',
-      body: JSON.stringify({
-        PlanId: planId,
-        Phase: phase
-      })
+      body: JSON.stringify({})
     });
     return handleApiResponse(response);
   },

@@ -111,8 +111,8 @@ export default function AdminQuestionModal({ onQuestionCreated }) {
                       value={formData.Visibility}
                       onChange={(e) => setFormData({ ...formData, Visibility: parseInt(e.target.value) })}
                     >
-                      <option value={0}>Private</option>
-                      <option value={1}>Public</option>
+                      <option value={0}>Public</option>
+                      <option value={1}>Private</option>
                     </select>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { fetchForumPosts } from "../utils/api";
+import { fetchForumPosts, fetchForumComments, fetchAllUsers } from "../utils/api";
 import AddPostModal from "./AddPostModal";
 
 export default function Page() {
@@ -20,21 +20,52 @@ export default function Page() {
 
   const loadPosts = async () => {
     try {
-      const response = await fetchForumPosts();
-      console.log("API response from fetchForumPosts:", response);
+      // Fetch posts, comments, and users concurrently
+      const [postsResponse, commentsResponse, usersResponse] = await Promise.all([
+        fetchForumPosts(),
+        fetchForumComments(),
+        fetchAllUsers()
+      ]);
 
-      if (Array.isArray(response)) {
+      console.log("API response from fetchForumPosts:", postsResponse);
+      console.log("API response from fetchForumComments:", commentsResponse);
+      console.log("API response from fetchAllUsers:", usersResponse);
+
+      if (Array.isArray(postsResponse)) {
+        // Group comments by PostId
+        const commentsByPostId = {};
+        if (Array.isArray(commentsResponse)) {
+          commentsResponse.forEach(comment => {
+            if (!commentsByPostId[comment.PostId]) {
+              commentsByPostId[comment.PostId] = [];
+            }
+            const user = usersResponse[comment.UserId];
+            commentsByPostId[comment.PostId].push({
+              ...comment,
+              UserName: comment.UserName || "Unknown User",
+              UserAvatar: user?.avatar || getDefaultAvatar(comment.UserName || "User")
+            });
+          });
+        }
+
+        // Associate comments with posts
+        const postsWithComments = postsResponse.map(post => ({
+          ...post,
+          Comments: commentsByPostId[post.Id] || []
+        }));
+
         // Sort posts by date (most recent first)
-        const sortedPosts = response.sort((a, b) => 
+        const sortedPosts = postsWithComments.sort((a, b) =>
           new Date(b.CreatedAt) - new Date(a.CreatedAt)
         );
+
         setPosts(sortedPosts);
       } else {
         setError("Failed to load posts");
       }
     } catch (err) {
-      console.error("Error fetching posts:", err);
-      setError("Something went wrong while fetching posts");
+      console.error("Error fetching posts, comments, or users:", err);
+      setError("Something went wrong while fetching posts, comments, or users");
     } finally {
       setLoading(false);
     }
@@ -142,6 +173,9 @@ export default function Page() {
       return alert("Please enter a comment");
 
     try {
+      // Get UserId dynamically, e.g. from localStorage or user context
+      const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+
       const res = await fetch(
         `https://flow108.coinagesoft.com/api/admin/community/forum/comments`,
         {
@@ -152,7 +186,7 @@ export default function Page() {
           },
           body: JSON.stringify({
             Content: content,
-            UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            UserId: userId,
             PostId: postId,
           }),
         }
@@ -162,8 +196,9 @@ export default function Page() {
 
       if (res.ok && result.status) {
         alert("✅ " + result.message);
+
         setCommentInputs({ ...commentInputs, [postId]: "" }); // clear input
-        loadPosts(); // refresh comments
+        loadPosts(); // refresh comments with real data
       } else {
         alert("❌ " + (result.message || "Failed to post comment"));
       }
@@ -243,10 +278,10 @@ export default function Page() {
                   <h4 className="mb-0">{posts.length}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Posts</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -265,10 +300,10 @@ export default function Page() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Likes</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -285,10 +320,10 @@ export default function Page() {
                   <h4 className="mb-0">{posts.filter((post) => post.IsAnonymous).length}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Anonymous Posts</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -307,10 +342,10 @@ export default function Page() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Comments</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -553,7 +588,7 @@ export default function Page() {
                                   }}
                                 >
                                   <img
-                                    src={getDefaultAvatar(comment.UserName || "User")}
+                                    src={comment.UserAvatar || getDefaultAvatar(comment.UserName || "User")}
                                     alt={comment.UserName || "User"}
                                     style={{
                                       width: "32px",

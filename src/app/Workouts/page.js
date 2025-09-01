@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchAllWorkouts, addWorkout, updateWorkout, deleteWorkout } from "../utils/api";
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState([]);
@@ -14,11 +15,8 @@ export default function WorkoutsPage() {
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [newWorkout, setNewWorkout] = useState({
     Title: "",
-    Description: "",
     Time: "",
-    Category: "",
     Format: "",
-    Intensity: 1,
     Image: ""
   });
 
@@ -26,12 +24,6 @@ export default function WorkoutsPage() {
   useEffect(() => {
     fetchWorkouts();
   }, []);
-
-  const getImageUrl = (url) => {
-    if (!url) return "/placeholder.jpg";
-    if (url.startsWith("http")) return url; // already absolute
-    return `https://flow108.coinagesoft.com${url}`; // prepend API domain
-  };
 
   const handleDeleteWorkout = async (id) => {
     if (!confirm("Are you sure you want to delete this workout?")) return;
@@ -87,11 +79,8 @@ export default function WorkoutsPage() {
         setShowAddModal(false);
         setNewWorkout({
           Title: "",
-          Description: "",
           Time: "",
-          Category: "",
           Format: "",
-          Intensity: 1,
           Image: ""
         });
         
@@ -113,6 +102,11 @@ export default function WorkoutsPage() {
     setNewWorkout((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingWorkout((prev) => ({ ...prev, [name]: value }));
+  };
+  
   const handleEditWorkout = async (e) => {
     e.preventDefault();
 
@@ -139,11 +133,6 @@ export default function WorkoutsPage() {
     }
   };
 
-  const handleEditInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditingWorkout((prev) => ({ ...prev, [name]: value }));
-  };
-
   const openEditModal = (workout) => {
     setEditingWorkout({ ...workout });
     setShowEditModal(true);
@@ -159,23 +148,7 @@ export default function WorkoutsPage() {
     setSelectedWorkout(null);
   };
 
-  const getIntensityLabel = (intensity) => {
-    switch (intensity) {
-      case 1: return "Low";
-      case 2: return "Medium";
-      case 3: return "High";
-      default: return "Unknown";
-    }
-  };
 
-  const getIntensityBadgeClass = (intensity) => {
-    switch (intensity) {
-      case 1: return "bg-label-success";
-      case 2: return "bg-label-warning";
-      case 3: return "bg-label-danger";
-      default: return "bg-label-secondary";
-    }
-  };
 
   return (
     <div className="content-wrapper">
@@ -227,24 +200,17 @@ export default function WorkoutsPage() {
 
                           <div className="card-body d-flex flex-column">
                             <h5 className="card-title">{workout.Title}</h5>
-                            <p className="card-text">{workout.Description}</p>
-                            
+
                             <div className="mb-2">
                               <small className="text-muted">
                                 <i className="ri-time-line me-1"></i>
                                 {workout.Time}
                               </small>
                             </div>
-                            
+
                             <div className="mb-2">
-                              <span className="badge bg-label-primary me-1">
-                                {workout.Category}
-                              </span>
-                              <span className="badge bg-label-info me-1">
+                              <span className="badge bg-label-info">
                                 {workout.Format}
-                              </span>
-                              <span className={`badge ${getIntensityBadgeClass(workout.Intensity)}`}>
-                                {getIntensityLabel(workout.Intensity)}
                               </span>
                             </div>
 
@@ -313,86 +279,71 @@ export default function WorkoutsPage() {
               </div>
               <div className="modal-body">
                 <form onSubmit={handleAddWorkout}>
-                  <div className="mb-3">
-                    <label>Title</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Title"
-                      value={newWorkout.Title}
-                      onChange={handleInputChange}
-                      required
-                    />
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Title *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Title"
+                        value={newWorkout.Title}
+                        onChange={handleInputChange}
+                        placeholder="Enter workout title"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Format *</label>
+                      <select
+                        className="form-select"
+                        name="Format"
+                        value={newWorkout.Format}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="">Select Format</option>
+                        <option value="Duration">Duration</option>
+                        <option value="Repetitions">Repetitions</option>
+                      </select>
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Description</label>
-                    <textarea
-                      className="form-control"
-                      name="Description"
-                      value={newWorkout.Description}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Time</label>
+                    <label className="form-label">Time *</label>
                     <input
                       type="text"
                       className="form-control"
                       name="Time"
                       value={newWorkout.Time}
                       onChange={handleInputChange}
+                      placeholder="e.g., 30 minutes, 10 reps"
                       required
                     />
+                    <div className="form-text">Enter the time or number of repetitions</div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Category</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Category"
-                      value={newWorkout.Category}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Format</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Format"
-                      value={newWorkout.Format}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Intensity</label>
-                    <select
-                      className="form-control"
-                      name="Intensity"
-                      value={newWorkout.Intensity}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value={1}>Low</option>
-                      <option value={2}>Medium</option>
-                      <option value={3}>High</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label>Image</label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="Image"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setNewWorkout((prev) => ({ ...prev, Image: file }));
-                      }}
-                    />
+                    <label className="form-label">Workout Image</label>
+                    <div className="card">
+                      <div className="card-body text-center">
+                        <div className="mb-2">
+                          <i className="bi bi-image fs-1 text-muted"></i>
+                        </div>
+                        <input
+                          type="file"
+                          className="form-control"
+                          name="Image"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setNewWorkout((prev) => ({ ...prev, Image: file }));
+                          }}
+                        />
+                        <div className="form-text mt-2">
+                          Upload an image for this workout (optional)
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="modal-footer">
                     <button
@@ -432,86 +383,71 @@ export default function WorkoutsPage() {
               </div>
               <div className="modal-body">
                 <form onSubmit={handleEditWorkout}>
-                  <div className="mb-3">
-                    <label>Title</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Title"
-                      value={editingWorkout?.Title || ""}
-                      onChange={handleEditInputChange}
-                      required
-                    />
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Title *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Title"
+                        value={editingWorkout?.Title || ""}
+                        onChange={handleEditInputChange}
+                        placeholder="Enter workout title"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Format *</label>
+                      <select
+                        className="form-select"
+                        name="Format"
+                        value={editingWorkout?.Format || ""}
+                        onChange={handleEditInputChange}
+                        required
+                      >
+                        <option value="">Select Format</option>
+                        <option value="Duration">Duration</option>
+                        <option value="Repetitions">Repetitions</option>
+                      </select>
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Description</label>
-                    <textarea
-                      className="form-control"
-                      name="Description"
-                      value={editingWorkout?.Description || ""}
-                      onChange={handleEditInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Time</label>
+                    <label className="form-label">Time *</label>
                     <input
                       type="text"
                       className="form-control"
                       name="Time"
                       value={editingWorkout?.Time || ""}
                       onChange={handleEditInputChange}
+                      placeholder="e.g., 30 minutes, 10 reps"
                       required
                     />
+                    <div className="form-text">Enter the time or number of repetitions</div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Category</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Category"
-                      value={editingWorkout?.Category || ""}
-                      onChange={handleEditInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Format</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Format"
-                      value={editingWorkout?.Format || ""}
-                      onChange={handleEditInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label>Intensity</label>
-                    <select
-                      className="form-control"
-                      name="Intensity"
-                      value={editingWorkout?.Intensity || 1}
-                      onChange={handleEditInputChange}
-                      required
-                    >
-                      <option value={1}>Low</option>
-                      <option value={2}>Medium</option>
-                      <option value={3}>High</option>
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <label>Image</label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="Image"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setEditingWorkout((prev) => ({ ...prev, Image: file }));
-                      }}
-                    />
+                    <label className="form-label">Workout Image</label>
+                    <div className="card">
+                      <div className="card-body text-center">
+                        <div className="mb-2">
+                          <i className="bi bi-image fs-1 text-muted"></i>
+                        </div>
+                        <input
+                          type="file"
+                          className="form-control"
+                          name="Image"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setEditingWorkout((prev) => ({ ...prev, Image: file }));
+                          }}
+                        />
+                        <div className="form-text mt-2">
+                          Upload an image for this workout (optional)
+                        </div>
+                      </div>
+                    </div>
                   </div>
                   <div className="modal-footer">
                     <button
@@ -567,31 +503,14 @@ export default function WorkoutsPage() {
                     />
                   </div>
                   <div className="col-md-6">
-                    <h6>Description</h6>
-                    <p>{selectedWorkout.Description}</p>
-                    
                     <div className="mb-3">
                       <strong>Time:</strong> {selectedWorkout.Time}
                     </div>
-                    
+
                     <div className="mb-3">
-                      <strong>Category:</strong> 
-                      <span className="badge bg-label-primary ms-2">
-                        {selectedWorkout.Category}
-                      </span>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <strong>Format:</strong> 
+                      <strong>Format:</strong>
                       <span className="badge bg-label-info ms-2">
                         {selectedWorkout.Format}
-                      </span>
-                    </div>
-                    
-                    <div className="mb-3">
-                      <strong>Intensity:</strong> 
-                      <span className={`badge ${getIntensityBadgeClass(selectedWorkout.Intensity)} ms-2`}>
-                        {getIntensityLabel(selectedWorkout.Intensity)}
                       </span>
                     </div>
                   </div>

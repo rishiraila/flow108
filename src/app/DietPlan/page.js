@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchUserCount, fetchForumPosts, fetchQuestions } from "../utils/api";
+import DietPlanAssignmentModal from "./DietPlanAssignmentModal";
 
 export default function Page() {
   const [search, setSearch] = useState("");
@@ -47,12 +48,6 @@ export default function Page() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedPlanForAssignment, setSelectedPlanForAssignment] =
     useState(null);
-  const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [usersError, setUsersError] = useState(null);
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [assignError, setAssignError] = useState(null);
-  const [assignSuccess, setAssignSuccess] = useState(false);
   const [stats, setStats] = useState({
     totalPlans: 0,
     totalMeals: 0,
@@ -132,33 +127,17 @@ export default function Page() {
       setStatsLoading(false);
     }
   }, [dietPlans]);
-  const calculateTotalNutrition = () => {
-    return meals.reduce(
-      (totals, meal) => {
-        totals.calories += Number(meal.Calories) || 0;
-        totals.fats += Number(meal.Fats) || 0;
-        totals.carbs += Number(meal.Carbs) || 0;
-        totals.protein += Number(meal.Protein) || 0;
-        return totals;
-      },
-      { calories: 0, fats: 0, carbs: 0, protein: 0 }
-    );
-  };
+
 
   const fetchDietPlans = async () => {
     try {
       setApiLoading(true);
       setApiError(null);
 
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminDietPlan"
-      );
+      // Use the centralized API client for better error handling
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const data = await dietPlanApi.getAll();
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
       console.log("API Response:", data); // Debug log
 
       // Validate response structure
@@ -281,22 +260,10 @@ export default function Page() {
     };
 
     try {
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminDietPlan",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      // Use the centralized API client for better error handling
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const result = await dietPlanApi.create(payload);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log("Diet plan created successfully:", result);
       setSuccess(true);
 
@@ -333,22 +300,10 @@ export default function Page() {
       setAddMealLoading(true);
       setAddMealError(null);
 
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/meals`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(mealData),
-        }
-      );
+      // Use the centralized API client for better error handling
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const result = await dietPlanApi.addMeal(planId, mealData);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log("Meal added successfully:", result);
       setAddMealSuccess(true);
 
@@ -393,60 +348,7 @@ export default function Page() {
       await addMealToPlan(selectedPlanId, mealData);
     }
   };
-  const assignPlanToUser = async (userId) => {
-    if (!selectedPlanForAssignment || !selectedPlanForAssignment.Id) {
-      setAssignError("No plan selected for assignment.");
-      return;
-    }
 
-    try {
-      setAssignLoading(true);
-      setAssignError(null);
-      setAssignSuccess(false);
-
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/users/${userId}/dietplans/${selectedPlanForAssignment.Id}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            accept: "*/*",
-          },
-          body: JSON.stringify({}),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Response error:", errorText);
-        throw new Error(
-          `HTTP error! status: ${response.status} - ${errorText}`
-        );
-      }
-
-      const result = await response.json();
-      console.log("Assignment result:", result);
-
-      if (result.status || result.Status) {
-        setAssignSuccess(true);
-      } else {
-        throw new Error(
-          result.message || result.Message || "Failed to assign diet plan."
-        );
-      }
-    } catch (err) {
-      console.error("Error assigning plan:", err);
-      setAssignError(err.message || "Failed to assign diet plan");
-    } finally {
-      setAssignLoading(false);
-
-      // Optional: Close modal after 2 seconds
-      setTimeout(() => {
-        setShowAssignModal(false);
-        setAssignSuccess(false);
-      }, 2000);
-    }
-  };
 
   const openAddMealModal = (planId) => {
     setSelectedPlanId(planId);
@@ -458,32 +360,6 @@ export default function Page() {
   const openAssignModal = async (plan) => {
     setSelectedPlanForAssignment(plan);
     setShowAssignModal(true);
-    setAssignError(null);
-    setAssignSuccess(false);
-    setUsers([]);
-
-    try {
-      setUsersLoading(true);
-      setUsersError(null);
-
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      // You can filter only approved users if needed here
-      setUsers(result.Data || []);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      setUsersError("Failed to load users. Please try again later.");
-    } finally {
-      setUsersLoading(false);
-    }
   };
 
   const handleDeletePlan = async (planId) => {
@@ -499,34 +375,20 @@ export default function Page() {
       setDeleteLoading(true);
       setDeleteError(null);
 
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      // Use the centralized API client for better error handling
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const result = await dietPlanApi.delete(planId);
+
+      console.log("Diet plan deleted successfully:", result);
+
+      // Remove the deleted plan from the state
+      setDietPlans((prevPlans) =>
+        prevPlans.filter((plan) => plan.Id !== planId)
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.status) {
-        // Remove the deleted plan from the state
-        setDietPlans((prevPlans) =>
-          prevPlans.filter((plan) => plan.Id !== planId)
-        );
-
-        // Set success message
-        setDeleteSuccess(true);
-        setTimeout(() => setDeleteSuccess(false), 3000);
-      } else {
-        throw new Error(result.message || "Failed to delete diet plan");
-      }
+      // Set success message
+      setDeleteSuccess(true);
+      setTimeout(() => setDeleteSuccess(false), 3000);
     } catch (err) {
       console.error("Error deleting diet plan:", err);
       setDeleteError(err.message || "Failed to delete diet plan");
@@ -572,37 +434,22 @@ export default function Page() {
     };
 
     try {
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/${editingPlan.Id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      // Use the centralized API client for better error handling
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const result = await dietPlanApi.update(editingPlan.Id, payload);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log("Diet plan updated successfully:", result);
 
-      const result = await response.json();
+      // Show toast notification
+      alert("Diet plan updated successfully!");
 
-      if (result.Status) {
-        // Show toast notification
-        alert("Diet plan updated successfully!");
+      // Refresh the diet plans list
+      fetchDietPlans();
 
-        // Refresh the diet plans list
-        fetchDietPlans();
-
-        // Close modal immediately after successful update
-        setShowEditModal(false);
-        setEditingPlan(null);
-        setEditSuccess(false);
-      } else {
-        throw new Error(result.Message || "Failed to update diet plan");
-      }
+      // Close modal immediately after successful update
+      setShowEditModal(false);
+      setEditingPlan(null);
+      setEditSuccess(false);
     } catch (err) {
       console.error("Error updating diet plan:", err);
       setEditError(err.message || "Failed to update diet plan");
@@ -750,10 +597,10 @@ export default function Page() {
                       <h4 className="mb-0">{stat.count}</h4>
                     </div>
                     <h6 className="mb-0 fw-normal">{stat.title}</h6>
-                    <p className="mb-0">
+                    {/* <p className="mb-0">
                       <span className="me-1 fw-medium">{stat.trend}</span>
                       <small className="text-muted">than last week</small>
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               </div>
@@ -1308,99 +1155,17 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Assign Modal */}
-      {showAssignModal && (
-        <div
-          className="modal fade show d-block"
-          tabIndex="-1"
-          role="dialog"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="modal-dialog modal-lg" role="document">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Assign Diet Plan to User</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowAssignModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                {assignSuccess && (
-                  <div className="alert alert-success" role="alert">
-                    Plan assigned successfully!
-                  </div>
-                )}
-                {assignError && (
-                  <div className="alert alert-danger" role="alert">
-                    {assignError}
-                  </div>
-                )}
-                {usersLoading && (
-                  <div className="text-center py-4">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-2">Loading users...</p>
-                  </div>
-                )}
-                {usersError && (
-                  <div className="alert alert-danger" role="alert">
-                    {usersError}
-                  </div>
-                )}
-
-                {!usersLoading && !usersError && users.length === 0 && (
-                  <div className="text-center py-4">
-                    <p className="text-muted">No approved users found.</p>
-                  </div>
-                )}
-
-                {!usersLoading && !usersError && users.length > 0 && (
-                  <div className="table-responsive">
-                    <table className="table table-hover">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.map((user) => (
-                          <tr key={user.Id}>
-                            <td>{user.Name || "N/A"}</td>
-                            <td>{user.Email || "N/A"}</td>
-                            <td>
-                              <button
-                                className="btn btn-primary btn-sm"
-                                onClick={() => assignPlanToUser(user.Id)}
-                                disabled={assignLoading}
-                              >
-                                {assignLoading ? "Assigning..." : "Assign Plan"}
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAssignModal(false)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Diet Plan Assignment Modal */}
+      <DietPlanAssignmentModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        planId={selectedPlanForAssignment?.Id}
+        planName={selectedPlanForAssignment?.Name}
+        onAssignmentSuccess={() => {
+          // Refresh the diet plans list to update user counts
+          fetchDietPlans();
+        }}
+      />
 
       <footer className="content-footer footer bg-footer-theme">
         <div className="container-xxl">

@@ -321,10 +321,10 @@ export default function Page() {
               <h4 className="text-center mb-2" style={{ marginTop: "-7%" }}>
                 Subscriptions Plans
               </h4>
-              <p className="text-center mb-2">
+              {/* <p className="text-center mb-2">
                 All plans include 40+ advanced tools and features to boost your
                 product. Choose the best plan to fit your needs.
-              </p>
+              </p> */}
 
               {/* Plan Cards */}
               <div className="pricing-plans row mx-4 gy-3 px-lg-12 mt-4">
@@ -334,7 +334,7 @@ export default function Page() {
                       <div className="card-body pt-12">
                         <div className="mt-3 mb-5 text-center">
                           <Image
-                            src="/assets/img/illustrations/pricing-basic.png"
+                            src="/assets/img/illustrations/union.svg"
                             alt="Basic Image"
                             width={100} // required
                             height={100} // required

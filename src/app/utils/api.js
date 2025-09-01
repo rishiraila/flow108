@@ -291,12 +291,12 @@ export const fetchForumPosts = async () => {
 
     // The API response has posts inside `data.data`
     const posts = Array.isArray(data.data) ? data.data : [];
-    
+
     // Convert relative image URLs to absolute URLs
     const baseDomain = "https://flow108.coinagesoft.com";
     return posts.map(post => {
       const updatedPost = { ...post };
-      
+
       // Convert Media.Url if it's a relative path
       if (post.Media && post.Media.Url && post.Media.Url.startsWith('/')) {
         updatedPost.Media = {
@@ -304,17 +304,34 @@ export const fetchForumPosts = async () => {
           Url: baseDomain + post.Media.Url
         };
       }
-      
+
       // Convert ProfilePictureUrl if it's a relative path
       if (post.ProfilePictureUrl && post.ProfilePictureUrl.startsWith('/')) {
         updatedPost.ProfilePictureUrl = baseDomain + post.ProfilePictureUrl;
       }
-      
+
       return updatedPost;
     });
   } catch (error) {
     console.error("Error fetching forum posts:", error);
     throw new Error(`Failed to fetch forum posts: ${error.message}`);
+  }
+};
+
+// Fetch forum comments
+export const fetchForumComments = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/community/forum/comments`
+    );
+    const data = await handleApiResponse(response);
+
+    // The API response has comments inside `data`
+    const comments = Array.isArray(data.data) ? data.data : [];
+    return comments;
+  } catch (error) {
+    console.error("Error fetching forum comments:", error);
+    throw new Error(`Failed to fetch forum comments: ${error.message}`);
   }
 };
 
@@ -364,11 +381,24 @@ export const fetchWorkoutPlans = async () => {
 // Add new workout plan
 export const addWorkoutPlan = async (workoutData) => {
   try {
+    // Create FormData object for multipart/form-data
+    const formData = new FormData();
+
+    // Append all fields to formData
+    Object.keys(workoutData).forEach(key => {
+      if (workoutData[key] !== undefined && workoutData[key] !== null) {
+        formData.append(key, workoutData[key]);
+      }
+    });
+
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/admin/workout_plan`,
       {
         method: "POST",
-        body: JSON.stringify(workoutData),
+        headers: {
+          accept: "*/*",
+        },
+        body: formData,
       }
     );
     return await handleApiResponse(response);
@@ -384,7 +414,7 @@ export const addWorkoutPlan = async (workoutData) => {
  * @param {Object} workoutData - The workout data to update (should include Name field)
  * @returns {Promise<Object>} - Returns the updated workout plan data with status, message, and data properties
  * @throws {Error} - Throws an error if the update fails
- * 
+ *
  * Example response format:
  * {
  *   "status": true,
@@ -397,55 +427,39 @@ export const addWorkoutPlan = async (workoutData) => {
  *   }
  * }
  */
-export const updateWorkoutPlan = async (workoutId, workoutData) => {
+export const updateWorkoutPlan = async (id, planData) => {
   try {
-    // Validate input parameters
-    console.log('updateWorkoutPlan called with:', { workoutId, workoutData });
-    
-    if (!workoutId || typeof workoutId !== 'string' || workoutId.trim() === '') {
-      console.error('Invalid workout ID:', workoutId);
-      throw new Error('Valid workout ID is required');
-    }
-    
-    if (!workoutData || typeof workoutData !== 'object') {
-      console.error('Invalid workout data:', workoutData);
-      throw new Error('Workout data object is required');
-    }
-    
-    if (!workoutData.Name || typeof workoutData.Name !== 'string' || workoutData.Name.trim() === '') {
-      console.error('Invalid workout name:', workoutData.Name);
-      throw new Error('Workout name is required and cannot be empty');
-    }
+    const formData = new FormData();
+
+    Object.keys(planData).forEach((key) => {
+      if (Array.isArray(planData[key])) {
+        planData[key].forEach((item) => {
+          formData.append(key, item);
+        });
+      } else {
+        formData.append(key, planData[key]);
+      }
+    });
 
     const response = await fetchWithTimeout(
-      `${API_BASE_URL}/admin/workout_plan/${workoutId}`,
+      `${API_BASE_URL}/admin/workout_plan/${id}`,
       {
-        method: "PUT",
-        body: JSON.stringify(workoutData),
+        method: "PATCH",
+        headers: {
+          accept: "*/*",
+        },
+        body: formData,
       }
     );
-    
-    const result = await handleApiResponse(response);
-    
-    // Ensure the response has the expected structure
-    if (!result || typeof result !== 'object') {
-      throw new Error('Invalid response format from server');
-    }
-    
-    return result;
+
+    return await handleApiResponse(response);
   } catch (error) {
     console.error("Error updating workout plan:", error);
-    
-    // Provide more specific error messages based on error type
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please check your connection and try again');
-    } else if (error.message.includes('HTTP error')) {
-      throw new Error(`Server error: ${error.message}`);
-    } else {
-      throw new Error(`Failed to update workout plan: ${error.message}`);
-    }
+    throw new Error(`Failed to update workout plan: ${error.message}`);
   }
 };
+
+
 
 // Delete workout plan
 export const deleteWorkoutPlan = async (workoutId) => {
@@ -564,10 +578,14 @@ export const addWorkout = async (workoutData) => {
   try {
     // Create FormData object for multipart/form-data
     const formData = new FormData();
-    
-    // Append all fields to formData
+
+    // Append all fields to formData, but only append Image if it's a File object
     Object.keys(workoutData).forEach(key => {
-      if (workoutData[key] !== undefined && workoutData[key] !== null) {
+      if (workoutData[key] !== undefined && workoutData[key] !== null && workoutData[key] !== "") {
+        if (key === 'Image' && !(workoutData[key] instanceof File)) {
+          // Don't append Image if it's not a File object
+          return;
+        }
         formData.append(key, workoutData[key]);
       }
     });
@@ -594,10 +612,14 @@ export const updateWorkout = async (workoutId, workoutData) => {
   try {
     // Create FormData object for multipart/form-data
     const formData = new FormData();
-    
-    // Append all fields to formData
+
+    // Append all fields to formData, but only append Image if it's a File object
     Object.keys(workoutData).forEach(key => {
-      if (workoutData[key] !== undefined && workoutData[key] !== null) {
+      if (workoutData[key] !== undefined && workoutData[key] !== null && workoutData[key] !== "") {
+        if (key === 'Image' && !(workoutData[key] instanceof File)) {
+          // Don't append Image if it's not a File object
+          return;
+        }
         formData.append(key, workoutData[key]);
       }
     });
@@ -655,4 +677,42 @@ export const removeWorkoutFromPlan = async (planId, workoutId) => {
 const getDefaultAvatar = (name) => {
   // Simple default avatar implementation
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+};
+
+// Fetch all workout user assignments
+export const fetchAllWorkoutUserAssignments = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/AllUserAssignments`
+    );
+    const data = await handleApiResponse(response);
+    
+    // The API returns data in the format: { status, message, data: [...] }
+    const userAssignments = data.data || [];
+    
+    // Transform the nested structure into a flat list of assignments
+    const flatAssignments = [];
+    
+    userAssignments.forEach(user => {
+      if (user.Plans && Array.isArray(user.Plans)) {
+        user.Plans.forEach(plan => {
+          flatAssignments.push({
+            AssignmentId: `${user.UserId}-${plan.PlanId}`, // Create a unique ID
+            UserId: user.UserId,
+            WorkoutPlanId: plan.PlanId,
+            PlanName: plan.PlanName,
+            AssignedDate: plan.AssignedOn,
+            Status: 'Active', // Default status since API doesn't provide it
+            userName: user.Name,
+            userEmail: user.Email
+          });
+        });
+      }
+    });
+    
+    return flatAssignments;
+  } catch (error) {
+    console.error("Error fetching workout user assignments:", error);
+    throw new Error(`Failed to fetch workout user assignments: ${error.message}`);
+  }
 };

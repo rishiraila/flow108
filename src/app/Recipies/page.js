@@ -19,6 +19,7 @@ export default function RecipiesPage() {
     Steps: "",
     ImageFile: null,
     Tags: "",
+    Category: "", // added category
   });
 
   // Fetch recipes from API
@@ -152,13 +153,13 @@ export default function RecipiesPage() {
   const handleAddRecipe = async (e) => {
     e.preventDefault();
 
-    // Create FormData object for multipart/form-data
     const formData = new FormData();
     formData.append("Name", newRecipe.Name);
     formData.append("Description", newRecipe.Description);
-    formData.append("Calories", newRecipe.Calories.toString());
+    formData.append("Calories", Number(newRecipe.Calories)); // must be integer
+    formData.append("Category", newRecipe.Category);
 
-    // Handle Steps as array
+    // Append each step
     const stepsArray = newRecipe.Steps.split("\n").filter((step) =>
       step.trim()
     );
@@ -166,7 +167,7 @@ export default function RecipiesPage() {
       formData.append("Steps", step.trim());
     });
 
-    // Handle Tags as array
+    // Append each tag
     const tagsArray = newRecipe.Tags.split(",")
       .map((tag) => tag.trim())
       .filter((tag) => tag);
@@ -174,7 +175,7 @@ export default function RecipiesPage() {
       formData.append("Tags", tag);
     });
 
-    // Handle image file if provided
+    // Append image file with correct field name
     if (newRecipe.ImageFile) {
       formData.append("ImageUrl", newRecipe.ImageFile);
     }
@@ -185,7 +186,7 @@ export default function RecipiesPage() {
         {
           method: "POST",
           headers: {
-            accept: "*/*",
+            accept: "*/*", // don't set Content-Type, browser will handle it
           },
           body: formData,
         }
@@ -207,8 +208,11 @@ export default function RecipiesPage() {
           Steps: "",
           ImageFile: null,
           Tags: "",
+          Category: "",
         });
-        fetchRecipes(); // Refresh the list
+        fetchRecipes(); // refresh list
+      } else {
+        alert(result.Message || "Failed to add recipe");
       }
     } catch (err) {
       console.error("Error adding recipe:", err);
@@ -255,15 +259,29 @@ export default function RecipiesPage() {
       }
     }
 
-    const payload = {
-      Id: editingRecipe.Id,
-      Name: editingRecipe.Name,
-      Description: editingRecipe.Description,
-      Calories: parseInt(editingRecipe.Calories, 10),
-      Steps: stepsArray,
-      ImageUrl: editingRecipe.ImageUrl,
-      Tags: tagsArray,
-    };
+    const formData = new FormData();
+    formData.append("Name", editingRecipe.Name);
+    formData.append("Description", editingRecipe.Description);
+    formData.append("Calories", parseInt(editingRecipe.Calories, 10));
+    formData.append("Category", editingRecipe.Category || "");
+
+    // Append each step
+    stepsArray.forEach((step) => {
+      formData.append("Steps", step);
+    });
+
+    // Append each tag
+    tagsArray.forEach((tag) => {
+      formData.append("Tags", tag);
+    });
+
+    // Append image file if a new file is selected
+    if (editingRecipe.Image instanceof File) {
+      formData.append("ImageUrl", editingRecipe.Image);
+    } else if (editingRecipe.ImageUrl) {
+      // If no new file, append existing image URL as string
+      formData.append("ImageUrl", editingRecipe.ImageUrl);
+    }
 
     try {
       const response = await fetch(
@@ -271,10 +289,9 @@ export default function RecipiesPage() {
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
             accept: "*/*",
           },
-          body: JSON.stringify(payload),
+          body: formData,
         }
       );
 
@@ -315,6 +332,7 @@ export default function RecipiesPage() {
         typeof recipe.Steps === "string"
           ? recipe.Steps
           : JSON.stringify(recipe.Steps),
+      Category: recipe.Category || "", // add category when opening edit modal
     });
     setShowEditModal(true);
   };
@@ -382,6 +400,9 @@ export default function RecipiesPage() {
                             <p className="card-text">{recipe.Description}</p>
                             <p>
                               <strong>Calories:</strong> {recipe.Calories}
+                            </p>
+                            <p>
+                              <strong>Category:</strong> {recipe.Category}
                             </p>
                             <p>
                               <strong>Tags:</strong> {recipe.Tags}
@@ -452,68 +473,115 @@ export default function RecipiesPage() {
               </div>
               <div className="modal-body">
                 <form onSubmit={handleAddRecipe}>
-                  <div className="mb-3">
-                    <label>Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Name"
-                      value={newRecipe.Name}
-                      onChange={handleInputChange}
-                      required
-                    />
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Name *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Name"
+                        value={newRecipe.Name}
+                        onChange={handleInputChange}
+                        placeholder="Enter recipe name"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Calories *</label>
+                      <div className="input-group">
+                        <input
+                          type="number"
+                          className="form-control"
+                          name="Calories"
+                          value={newRecipe.Calories}
+                          onChange={handleInputChange}
+                          placeholder="e.g., 250"
+                          required
+                        />
+                        <span className="input-group-text">🔥</span>
+                      </div>
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Description</label>
+                    <label className="form-label">Description *</label>
                     <textarea
                       className="form-control"
                       name="Description"
                       value={newRecipe.Description}
                       onChange={handleInputChange}
+                      placeholder="Describe the recipe..."
+                      rows={3}
                       required
                     />
                   </div>
-                  <div className="mb-3">
-                    <label>Calories</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="Calories"
-                      value={newRecipe.Calories}
-                      onChange={handleInputChange}
-                      required
-                    />
+
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Category *</label>
+                      <select
+                        name="Category"
+                        value={newRecipe.Category}
+                        onChange={handleInputChange}
+                        className="form-control"
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Veg">Veg</option>
+                        <option value="NonVeg">Non-Veg</option>
+                        <option value="Eggs">Eggs</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Tags</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Tags"
+                        value={newRecipe.Tags}
+                        onChange={handleInputChange}
+                        placeholder="e.g., healthy, quick, spicy"
+                      />
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Steps</label>
+                    <label className="form-label">Steps *</label>
                     <textarea
                       className="form-control"
                       name="Steps"
                       value={newRecipe.Steps}
                       onChange={handleInputChange}
+                      placeholder="Enter cooking steps, one per line..."
+                      rows={4}
                       required
                     />
+                    <div className="form-text">
+                      Enter each step on a new line
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Image File</label>
-                    <input
-                      type="file"
-                      className="form-control"
-                      name="ImageFile"
-                      accept="image/*"
-                      onChange={handleInputChange}
-                    />
+                    <label className="form-label">Recipe Image</label>
+                    <div className="card">
+                      <div className="card-body text-center">
+                        <div className="mb-2">
+                          <i className="bi bi-image fs-1 text-muted"></i>
+                        </div>
+                        <input
+                          type="file"
+                          className="form-control"
+                          name="ImageFile"
+                          accept="image/*"
+                          onChange={handleInputChange}
+                        />
+                        <div className="form-text mt-2">
+                          Upload an image for this recipe (optional)
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mb-3">
-                    <label>Tags</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Tags"
-                      value={newRecipe.Tags}
-                      onChange={handleInputChange}
-                    />
-                  </div>
+
                   <div className="modal-footer">
                     <button
                       type="button"
@@ -552,68 +620,121 @@ export default function RecipiesPage() {
               </div>
               <div className="modal-body">
                 <form onSubmit={handleEditRecipe}>
-                  <div className="mb-3">
-                    <label>Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Name"
-                      value={editingRecipe?.Name || ""}
-                      onChange={handleEditInputChange}
-                      required
-                    />
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Name *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Name"
+                        value={editingRecipe?.Name || ""}
+                        onChange={handleEditInputChange}
+                        placeholder="Enter recipe name"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Calories *</label>
+                      <div className="input-group">
+                        <input
+                          type="number"
+                          className="form-control"
+                          name="Calories"
+                          value={editingRecipe?.Calories || 0}
+                          onChange={handleEditInputChange}
+                          placeholder="e.g., 250"
+                          required
+                        />
+                        <span className="input-group-text">🔥</span>
+                      </div>
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Description</label>
+                    <label className="form-label">Description *</label>
                     <textarea
                       className="form-control"
                       name="Description"
                       value={editingRecipe?.Description || ""}
                       onChange={handleEditInputChange}
+                      placeholder="Describe the recipe..."
+                      rows={3}
                       required
                     />
                   </div>
-                  <div className="mb-3">
-                    <label>Calories</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      name="Calories"
-                      value={editingRecipe?.Calories || 0}
-                      onChange={handleEditInputChange}
-                      required
-                    />
+
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Category *</label>
+                      <select
+                        name="Category"
+                        value={editingRecipe?.Category || ""}
+                        onChange={handleEditInputChange}
+                        className="form-control"
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Veg">Veg</option>
+                        <option value="NonVeg">Non-Veg</option>
+                        <option value="Eggs">Eggs</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Tags</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="Tags"
+                        value={editingRecipe?.Tags || ""}
+                        onChange={handleEditInputChange}
+                        placeholder="e.g., healthy, quick, spicy"
+                      />
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Steps</label>
+                    <label className="form-label">Steps *</label>
                     <textarea
                       className="form-control"
                       name="Steps"
                       value={editingRecipe?.Steps || ""}
                       onChange={handleEditInputChange}
+                      placeholder="Enter cooking steps, one per line..."
+                      rows={4}
                       required
                     />
+                    <div className="form-text">
+                      Enter each step on a new line
+                    </div>
                   </div>
+
                   <div className="mb-3">
-                    <label>Image URL</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="ImageUrl"
-                      value={editingRecipe?.ImageUrl || ""}
-                      onChange={handleEditInputChange}
-                    />
+                    <label className="form-label">Recipe Image</label>
+                    <div className="card">
+                      <div className="card-body text-center">
+                        <div className="mb-2">
+                          <i className="bi bi-image fs-1 text-muted"></i>
+                        </div>
+                        <input
+                          type="file"
+                          className="form-control"
+                          name="Image"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            setEditingRecipe((prev) => ({
+                              ...prev,
+                              Image: file,
+                            }));
+                          }}
+                        />
+                        <div className="form-text mt-2">
+                          Upload a new image for this recipe (optional)
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mb-3">
-                    <label>Tags</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="Tags"
-                      value={editingRecipe?.Tags || ""}
-                      onChange={handleEditInputChange}
-                    />
-                  </div>
+
                   <div className="modal-footer">
                     <button
                       type="button"
@@ -672,6 +793,9 @@ export default function RecipiesPage() {
                     <p>{selectedRecipe.Description}</p>
                     <p>
                       <strong>Calories:</strong> {selectedRecipe.Calories}
+                    </p>
+                    <p>
+                      <strong>Category:</strong> {selectedRecipe.Category}
                     </p>
                     <p>
                       <strong>Tags:</strong> {selectedRecipe.Tags}

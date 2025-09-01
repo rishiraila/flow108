@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { fetchWorkoutPlans, updateWorkoutPlan, deleteWorkoutPlan, addWorkoutPlan } from "../utils/api";
 import WorkoutPlanAssignmentModal from "../WorkoutPlanAssignmentModal";
+import { getImageUrl } from "../utils/imageUtils";
 
 export default function ExercisePage() {
   const [workoutPlans, setWorkoutPlans] = useState([]);
@@ -23,27 +24,30 @@ export default function ExercisePage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  
+
+
   // New workout form data
   const [formData, setFormData] = useState({
     Name: "",
+    Time: "",
     Description: "",
-    Duration: "",
-    Intensity: "Medium"
+    Category: "",
+    Image: null,
+    Intensity: "None"
   });
-
-  const itemsPerPage = 10;
-  const totalPages = Math.ceil(workoutPlans.length / itemsPerPage);
-  const paginatedWorkoutPlans = workoutPlans.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   // Filter workout plans based on search
   const filteredPlans = workoutPlans.filter(
     (plan) =>
       plan.Name?.toLowerCase().includes(search.toLowerCase()) ||
       plan.Description?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredPlans.length / itemsPerPage);
+  const paginatedWorkoutPlans = filteredPlans.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
 
   // Calculate workout plan statistics
@@ -60,7 +64,10 @@ export default function ExercisePage() {
     return {
       totalPlans: workoutPlans.length,
       plansWithSteps: workoutPlans.filter((w) => w.Steps && w.Steps.length > 0).length,
-      longDuration: workoutPlans.filter((w) => w.Duration > 30).length,
+      longDuration: workoutPlans.filter((w) => {
+        const timeValue = parseInt(w.Time);
+        return !isNaN(timeValue) && timeValue > 30;
+      }).length,
       highIntensity: workoutPlans.filter((w) => w.Intensity === "High").length
     };
   };
@@ -85,11 +92,18 @@ export default function ExercisePage() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    const { name, value, type, files } = e.target;
+    if (type === 'file') {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: files[0],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleAddWorkout = async (e) => {
@@ -103,17 +117,25 @@ export default function ExercisePage() {
       return;
     }
 
+    // Process Time field to append " min" if only a number is entered
+    let processedTime = formData.Time.trim();
+    if (/^\d+$/.test(processedTime)) {
+      processedTime = processedTime + " min";
+    }
+
     setAddingWorkout(true);
     try {
-      const response = await addWorkoutPlan(formData);
+      const response = await addWorkoutPlan({ ...formData, Time: processedTime });
       if (response && response.status === true) {
         // Refresh workout plans list
         await fetchWorkoutPlansData();
         setFormData({
           Name: "",
+          Time: "",
           Description: "",
-          Duration: "",
-          Intensity: "Medium"
+          Category: "",
+          Image: null,
+          Intensity: "None"
         });
         setAddWorkoutSuccess(true);
         setTimeout(() => setAddWorkoutSuccess(false), 3000);
@@ -127,54 +149,73 @@ export default function ExercisePage() {
     }
   };
 
-  const handleEditWorkout = async (e) => {
-    e.preventDefault();
-    setEditLoading(true);
-    setEditError(null);
-    setEditSuccess(false);
+ const handleEditWorkout = async (e) => {
+  e.preventDefault();
+  setEditLoading(true);
+  setEditError(null);
+  setEditSuccess(false);
 
-    const form = e.target;
-    const updatedData = {
-      Name: form.Name.value.trim(),
-      Description: form.Description.value.trim(),
-      Duration: form.Duration.value.trim(),
-      Intensity: form.Intensity.value
-    };
+  const form = e.target;
 
-    if (!updatedData.Name) {
-      setEditError("Workout name cannot be empty");
-      setEditLoading(false);
-      return;
-    }
+  let updatedTime = form.Time.value.trim();
+  if (/^\d+$/.test(updatedTime)) {
+    updatedTime = updatedTime + " min";
+  }
 
-    try {
-      const response = await updateWorkoutPlan(currentWorkout.Id, updatedData);
-      
-      if (response && response.status === true && response.data) {
-        // Update the local state to reflect the change
-        setWorkoutPlans(prevPlans => 
-          prevPlans.map(plan => 
-            plan.Id === currentWorkout.Id 
-              ? { ...plan, ...updatedData }
-              : plan
-          )
-        );
-        
-        setEditSuccess(true);
-        setTimeout(() => {
-          setShowEditModal(false);
-          setEditSuccess(false);
-        }, 2000);
-      } else {
-        throw new Error("Invalid response from server");
-      }
-    } catch (error) {
-      console.error("Error updating workout plan:", error);
-      setEditError(error.message || "Failed to update workout plan. Please try again.");
-    } finally {
-      setEditLoading(false);
-    }
+  // Build plain object for update
+  const updatedData = {
+    Name: form.Name.value.trim(),
+    Description: form.Description.value.trim(),
+    Time: updatedTime,
+    Category: form.Category.value.trim(),
+    Intensity: form.Intensity.value,
   };
+
+  // Append file if new image selected
+  if (form.Image.files && form.Image.files.length > 0) {
+    updatedData.Image = form.Image.files[0];
+  }
+
+  if (!updatedData.Name) {
+    setEditError("Workout name cannot be empty");
+    setEditLoading(false);
+    return;
+  }
+
+  try {
+    console.log("Sending update request with data:", updatedData);
+    const response = await updateWorkoutPlan(currentWorkout.Id, updatedData);
+
+    console.log("Update response:", response);
+
+    if (response && response.status === true && response.data) {
+      setWorkoutPlans((prevPlans) =>
+        prevPlans.map((plan) =>
+          plan.Id === currentWorkout.Id
+            ? { ...plan, ...response.data } // use backend’s updated data
+            : plan
+        )
+      );
+
+      alert("Workout plan updated successfully!");
+      setEditSuccess(true);
+      setTimeout(() => {
+        setShowEditModal(false);
+        setEditSuccess(false);
+      }, 2000);
+    } else {
+      throw new Error(response?.message || "Invalid response from server");
+    }
+  } catch (error) {
+    console.error("Error updating workout plan:", error);
+    setEditError(
+      error.message || "Failed to update workout plan. Please try again."
+    );
+  } finally {
+    setEditLoading(false);
+  }
+};
+
 
   const handleDeleteWorkout = async (workoutId) => {
     if (!window.confirm("Are you sure you want to delete this workout plan?")) {
@@ -237,10 +278,10 @@ export default function ExercisePage() {
                     <h4 className="mb-0">{workoutPlans.length}</h4>
                   </div>
                   <h6 className="mb-0 fw-normal">Total Workout Plans</h6>
-                  <p className="mb-0">
+                  {/* <p className="mb-0">
                     <span className="me-1 fw-medium">Live Data</span>
                     <small className="text-muted">from API</small>
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>
@@ -254,14 +295,14 @@ export default function ExercisePage() {
                       </span>
                     </div>
                     <h4 className="mb-0">
-                      {workoutPlans.filter((w) => w.Steps && w.Steps.length > 0).length}
+                      {stats.plansWithSteps}
                     </h4>
                   </div>
                   <h6 className="mb-0 fw-normal">Plans with Steps</h6>
-                  <p className="mb-0">
+                  {/* <p className="mb-0">
                     <span className="me-1 fw-medium">Live Data</span>
                     <small className="text-muted">from API</small>
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>
@@ -275,14 +316,14 @@ export default function ExercisePage() {
                       </span>
                     </div>
                     <h4 className="mb-0">
-                      {workoutPlans.filter((w) => w.Duration > 30).length}
+                      {stats.longDuration}
                     </h4>
                   </div>
                   <h6 className="mb-0 fw-normal">Long Duration</h6>
-                  <p className="mb-0">
+                  {/* <p className="mb-0">
                     <span className="me-1 fw-medium">30+ min</span>
                     <small className="text-muted">workouts</small>
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>
@@ -296,14 +337,14 @@ export default function ExercisePage() {
                       </span>
                     </div>
                     <h4 className="mb-0">
-                      {workoutPlans.filter((w) => w.Intensity === "High").length}
+                      {stats.highIntensity}
                     </h4>
                   </div>
                   <h6 className="mb-0 fw-normal">High Intensity</h6>
-                  <p className="mb-0">
+                  {/* <p className="mb-0">
                     <span className="me-1 fw-medium">Live Data</span>
                     <small className="text-muted">from API</small>
-                  </p>
+                  </p> */}
                 </div>
               </div>
             </div>
@@ -312,14 +353,32 @@ export default function ExercisePage() {
           <div className="bs-stepper-content rounded-0">
             <div id="checkout-confirmation" className="content">
               <div className="row">
-                <div className="col-xl-8 mb-4 mb-xl-0">
+                <div className="col-md-8 mb-4 mb-xl-0">
                   <h4>Workout Plans</h4>
+                  <div className="input-group mb-3" style={{ maxWidth: '300px' }}>
+                    <span className="input-group-text"><i className="ri-search-line"></i></span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search workout plans..."
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
                   <ul className="list-group">
                     {paginatedWorkoutPlans.map((workout) => (
-                      <li key={workout.Id} className="list-group-item p-5">
+                      <li key={workout.Id} className="list-group-item p-5 bg-white">
                         <div className="d-flex gap-4">
                           <div className="flex-shrink-0">
-                            
+                            <img
+                              src={getImageUrl(workout.Image)}
+                              alt={workout.Name}
+                              className="rounded"
+                              style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                              onError={(e) => {
+                                e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmOGY5ZmEiLz48cmVjdCB4PSIyMCIgeT0iMjAiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjZTllY2VmIiBzdHJva2U9IiNkZWUyZTYiIHN0cm9rZS13aWR0aD0iMiIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIyMCIgZmlsbD0iI2FkYjViZCIvPjxwYXRoIGQ9Ik03MCAxMjAgUTEwMCAxMDAgMTMwIDEyMCBRMTMwIDE0MCAxMDAgMTUwIFE3MCAxNDAgNzAgMTIwIFoiIGZpbGw9IiNhZGI1YmQiLz48dGV4dCB4PSIxMDAiIHk9IjE4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZjNzU3ZCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+                              }}
+                            />
                           </div>
                           <div className="flex-grow-1">
                             <div className="row d-flex align-items-center">
@@ -330,7 +389,18 @@ export default function ExercisePage() {
                                 >
                                   <h6 className="mb-2">{workout.Name}</h6>
                                 </a>
-                               
+                                <p className="mb-1 text-muted small">
+                                  {workout.Description && workout.Description.length > 100
+                                    ? `${workout.Description.substring(0, 100)}...`
+                                    : workout.Description}
+                                </p>
+                                <div className="d-flex gap-3 small text-muted">
+                                  {workout.Time && <span><i className="ri-time-line me-1"></i>{workout.Time}</span>}
+                                  {workout.Category && <span><i className="ri-price-tag-3-line me-1"></i>{workout.Category}</span>}
+                                  {workout.Intensity && workout.Intensity !== "None" && (
+                                    <span><i className="ri-flashlight-line me-1"></i>{workout.Intensity}</span>
+                                  )}
+                                </div>
                               </div>
                               <div className="col-md-4">
                                 <div className="text-md-end">
@@ -406,107 +476,135 @@ export default function ExercisePage() {
                     </ul>
                   </nav>
                 </div>
-
-                {/* New Workout Plan Form on the right  here */}
-                <div className="col-xl-4">
-                  <div className="card">
-                    <div className="card-header">
-                      <h5 className="mb-0">Add New Workout Plan</h5>
-                    </div>
+                <div className="col-md-4">
+                  <div className="card bg-white">
                     <div className="card-body">
-                      {addWorkoutSuccess && (
-                        <div className="alert alert-success" role="alert">
-                          Workout plan created successfully!
-                        </div>
-                      )}
-                      {addWorkoutError && (
-                        <div className="alert alert-danger" role="alert">
-                          {addWorkoutError}
-                        </div>
-                      )}
-                      <form onSubmit={handleAddWorkout}>
-                        <div className="mb-3">
-                          <label htmlFor="Name" className="form-label">
-                            Workout Plan Name
-                          </label>
+                      <h4>Add New Workout Plan</h4>
+                  {addWorkoutSuccess && (
+                    <div className="alert alert-success" role="alert">
+                      Workout plan created successfully!
+                    </div>
+                  )}
+                  {addWorkoutError && (
+                    <div className="alert alert-danger" role="alert">
+                      {addWorkoutError}
+                    </div>
+                  )}
+                  <form onSubmit={handleAddWorkout}>
+                    <div className="row">
+                      <div className="col-md-12 mb-3">
+                        <label className="form-label">Workout Plan Name *</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="Name"
+                          name="Name"
+                          value={formData.Name}
+                          onChange={handleInputChange}
+                          placeholder="Enter workout plan name"
+                          disabled={addingWorkout}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Description *</label>
+                      <textarea
+                        className="form-control"
+                        id="Description"
+                        name="Description"
+                        rows="3"
+                        value={formData.Description}
+                        onChange={handleInputChange}
+                        placeholder="Add a brief description"
+                        disabled={addingWorkout}
+                      />
+                    </div>
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Category *</label>
+                      <select
+                        className="form-select"
+                        id="Category"
+                        name="Category"
+                        value={formData.Category}
+                        onChange={handleInputChange}
+                        disabled={addingWorkout}
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Mind">Mind</option>
+                        <option value="Body">Body</option>
+                      </select>
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Time *</label>
+                        <div className="input-group">
                           <input
                             type="text"
                             className="form-control"
-                            id="Name"
-                            name="Name"
-                            value={formData.Name}
-                            onChange={handleInputChange}
-                            placeholder="Enter workout plan name"
-                            disabled={addingWorkout}
-                            required
-                          />
-                        </div>
-                        <div className="mb-3">
-                          <label htmlFor="Description" className="form-label">
-                            Description
-                          </label>
-                          <textarea
-                            className="form-control"
-                            id="Description"
-                            name="Description"
-                            rows="3"
-                            value={formData.Description}
-                            onChange={handleInputChange}
-                            placeholder="Add a brief description"
-                            disabled={addingWorkout}
-                          />
-                        </div>
-                        <div className="mb-3">
-                          <label htmlFor="Duration" className="form-label">
-                            Duration
-                          </label>
-                          <input
-                            type="text"
-                            className="form-control"
-                            id="Duration"
-                            name="Duration"
-                            value={formData.Duration}
+                            id="Time"
+                            name="Time"
+                            value={formData.Time}
                             onChange={handleInputChange}
                             placeholder="e.g., 30 minutes, 1 hour"
                             disabled={addingWorkout}
                           />
+                          <span className="input-group-text"><i className="ri-time-line"></i></span>
                         </div>
-                        <div className="mb-3">
-                          <label htmlFor="Intensity" className="form-label">
-                            Intensity Level
-                          </label>
-                          <select
-                            className="form-select"
-                            id="Intensity"
-                            name="Intensity"
-                            value={formData.Intensity}
+                      </div>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Intensity Level *</label>
+                      <select
+                        className="form-select"
+                        id="Intensity"
+                        name="Intensity"
+                        value={formData.Intensity}
+                        onChange={handleInputChange}
+                        disabled={addingWorkout}
+                      >
+                        <option value="None">None</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Image</label>
+                      <div className="card">
+                        <div className="card-body">
+                          <input
+                            type="file"
+                            className="form-control"
+                            id="Image"
+                            name="Image"
                             onChange={handleInputChange}
                             disabled={addingWorkout}
-                          >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                          </select>
+                            accept="image/*"
+                          />
                         </div>
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={addingWorkout}
-                        >
-                          {addingWorkout ? (
-                            <>
-                              <span
-                                className="spinner-border spinner-border-sm me-2"
-                                role="status"
-                                aria-hidden="true"
-                              ></span>
-                              Adding...
-                            </>
-                          ) : (
-                            "Add Workout Plan"
-                          )}
-                        </button>
-                      </form>
+                      </div>
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn btn-primary w-100"
+                      disabled={addingWorkout}
+                    >
+                      {addingWorkout ? (
+                        <>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
+                          Adding...
+                        </>
+                      ) : (
+                        "Add Workout Plan"
+                      )}
+                    </button>
+                  </form>
                     </div>
                   </div>
                 </div>
@@ -531,17 +629,89 @@ export default function ExercisePage() {
               </div>
               <div className="modal-body">
                 <form onSubmit={handleEditWorkout}>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Workout Plan Name *</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        id="editName"
+                        name="Name"
+                        defaultValue={currentWorkout.Name}
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Intensity Level *</label>
+                      <select
+                        className="form-select"
+                        id="editIntensity"
+                        name="Intensity"
+                        defaultValue={currentWorkout.Intensity || "None"}
+                      >
+                        <option value="None">None</option>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                      </select>
+                    </div>
+                  </div>
                   <div className="mb-3">
-                    <label className="form-label">Workout Name</label>
-                    <input
-                      type="text"
+                    <label className="form-label">Description *</label>
+                    <textarea
                       className="form-control"
-                      defaultValue={currentWorkout.Name}
-                      required
+                      id="editDescription"
+                      name="Description"
+                      rows="3"
+                      defaultValue={currentWorkout.Description || ""}
                     />
                   </div>
-                  <div className="alert alert-info">
-                    <small>Note: Only the workout name can be edited. Other fields are read-only.</small>
+                  <div className="row">
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Category *</label>
+                      <select
+                        className="form-select"
+                        id="editCategory"
+                        name="Category"
+                        defaultValue={currentWorkout.Category || ""}
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        <option value="Mind">Mind</option>
+                        <option value="Body">Body</option>
+                      </select>
+                    </div>
+                    <div className="col-md-6 mb-3">
+                      <label className="form-label">Time *</label>
+                      <div className="input-group">
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="editTime"
+                          name="Time"
+                          defaultValue={currentWorkout.Time || ""}
+                          placeholder="e.g., 30 minutes, 1 hour"
+                        />
+                        <span className="input-group-text"><i className="ri-time-line"></i></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Image</label>
+                    <div className="card">
+                      <div className="card-body">
+                        <input
+                          type="file"
+                          className="form-control"
+                          id="editImage"
+                          name="Image"
+                          accept="image/*"
+                        />
+                        {currentWorkout.Image && (
+                          <small className="text-muted">Current image will be replaced if you select a new one.</small>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="modal-footer">
                     <button
@@ -554,8 +724,16 @@ export default function ExercisePage() {
                     <button
                       type="submit"
                       className="btn btn-primary"
+                      disabled={editLoading}
                     >
-                      Save Changes
+                      {editLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
                     </button>
                   </div>
                 </form>
@@ -564,6 +742,8 @@ export default function ExercisePage() {
           </div>
         </div>
       )}
+
+
 
       {/* Workout Plan Assignment Modal */}
       <WorkoutPlanAssignmentModal

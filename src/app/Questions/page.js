@@ -339,10 +339,10 @@ export default function QuestionsPage() {
                   <h4 className="mb-0">{questions.length}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Questions</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -361,10 +361,10 @@ export default function QuestionsPage() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Likes</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -383,10 +383,10 @@ export default function QuestionsPage() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Anonymous Questions</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -408,10 +408,10 @@ export default function QuestionsPage() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Admin Questions</h6>
-                <p className="mb-0">
+                {/* <p className="mb-0">
                   <span className="me-1 fw-medium">Live Data</span>
                   <small className="text-muted">from API</small>
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -541,12 +541,12 @@ export default function QuestionsPage() {
                           <div className="mt-2">
                             <span
                               className={`badge ${
-                                question.Visibility === 1
+                                question.Visibility === 0
                                   ? "bg-success"
                                   : "bg-secondary"
                               }`}
                             >
-                              {question.Visibility === 1 ? "Public" : "Private"}
+                              {question.Visibility === 0 ? "Public" : "Private"}
                             </span>
                             {/* <span
                               className={`badge ms-2 ${
@@ -715,8 +715,8 @@ export default function QuestionsPage() {
                       })
                     }
                   >
-                    <option value={0}>Private</option>
-                    <option value={1}>Public</option>
+                    <option value={0}>Public</option>
+                    <option value={1}>Private</option>
                   </select>
                 </div>
 
@@ -829,8 +829,8 @@ export default function QuestionsPage() {
                           })
                         }
                       >
-                        <option value={0}>Private</option>
-                        <option value={1}>Public</option>
+                        <option value={0}>Public</option>
+                        <option value={1}>Private</option>
                       </select>
                     </div>
 

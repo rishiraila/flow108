@@ -7,19 +7,19 @@ const API_BASE_URL = "https://flow108.coinagesoft.com/api";
 const createForumPost = async (postData) => {
   const formData = new FormData();
   formData.append("Title", postData.Title);
-  formData.append("Description", postData.Description);
   formData.append("IsAnonymous", postData.IsAnonymous.toString());
-  formData.append("UserId", postData.UserId);
 
-  // Attach media files directly
-  postData.Media.forEach((media) => {
-    formData.append("Media", media.file); // 👈 send file in Media
-    formData.append("MediaType", media.Type.toString()); // 👈 type separately
-  });
+  // Attach media file if present
+  if (postData.Media && postData.Media.file) {
+    formData.append("Media.Url", postData.Media.file);
+  }
 
-  const response = await fetch(`${API_BASE_URL}/admin/community/forum/posts`, {
+  const response = await fetch(`${API_BASE_URL}/admin/community/forum/posts?adminId=17de4552-dbcc-44cc-92e6-71eff2078364`, {
     method: "POST",
-    headers: { accept: "*/*" }, // DO NOT set Content-Type (FormData sets it)
+    headers: {
+      accept: "*/*",
+      Authorization: `Bearer ${localStorage.getItem("token")}`
+    }, // DO NOT set Content-Type (FormData sets it)
     body: formData,
   });
 
@@ -37,16 +37,14 @@ export default function AddPostModal({ onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     Title: "",
-    Description: "",
     IsAnonymous: false,
-    UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6", // Default user ID
-    Media: [],
+    Media: null,
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.Title.trim() || !formData.Description.trim()) {
-      alert("Please fill in both title and description");
+    if (!formData.Title.trim()) {
+      alert("Please enter a title");
       return;
     }
 
@@ -57,10 +55,8 @@ export default function AddPostModal({ onPostCreated }) {
 
       setFormData({
         Title: "",
-        Description: "",
         IsAnonymous: false,
-        UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        Media: [],
+        Media: null,
       });
 
       const modal = document.getElementById("addPostModal");
@@ -78,21 +74,14 @@ export default function AddPostModal({ onPostCreated }) {
   };
 
   const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const newMedia = files.map((file) => ({
-      file,
-      Type: file.type.startsWith("image")
-        ? 0
-        : file.type.startsWith("video")
-        ? 1
-        : 2, // 0=Image, 1=Video, 2=Document
-    }));
-    setFormData({ ...formData, Media: [...formData.Media, ...newMedia] });
+    const file = e.target.files[0];
+    if (file) {
+      setFormData({ ...formData, Media: { file } });
+    }
   };
 
-  const handleRemoveMedia = (index) => {
-    const newMedia = formData.Media.filter((_, i) => i !== index);
-    setFormData({ ...formData, Media: newMedia });
+  const handleRemoveMedia = () => {
+    setFormData({ ...formData, Media: null });
   };
 
   return (
@@ -133,20 +122,7 @@ export default function AddPostModal({ onPostCreated }) {
                 />
               </div>
 
-              {/* Description */}
-              <div className="mb-3">
-                <label className="form-label">Description *</label>
-                <textarea
-                  className="form-control"
-                  rows="4"
-                  value={formData.Description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, Description: e.target.value })
-                  }
-                  placeholder="Enter post description..."
-                  required
-                />
-              </div>
+
 
               {/* Anonymous toggle */}
               <div className="mb-3">
@@ -166,22 +142,7 @@ export default function AddPostModal({ onPostCreated }) {
                 </div>
               </div>
 
-              {/* User ID */}
-              <div className="mb-3">
-                <label className="form-label">User ID</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={formData.UserId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, UserId: e.target.value })
-                  }
-                  placeholder="Enter user ID..."
-                />
-                <small className="text-muted">
-                  Default: 3fa85f64-5717-4562-b3fc-2c963f66afa6
-                </small>
-              </div>
+
 
               {/* File Upload */}
               <div className="mb-3">
@@ -190,34 +151,22 @@ export default function AddPostModal({ onPostCreated }) {
                   type="file"
                   className="form-control"
                   accept="image/*,video/*,.pdf,.doc,.docx"
-                  multiple
                   onChange={handleFileUpload}
                 />
-                <div className="mt-2">
-                  {formData.Media.map((media, index) => (
-                    <div
-                      key={index}
-                      className="d-flex justify-content-between align-items-center border rounded p-2 mb-1"
-                    >
-                      <small>
-                        {media.file.name} (
-                        {media.Type === 0
-                          ? "Image"
-                          : media.Type === 1
-                          ? "Video"
-                          : "Document"}
-                        )
-                      </small>
+                {formData.Media && (
+                  <div className="mt-2">
+                    <div className="d-flex justify-content-between align-items-center border rounded p-2 mb-1">
+                      <small>{formData.Media.file.name}</small>
                       <button
                         type="button"
                         className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleRemoveMedia(index)}
+                        onClick={handleRemoveMedia}
                       >
                         <i className="ri-delete-bin-line"></i>
                       </button>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}
