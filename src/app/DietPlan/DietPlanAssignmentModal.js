@@ -8,11 +8,15 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
 
   useEffect(() => {
     if (isOpen && planId) {
       fetchUsers();
       fetchAssignedUsers();
+      setSelectedUsers([]);
+      setAssignError(null);
+      setAssignSuccess(false);
     }
   }, [isOpen, planId]);
 
@@ -54,9 +58,6 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
   };
 
   const assignPlanToUser = async (userId) => {
-    setAssignLoading(true);
-    setAssignError(null);
-    setAssignSuccess(false);
     try {
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/users/${userId}/dietplans/${planId}`,
@@ -73,23 +74,48 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       const result = await response.json();
-      if (result.status) {
-        setAssignSuccess(true);
-        onAssignmentSuccess();
-        // Refresh assigned users list to update the filtered display
-        fetchAssignedUsers();
-        setTimeout(() => {
-          setAssignSuccess(false);
-          onClose();
-        }, 2000);
-      } else {
+      if (!result.status) {
         throw new Error(result.message || "Failed to assign plan");
       }
+      return true;
     } catch (error) {
-      setAssignError(error.message || "Failed to assign plan");
+      throw error;
+    }
+  };
+
+  const assignPlanToSelectedUsers = async () => {
+    if (selectedUsers.length === 0) {
+      setAssignError("Please select at least one user to assign the plan.");
+      return;
+    }
+    setAssignLoading(true);
+    setAssignError(null);
+    setAssignSuccess(false);
+    try {
+      for (const userId of selectedUsers) {
+        await assignPlanToUser(userId);
+      }
+      setAssignSuccess(true);
+      onAssignmentSuccess();
+      setTimeout(() => {
+        setAssignSuccess(false);
+        onClose();
+      }, 2000);
+    } catch (error) {
+      setAssignError(error.message || "Failed to assign plan to selected users");
     } finally {
       setAssignLoading(false);
     }
+  };
+
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers((prevSelected) => {
+      if (prevSelected.includes(userId)) {
+        return prevSelected.filter((id) => id !== userId);
+      } else {
+        return [...prevSelected, userId];
+      }
+    });
   };
 
   if (!isOpen) return null;
@@ -104,7 +130,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
       <div className="modal-dialog modal-lg" role="document">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Assign Diet Plan to User</h5>
+            <h5 className="modal-title">Assign Diet Plan to User(s)</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
@@ -139,41 +165,70 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                 <p className="text-muted">All users are already assigned to this diet plan.</p>
               </div>
             ) : (
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users
-                      .filter(
-                        (user) =>
-                          !assignedUsers.some(
-                            (assigned) => assigned.Id === user.Id
-                          )
-                      )
-                      .map((user) => (
-                        <tr key={user.Id}>
-                          <td>{user.Name || "N/A"}</td>
-                          <td>{user.Email || "N/A"}</td>
-                          <td>
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => assignPlanToUser(user.Id)}
-                              disabled={assignLoading}
-                            >
-                              {assignLoading ? "Assigning..." : "Assign Plan"}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.length === users.filter(
+                              (user) => !assignedUsers.some(
+                                (assigned) => assigned.Id === user.Id
+                              )
+                            ).length && users.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUsers(users.filter(
+                                  (user) => !assignedUsers.some(
+                                    (assigned) => assigned.Id === user.Id
+                                  )
+                                ).map((u) => u.Id));
+                              } else {
+                                setSelectedUsers([]);
+                              }
+                            }}
+                          />
+                        </th>
+                        <th>Name</th>
+                        <th>Email</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users
+                        .filter(
+                          (user) =>
+                            !assignedUsers.some(
+                              (assigned) => assigned.Id === user.Id
+                            )
+                        )
+                        .map((user) => (
+                          <tr key={user.Id}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.includes(user.Id)}
+                                onChange={() => toggleUserSelection(user.Id)}
+                              />
+                            </td>
+                            <td>{user.Name || "N/A"}</td>
+                            <td>{user.Email || "N/A"}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="d-flex justify-content-end mt-3">
+                  <button
+                    className="btn btn-primary"
+                    onClick={assignPlanToSelectedUsers}
+                    disabled={assignLoading}
+                  >
+                    {assignLoading ? "Assigning..." : "Assign Plan to Selected Users"}
+                  </button>
+                </div>
+              </>
             )}
           </div>
           <div className="modal-footer">

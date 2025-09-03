@@ -68,6 +68,8 @@ export default function DietPlanDetails() {
   const [editMealLoading, setEditMealLoading] = useState(false);
   const [editMealError, setEditMealError] = useState(null);
   const [unassignLoading, setUnassignLoading] = useState(null); // Track which user is being unassigned
+  const [selectedUsersToUnassign, setSelectedUsersToUnassign] = useState([]); // Track selected users for bulk unassignment
+  const [bulkUnassignLoading, setBulkUnassignLoading] = useState(false); // Track bulk unassignment loading
 
   // Function to unassign user from diet plan
   const handleUnassignUser = async (userId) => {
@@ -291,8 +293,10 @@ export default function DietPlanDetails() {
       }
 
       const data = await response.json();
+      console.log("Assigned users API response:", data); // Debug log
 
       if (data.Status && Array.isArray(data.Data)) {
+        console.log("Assigned users data:", data.Data); // Debug log
         setAssignedUsers(data.Data);
       } else {
         console.warn("Invalid assigned users data format:", data);
@@ -313,6 +317,92 @@ export default function DietPlanDetails() {
 
   const closeUsersModal = () => {
     setShowUsersModal(false);
+    setSelectedUsersToUnassign([]); // Clear selections when closing
+  };
+
+  // Handle checkbox selection for bulk unassignment
+  const handleUserSelection = (userId) => {
+    setSelectedUsersToUnassign((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  // Handle select all checkbox
+  const handleSelectAll = () => {
+    if (selectedUsersToUnassign.length === assignedUsers.length) {
+      setSelectedUsersToUnassign([]);
+    } else {
+      setSelectedUsersToUnassign(assignedUsers.map((user) => user.Id));
+    }
+  };
+
+  // Bulk unassign selected users
+  const handleBulkUnassign = async () => {
+    if (selectedUsersToUnassign.length === 0) {
+      alert("Please select users to unassign");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to unassign ${selectedUsersToUnassign.length} user(s) from the diet plan?`)) return;
+
+    try {
+      setBulkUnassignLoading(true);
+
+      // Process unassignments sequentially
+      const results = [];
+      for (const userId of selectedUsersToUnassign) {
+        try {
+          const response = await fetch(
+            `https://flow108.coinagesoft.com/api/AdminDietPlan/unassignplans/${userId}`,
+            {
+              method: "DELETE",
+              headers: {
+                accept: "*/*",
+              },
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to unassign user");
+
+          const result = await response.json();
+          if (result.Status) {
+            results.push({ userId, success: true, message: result.Message });
+          } else {
+            results.push({ userId, success: false, message: result.Message });
+          }
+        } catch (err) {
+          results.push({ userId, success: false, message: err.message });
+        }
+      }
+
+      // Count successful unassignments
+      const successfulUnassignments = results.filter(r => r.success).length;
+
+      if (successfulUnassignments > 0) {
+        alert(`${successfulUnassignments} user(s) unassigned successfully`);
+
+        // Remove successfully unassigned users from the state
+        const successfulUserIds = results.filter(r => r.success).map(r => r.userId);
+        setAssignedUsers((prevUsers) =>
+          prevUsers.filter(user => !successfulUserIds.includes(user.Id))
+        );
+
+        // Clear selections
+        setSelectedUsersToUnassign([]);
+
+        // Refresh the assigned users list from server to ensure consistency
+        await fetchAssignedUsers();
+      } else {
+        alert("Failed to unassign any users");
+      }
+    } catch (err) {
+      console.error("Error in bulk unassignment:", err);
+      alert("Error during bulk unassignment: " + err.message);
+    } finally {
+      setBulkUnassignLoading(false);
+    }
   };
   const getInitials = (name = "") => {
     if (!name) return "?";
@@ -620,7 +710,7 @@ export default function DietPlanDetails() {
     if (confirm("Are you sure you want to delete this meal?")) {
       try {
         const response = await fetch(
-          `https://flow108.coinagesoft.com/api/AdminDietPlan/meals/delete/${mealId}`,
+          `https://flow108.coinagesoft.com/api/meals/${mealId}`,
           {
             method: "DELETE",
             headers: {
@@ -1052,7 +1142,7 @@ export default function DietPlanDetails() {
                         />
                       </div>
                     </div>
-                    <div className="modal-footer">
+                    <div className="modal-footer d-flex justify-content-between">
                       <button
                         type="button"
                         className="btn btn-secondary"
@@ -1114,73 +1204,124 @@ export default function DietPlanDetails() {
                       >
                         <span className="visually-hidden">Loading...</span>
                       </div>
+                      <p className="mt-2">Loading assigned users...</p>
                     </div>
                   ) : assignedUsers.length > 0 ? (
-                    <ul className="list-group">
-                      {assignedUsers.map((user) => (
-                        <li
-                          key={user.Id}
-                          className="list-group-item d-flex align-items-center justify-content-between"
-                        >
-                          <div className="d-flex align-items-center">
-                            {user.ProfilePictureUrl ? (
-                              <img
-                                src={user.ProfilePictureUrl}
-                                alt={user.Name}
-                                className="rounded-circle me-3"
-                                width="40"
-                                height="40"
-                                onError={(e) => {
-                                  // if image fails to load → fallback to initials
-                                  e.target.style.display = "none";
-                                  const fallback = document.createElement("div");
-                                  fallback.className =
-                                    "rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3";
-                                  fallback.style.width = "40px";
-                                  fallback.style.height = "40px";
-                                  fallback.style.fontWeight = "bold";
-                                  fallback.innerText = getInitials(user.Name);
-                                  e.target.parentNode.prepend(fallback);
-                                }}
+                    <div className="table-responsive">
+                      <table className="table table-hover">
+                        <thead>
+                          <tr>
+                            <th>
+                              <input
+                                type="checkbox"
+                                checked={selectedUsersToUnassign.length === assignedUsers.length && assignedUsers.length > 0}
+                                onChange={handleSelectAll}
                               />
-                            ) : (
-                              <div
-                                className="rounded-circle text-white d-flex align-items-center justify-content-center me-3"
-                                style={{
-                                  width: "40px",
-                                  height: "40px",
-                                  fontWeight: "bold",
-                                  backgroundColor: getColorFromName(user.Name),
-                                }}
-                              >
-                                {getInitials(user.Name)}
-                              </div>
-                            )}
-
-                            <div>
-                              <strong>{user.Name}</strong>
-                              <div className="text-muted small">{user.Email}</div>
-                            </div>
-                          </div>
-                          <button
-                            className="btn btn-sm btn-danger"
-                            onClick={() => handleUnassignUser(user.Id)}
-                            disabled={unassignLoading === user.Id}
-                          >
-                            {unassignLoading === user.Id ? (
-                              <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            ) : (
-                              "Unassign"
-                            )}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                            </th>
+                            <th>User</th>
+                            <th>Assigned Date</th>
+                            {/* <th>Status</th> */}
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assignedUsers.map((user) => (
+                            <tr key={user.Id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUsersToUnassign.includes(user.Id)}
+                                  onChange={() => handleUserSelection(user.Id)}
+                                />
+                              </td>
+                              <td>
+                                <div className="d-flex align-items-center">
+                                  {user.ProfilePictureUrl ? (
+                                    <img
+                                      src={user.ProfilePictureUrl}
+                                      alt={user.Name}
+                                      className="rounded-circle me-2"
+                                      style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                                      onError={(e) => {
+                                        // if image fails to load → fallback to initials
+                                        e.target.style.display = "none";
+                                        const fallback = document.createElement("div");
+                                        fallback.className =
+                                          "rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-2";
+                                        fallback.style.width = "32px";
+                                        fallback.style.height = "32px";
+                                        fallback.style.fontWeight = "bold";
+                                        fallback.innerText = getInitials(user.Name);
+                                        e.target.parentNode.prepend(fallback);
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      className="rounded-circle text-white d-flex align-items-center justify-content-center me-2"
+                                      style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        fontWeight: "bold",
+                                        backgroundColor: getColorFromName(user.Name),
+                                      }}
+                                    >
+                                      {getInitials(user.Name)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="fw-semibold">{user.Name}</div>
+                                    <small className="text-muted">Email: {user.Email}</small>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                {user.SignupDate && !isNaN(new Date(user.SignupDate).getTime())
+                                  ? new Date(user.SignupDate).toLocaleDateString()
+                                  : 'Not Available'}
+                              </td>
+                              {/* <td>
+                                <span className={`badge bg-${user.Status === 'Active' ? 'success' : user.Status === 'Completed' ? 'primary' : 'secondary'}`}>
+                                  {user.Status || 'Active'}
+                                </span>
+                              </td> */}
+                              <td>
+                                <button
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleUnassignUser(user.Id)}
+                                  disabled={unassignLoading === user.Id}
+                                >
+                                  {unassignLoading === user.Id ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                      Unassigning...
+                                    </>
+                                  ) : (
+                                    "Unassign"
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   ) : (
-                    <p>No users assigned to this plan.</p>
+                    <div className="text-center text-muted">
+                      <i className="ri-user-unfollow-line" style={{ fontSize: '3rem' }}></i>
+                      <p className="mt-2">No users assigned to this diet plan yet.</p>
+                    </div>
                   )}
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer d-flex justify-content-between">
+                  {selectedUsersToUnassign.length > 0 && (
+                    <button
+                      className="btn btn-danger"
+                      onClick={handleBulkUnassign}
+                      disabled={bulkUnassignLoading}
+                    >
+                      {bulkUnassignLoading ? "Unassigning..." : `Unassign ${selectedUsersToUnassign.length} User(s)`}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -1323,7 +1464,7 @@ export default function DietPlanDetails() {
                         />
                       </div>
                     </div>
-                    <div className="modal-footer">
+                    <div className="modal-footer d-flex justify-content-between">
                       <button
                         type="button"
                         className="btn btn-secondary"

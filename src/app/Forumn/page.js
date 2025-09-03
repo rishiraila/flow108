@@ -504,7 +504,7 @@ export default function Page() {
                           </div>
 
                           <div className="d-flex justify-content-end gap-2">
-                            <button
+                            {/* <button
                               className="btn btn-outline-primary btn-sm"
                               onClick={() => {
                                 setEditingPost(post);
@@ -520,7 +520,7 @@ export default function Page() {
                               }}
                             >
                               Edit
-                            </button>
+                            </button> */}
 
                             <button
                               className="btn btn-outline-danger btn-sm"

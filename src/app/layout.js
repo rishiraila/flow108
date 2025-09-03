@@ -4,6 +4,8 @@ import Sidebar from "./Components/Sidebar";
 import "./globals.css";
 import Script from "next/script";
 import Navbar from "./Components/Navbar";
+import { AlertProvider } from "./utils/alertcontxt";
+import { ConfirmProvider } from "./utils/confirmContext";
 // import "/public/styles.css";
 // import "bootstrap/dist/css/bootstrap.min.css";
 // import 'bootstrap/dist/css/bootstrap.min.css';
@@ -120,11 +122,13 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <AlertProvider>
+        <ConfirmProvider>
          {isAuthPage ? (
           <> {children} </>
-        ) : 
+        ) :
          (
-          
+
             <div className="layout-wrapper layout-content-navbar">
               <div className="layout-container">
                 <Sidebar />
@@ -134,8 +138,10 @@ export default function RootLayout({ children }) {
                 </div>
               </div>
             </div>
-          
+
         )}
+        </ConfirmProvider>
+      </AlertProvider>
 
         <Script
           src="/assets/vendor/js/helpers.js"

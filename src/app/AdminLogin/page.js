@@ -18,7 +18,7 @@ export default function Page() {
     if (username === 'coinage@admin.com' && password === 'admin123') {
       setSuccessMsg('Login Successful! Redirecting...');
       setTimeout(() => {
-        router.push('/Users');
+        router.push('/Dashboard');
       }, 1000);
     } else {
       alert('Invalid email or password!');

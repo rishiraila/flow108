@@ -20,6 +20,14 @@ export default function WorkoutsPage() {
     Image: ""
   });
 
+  // Styled alert states
+  const [deleteSuccessAlert, setDeleteSuccessAlert] = useState(false);
+  const [deleteErrorAlert, setDeleteErrorAlert] = useState(false);
+  const [addSuccessAlert, setAddSuccessAlert] = useState(false);
+  const [addErrorAlert, setAddErrorAlert] = useState(false);
+  const [editSuccessAlert, setEditSuccessAlert] = useState(false);
+  const [editErrorAlert, setEditErrorAlert] = useState(false);
+
   // Fetch workouts from API
   useEffect(() => {
     fetchWorkouts();
@@ -32,14 +40,17 @@ export default function WorkoutsPage() {
       const response = await deleteWorkout(id);
 
       if (response.status) {
-        alert("Workout deleted successfully!");
+        setDeleteSuccessAlert(true);
+        setTimeout(() => setDeleteSuccessAlert(false), 3000);
         fetchWorkouts(); // Refresh the list
       } else {
-        alert("Failed to delete workout");
+        setDeleteErrorAlert(true);
+        setTimeout(() => setDeleteErrorAlert(false), 3000);
       }
     } catch (err) {
       console.error("Error deleting workout:", err);
-      alert("Error deleting workout");
+      setDeleteErrorAlert(true);
+      setTimeout(() => setDeleteErrorAlert(false), 3000);
     }
   };
 
@@ -75,7 +86,8 @@ export default function WorkoutsPage() {
       const response = await addWorkout(newWorkout);
 
       if (response.status) {
-        alert("Workout added successfully!");
+        setAddSuccessAlert(true);
+        setTimeout(() => setAddSuccessAlert(false), 3000);
         setShowAddModal(false);
         setNewWorkout({
           Title: "",
@@ -93,7 +105,8 @@ export default function WorkoutsPage() {
       }
     } catch (err) {
       console.error("Error adding workout:", err);
-      alert("Failed to add workout");
+      setAddErrorAlert(true);
+      setTimeout(() => setAddErrorAlert(false), 3000);
     }
   };
 
@@ -116,7 +129,8 @@ export default function WorkoutsPage() {
       const response = await updateWorkout(editingWorkout.Id, editingWorkout);
 
       if (response.status) {
-        alert("Workout updated successfully!");
+        setEditSuccessAlert(true);
+        setTimeout(() => setEditSuccessAlert(false), 3000);
         setShowEditModal(false);
         setEditingWorkout(null);
         
@@ -129,7 +143,8 @@ export default function WorkoutsPage() {
       }
     } catch (err) {
       console.error("Error updating workout:", err);
-      alert(`Failed to update workout: ${err.message}`);
+      setEditErrorAlert(true);
+      setTimeout(() => setEditErrorAlert(false), 3000);
     }
   };
 

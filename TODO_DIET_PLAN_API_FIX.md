@@ -1,15 +1,15 @@
 # Diet Plan API Fix TODO
 
 ## Issues Identified
-- [x] `fetchAssignedUsers` function using incorrect API endpoint
-- [x] `editMeal` function using incorrect API endpoint
-- [x] `deleteMeal` function using incorrect API endpoint
+- [x] `fetchAssignedUsers` function using incorrect API endpoint - RESOLVED: Current endpoint `/AdminDietPlan/${planId}/users` is working correctly
+- [ ] `editMeal` function using incorrect API endpoint - NEEDS VERIFICATION
+- [x] `deleteMeal` function using incorrect API endpoint - FIXED: Updated to use `/meals/${mealId}`
 
 ## Fixes Applied
-- [ ] Update `fetchAssignedUsers` to use `/admin/AllDietUserAssignments` endpoint
-- [ ] Fix `editMeal` endpoint to use proper meal update API
-- [ ] Fix `deleteMeal` endpoint to use proper meal delete API
+- [x] Verified `fetchAssignedUsers` endpoint `/AdminDietPlan/${planId}/users` works correctly (returns proper user data)
+- [ ] Verify `editMeal` endpoint `/AdminDietPlan/meals/${editingMeal.Id}` is correct
+- [x] Fixed `deleteMeal` endpoint from `/AdminDietPlan/meals/delete/${mealId}` to `/meals/${mealId}`
 - [ ] Test all API calls work correctly
 
 ## Files Modified
-- [ ] `src/app/DietPlan/[id]/page.js`
+- [x] `src/app/DietPlan/[id]/page.js` - Updated deleteMeal endpoint

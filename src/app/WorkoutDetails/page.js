@@ -30,6 +30,8 @@ function WorkoutDetailsContent() {
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [showUsersModal, setShowUsersModal] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [unassignLoading, setUnassignLoading] = useState(false);
 
   const searchParams = useSearchParams();
   const workoutId = searchParams.get("workoutId");
@@ -285,6 +287,61 @@ function WorkoutDetailsContent() {
       await fetchAssignedUsers();
     } catch (err) {
       alert("Error unassigning user: " + err.message);
+    }
+  };
+
+  // Function to toggle user selection for bulk unassignment
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers((prevSelected) => {
+      if (prevSelected.includes(userId)) {
+        return prevSelected.filter((id) => id !== userId);
+      } else {
+        return [...prevSelected, userId];
+      }
+    });
+  };
+
+  // Function to handle bulk unassignment
+  const handleBulkUnassign = async () => {
+    if (selectedUsers.length === 0) {
+      alert("Please select at least one user to unassign.");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to unassign ${selectedUsers.length} user(s) from the workout plan?`)) return;
+
+    setUnassignLoading(true);
+    try {
+      for (const userId of selectedUsers) {
+        const response = await fetch(
+          `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${workoutId}`,
+          {
+            method: "DELETE",
+            headers: {
+              accept: "*/*",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to unassign user ${userId}`);
+        }
+      }
+
+      alert(`${selectedUsers.length} user(s) unassigned successfully`);
+
+      // Remove the users from the assignedUsers state to update UI immediately
+      setAssignedUsers((prevUsers) => prevUsers.filter(user => !selectedUsers.includes(user.UserId)));
+
+      // Clear selection
+      setSelectedUsers([]);
+
+      // Refresh the assigned users list from server to ensure consistency
+      await fetchAssignedUsers();
+    } catch (err) {
+      alert("Error unassigning users: " + err.message);
+    } finally {
+      setUnassignLoading(false);
     }
   };
 
@@ -633,6 +690,19 @@ function WorkoutDetailsContent() {
                       <table className="table table-hover">
                         <thead>
                           <tr>
+                            <th>
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.length === assignedUsers.length && assignedUsers.length > 0}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedUsers(assignedUsers.map((u) => u.UserId));
+                                  } else {
+                                    setSelectedUsers([]);
+                                  }
+                                }}
+                              />
+                            </th>
                             <th>User</th>
                             <th>Assigned Date</th>
                             <th>Status</th>
@@ -642,6 +712,13 @@ function WorkoutDetailsContent() {
                         <tbody>
                           {assignedUsers.map((user) => (
                             <tr key={user.AssignmentId}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUsers.includes(user.UserId)}
+                                  onChange={() => toggleUserSelection(user.UserId)}
+                                />
+                              </td>
                               <td>
                                 <div className="d-flex align-items-center">
                                   <img
@@ -683,6 +760,25 @@ function WorkoutDetailsContent() {
                   )}
                 </div>
                 <div className="modal-footer">
+                  {selectedUsers.length > 0 && (
+                    <button
+                      className="btn btn-danger me-auto"
+                      onClick={handleBulkUnassign}
+                      disabled={unassignLoading}
+                    >
+                      {unassignLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          Unassigning...
+                        </>
+                      ) : (
+                        <>
+                          <i className="ri-user-unfollow-line me-1"></i>
+                          Unassign Selected ({selectedUsers.length})
+                        </>
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-secondary"

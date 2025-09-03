@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { fetchAllWorkoutUserAssignments } from "./utils/api";
+import { useAlert } from "./utils/alertcontxt";
 
 export default function WorkoutPlanAssignmentModal({ 
   isOpen, 
@@ -10,34 +12,45 @@ export default function WorkoutPlanAssignmentModal({
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [assignLoading, setAssignLoading] = useState(false);
-  const [assignError, setAssignError] = useState(null);
-  const [assignSuccess, setAssignSuccess] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+
+  const { showAlert } = useAlert();
 
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      setSelectedUsers([]);
     }
   }, [isOpen]);
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
-    setAssignError(null);
     try {
       const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
-      setUsers(data.Data || []);
+      let allUsers = data.Data || [];
+
+      try {
+        const assignments = await fetchAllWorkoutUserAssignments();
+        const assignedUserIds = assignments
+          .filter(assignment => assignment.WorkoutPlanId === planId)
+          .map(assignment => assignment.UserId);
+
+        allUsers = allUsers.filter(user => !assignedUserIds.includes(user.Id));
+      } catch (assignmentError) {
+        console.warn("Failed to fetch assignments:", assignmentError);
+      }
+
+      setUsers(allUsers);
     } catch (error) {
-      setAssignError(error.message || "Failed to load users");
+      showAlert("error", error.message || "Failed to load users");
     } finally {
       setLoadingUsers(false);
     }
   };
 
   const assignPlanToUser = async (userId) => {
-    setAssignLoading(true);
-    setAssignError(null);
-    setAssignSuccess(false);
     try {
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/admin/users/${userId}/assign-plan`,
@@ -58,21 +71,41 @@ export default function WorkoutPlanAssignmentModal({
         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       const result = await response.json();
-      if (result.status) {
-        setAssignSuccess(true);
-        onAssignmentSuccess();
-        setTimeout(() => {
-          setAssignSuccess(false);
-          onClose();
-        }, 2000);
-      } else {
+      if (!result.status) {
         throw new Error(result.message || "Failed to assign plan");
       }
+      return true;
     } catch (error) {
-      setAssignError(error.message || "Failed to assign plan");
+      throw error;
+    }
+  };
+
+  const assignPlanToSelectedUsers = async () => {
+    if (selectedUsers.length === 0) {
+      showAlert("error", "Please select at least one user to assign the plan.");
+      return;
+    }
+    setAssignLoading(true);
+    try {
+     for (const userId of selectedUsers) {
+    await assignPlanToUser(userId);
+   }
+   showAlert("success", "Workout plan assigned successfully!");
+   onAssignmentSuccess();
+   setTimeout(() => onClose(), 4000);
+    } catch (error) {
+      showAlert("error", error.message || "Failed to assign plan to selected users");
     } finally {
       setAssignLoading(false);
     }
+  };
+
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers((prevSelected) =>
+      prevSelected.includes(userId)
+        ? prevSelected.filter((id) => id !== userId)
+        : [...prevSelected, userId]
+    );
   };
 
   if (!isOpen) return null;
@@ -87,20 +120,10 @@ export default function WorkoutPlanAssignmentModal({
       <div className="modal-dialog modal-lg" role="document">
         <div className="modal-content">
           <div className="modal-header">
-            <h5 className="modal-title">Assign Workout Plan to User</h5>
+            <h5 className="modal-title">Assign Workout Plan to User(s)</h5>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
           <div className="modal-body">
-            {assignSuccess && (
-              <div className="alert alert-success" role="alert">
-                Workout plan assigned successfully!
-              </div>
-            )}
-            {assignError && (
-              <div className="alert alert-danger" role="alert">
-                {assignError}
-              </div>
-            )}
             {loadingUsers ? (
               <div className="text-center py-4">
                 <div className="spinner-border text-primary" role="status">
@@ -113,34 +136,55 @@ export default function WorkoutPlanAssignmentModal({
                 <p className="text-muted">No users found.</p>
               </div>
             ) : (
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((user) => (
-                      <tr key={user.Id}>
-                        <td>{user.Name || "N/A"}</td>
-                        <td>{user.Email || "N/A"}</td>
-                        <td>
-                          <button
-                            className="btn btn-primary btn-sm"
-                            onClick={() => assignPlanToUser(user.Id)}
-                            disabled={assignLoading}
-                          >
-                            {assignLoading ? "Assigning..." : "Assign Plan"}
-                          </button>
-                        </td>
+              <>
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.length === users.length && users.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedUsers(users.map((u) => u.Id));
+                              } else {
+                                setSelectedUsers([]);
+                              }
+                            }}
+                          />
+                        </th>
+                        <th>Name</th>
+                        <th>Email</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr key={user.Id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.includes(user.Id)}
+                              onChange={() => toggleUserSelection(user.Id)}
+                            />
+                          </td>
+                          <td>{user.Name || "N/A"}</td>
+                          <td>{user.Email || "N/A"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="d-flex justify-content-end mt-3">
+                  <button
+                    className="btn btn-primary"
+                    onClick={assignPlanToSelectedUsers}
+                    disabled={assignLoading}
+                  >
+                    {assignLoading ? "Assigning..." : "Assign Plan to Selected Users"}
+                  </button>
+                </div>
+              </>
             )}
           </div>
           <div className="modal-footer">

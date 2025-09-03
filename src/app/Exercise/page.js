@@ -4,10 +4,14 @@ import React, { useState, useEffect } from "react";
 import { fetchWorkoutPlans, updateWorkoutPlan, deleteWorkoutPlan, addWorkoutPlan } from "../utils/api";
 import WorkoutPlanAssignmentModal from "../WorkoutPlanAssignmentModal";
 import { getImageUrl } from "../utils/imageUtils";
+import { useAlert } from "../utils/alertcontxt";
+import { useConfirm } from "../utils/confirmContext";
 
 export default function ExercisePage() {
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showAlert } = useAlert();
+  const { showConfirm } = useConfirm();
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -16,14 +20,14 @@ export default function ExercisePage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentWorkout, setCurrentWorkout] = useState(null);
   const [addingWorkout, setAddingWorkout] = useState(false);
-  const [addWorkoutError, setAddWorkoutError] = useState(null);
-  const [addWorkoutSuccess, setAddWorkoutSuccess] = useState(false);
+
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState(null);
   const [editSuccess, setEditSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+
 
 
   // New workout form data
@@ -106,28 +110,23 @@ export default function ExercisePage() {
     }
   };
 
-  const handleAddWorkout = async (e) => {
+ const handleAddWorkout = async (e) => {
     e.preventDefault();
-    setAddWorkoutError(null);
-    setAddWorkoutSuccess(false);
-
     const trimmedName = formData.Name.trim();
     if (!trimmedName) {
-      setAddWorkoutError("Workout name cannot be empty");
+      showAlert("error", "Workout name cannot be empty");
       return;
     }
 
-    // Process Time field to append " min" if only a number is entered
     let processedTime = formData.Time.trim();
     if (/^\d+$/.test(processedTime)) {
-      processedTime = processedTime + " min";
+      processedTime += " min";
     }
 
     setAddingWorkout(true);
     try {
       const response = await addWorkoutPlan({ ...formData, Time: processedTime });
-      if (response && response.status === true) {
-        // Refresh workout plans list
+      if (response?.status === true) {
         await fetchWorkoutPlansData();
         setFormData({
           Name: "",
@@ -135,107 +134,84 @@ export default function ExercisePage() {
           Description: "",
           Category: "",
           Image: null,
-          Intensity: "None"
+          Intensity: "None",
         });
-        setAddWorkoutSuccess(true);
-        setTimeout(() => setAddWorkoutSuccess(false), 3000);
+        showAlert("success", "Workout plan created successfully!");
       } else {
         throw new Error(response.message || "Failed to add workout plan");
       }
     } catch (error) {
-      setAddWorkoutError(error.message || "Failed to add workout plan");
+      showAlert("error", error.message || "Failed to add workout plan");
     } finally {
       setAddingWorkout(false);
     }
   };
 
- const handleEditWorkout = async (e) => {
-  e.preventDefault();
-  setEditLoading(true);
-  setEditError(null);
-  setEditSuccess(false);
+  const handleEditWorkout = async (e) => {
+    e.preventDefault();
+    const form = e.target;
 
-  const form = e.target;
-
-  let updatedTime = form.Time.value.trim();
-  if (/^\d+$/.test(updatedTime)) {
-    updatedTime = updatedTime + " min";
-  }
-
-  // Build plain object for update
-  const updatedData = {
-    Name: form.Name.value.trim(),
-    Description: form.Description.value.trim(),
-    Time: updatedTime,
-    Category: form.Category.value.trim(),
-    Intensity: form.Intensity.value,
-  };
-
-  // Append file if new image selected
-  if (form.Image.files && form.Image.files.length > 0) {
-    updatedData.Image = form.Image.files[0];
-  }
-
-  if (!updatedData.Name) {
-    setEditError("Workout name cannot be empty");
-    setEditLoading(false);
-    return;
-  }
-
-  try {
-    console.log("Sending update request with data:", updatedData);
-    const response = await updateWorkoutPlan(currentWorkout.Id, updatedData);
-
-    console.log("Update response:", response);
-
-    if (response && response.status === true && response.data) {
-      setWorkoutPlans((prevPlans) =>
-        prevPlans.map((plan) =>
-          plan.Id === currentWorkout.Id
-            ? { ...plan, ...response.data } // use backend’s updated data
-            : plan
-        )
-      );
-
-      alert("Workout plan updated successfully!");
-      setEditSuccess(true);
-      setTimeout(() => {
-        setShowEditModal(false);
-        setEditSuccess(false);
-      }, 2000);
-    } else {
-      throw new Error(response?.message || "Invalid response from server");
+    let updatedTime = form.Time.value.trim();
+    if (/^\d+$/.test(updatedTime)) {
+      updatedTime += " min";
     }
-  } catch (error) {
-    console.error("Error updating workout plan:", error);
-    setEditError(
-      error.message || "Failed to update workout plan. Please try again."
-    );
-  } finally {
-    setEditLoading(false);
-  }
-};
 
+    const updatedData = {
+      Name: form.Name.value.trim(),
+      Description: form.Description.value.trim(),
+      Time: updatedTime,
+      Category: form.Category.value.trim(),
+      Intensity: form.Intensity.value,
+    };
 
-  const handleDeleteWorkout = async (workoutId) => {
-    if (!window.confirm("Are you sure you want to delete this workout plan?")) {
+    if (form.Image.files?.length > 0) {
+      updatedData.Image = form.Image.files[0];
+    }
+
+    if (!updatedData.Name) {
+      showAlert("error", "Workout name cannot be empty");
       return;
     }
-    
-    setDeleteLoading(true);
-    setDeleteError(null);
+
     try {
-      await deleteWorkoutPlan(workoutId);
-      setWorkoutPlans((prevPlans) => prevPlans.filter((plan) => plan.Id !== workoutId));
-      setDeleteSuccess(true);
-      setTimeout(() => setDeleteSuccess(false), 3000);
+      const response = await updateWorkoutPlan(currentWorkout.Id, updatedData);
+      if (response?.status === true && response.data) {
+        setWorkoutPlans((prev) =>
+          prev.map((plan) =>
+            plan.Id === currentWorkout.Id ? { ...plan, ...response.data } : plan
+          )
+        );
+        showAlert("success", "Workout plan updated successfully!");
+        setShowEditModal(false);
+      } else {
+        throw new Error(response?.message || "Invalid response from server");
+      }
     } catch (error) {
-      console.error("Error deleting workout plan:", error);
-      setDeleteError(error.message || "Failed to delete workout plan. Please try again.");
-    } finally {
-      setDeleteLoading(false);
+      showAlert("error", error.message || "Failed to update workout plan");
     }
   };
+
+  const handleDeleteWorkout = (workoutId) => {
+    showConfirm(
+      "Are you sure you want to delete this workout plan? This action cannot be undone.",
+      async () => {
+        setDeleteLoading(true);
+        try {
+          await deleteWorkoutPlan(workoutId);
+          setWorkoutPlans((prev) => prev.filter((plan) => plan.Id !== workoutId));
+          showAlert("success", "Workout plan deleted successfully!");
+        } catch (error) {
+          showAlert("error", error.message || "Failed to delete workout plan");
+        } finally {
+          setDeleteLoading(false);
+        }
+      },
+      () => {
+        // Cancel
+      }
+    );
+  };
+
 
   const handleEditButtonClick = (workout) => {
     setCurrentWorkout(workout);
@@ -263,6 +239,9 @@ export default function ExercisePage() {
 
   return (
     <div>
+      {/* Styled Alerts */}
+     
+
       <div className="content-wrapper">
         <div className="container-xxl flex-grow-1 container-p-y">
           <div className="row mb-5">
@@ -480,16 +459,7 @@ export default function ExercisePage() {
                   <div className="card bg-white">
                     <div className="card-body">
                       <h4>Add New Workout Plan</h4>
-                  {addWorkoutSuccess && (
-                    <div className="alert alert-success" role="alert">
-                      Workout plan created successfully!
-                    </div>
-                  )}
-                  {addWorkoutError && (
-                    <div className="alert alert-danger" role="alert">
-                      {addWorkoutError}
-                    </div>
-                  )}
+                 
                   <form onSubmit={handleAddWorkout}>
                     <div className="row">
                       <div className="col-md-12 mb-3">
@@ -751,7 +721,7 @@ export default function ExercisePage() {
         onClose={() => setShowAssignModal(false)}
         planId={assignWorkoutId}
         onAssignmentSuccess={() => {
-          alert("Workout plan assigned to user successfully!");
+          showAlert("success", "Workout plan assigned successfully!");
           setShowAssignModal(false);
         }}
       />

@@ -3,8 +3,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchUserCount, fetchForumPosts, fetchQuestions } from "../utils/api";
 import DietPlanAssignmentModal from "./DietPlanAssignmentModal";
+import { useAlert } from "../utils/alertcontxt";
+import { useConfirm } from "../utils/confirmContext";
 
 export default function Page() {
+  const { showAlert } = useAlert();
+  const { showConfirm } = useConfirm();
   const [search, setSearch] = useState("");
   const [formData, setFormData] = useState({
     Name: "",
@@ -363,11 +367,11 @@ export default function Page() {
   };
 
   const handleDeletePlan = async (planId) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this diet plan? This action cannot be undone."
-      )
-    ) {
+    const confirmed = await showConfirm(
+      "Are you sure you want to delete this diet plan? This action cannot be undone."
+    );
+
+    if (!confirmed) {
       return;
     }
 
