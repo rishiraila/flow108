@@ -710,7 +710,7 @@ export default function DietPlanDetails() {
     if (confirm("Are you sure you want to delete this meal?")) {
       try {
         const response = await fetch(
-          `https://flow108.coinagesoft.com/api/meals/${mealId}`,
+          `https://flow108.coinagesoft.com/api/AdminDietPlan/meals/delete/${mealId}`,
           {
             method: "DELETE",
             headers: {
