@@ -13,7 +13,6 @@ export default function Page() {
   const [formData, setFormData] = useState({
     Name: "",
     Description: "",
-    Duration: "",
     TotalCalories: 0,
     meals: {
       Breakfast: false,
@@ -259,7 +258,6 @@ export default function Page() {
     const payload = {
       Name: formData.Name,
       Description: formData.Description,
-      Duration: formData.Duration,
       TotalCalories: formData.TotalCalories,
     };
 
@@ -275,7 +273,6 @@ export default function Page() {
       setFormData({
         Name: "",
         Description: "",
-        Duration: "",
         TotalCalories: 0,
         meals: {
           Breakfast: false,
@@ -383,16 +380,22 @@ export default function Page() {
       const { dietPlanApi } = await import("../utils/apiClient");
       const result = await dietPlanApi.delete(planId);
 
-      console.log("Diet plan deleted successfully:", result);
+      console.log("Delete API response:", result);
 
-      // Remove the deleted plan from the state
-      setDietPlans((prevPlans) =>
-        prevPlans.filter((plan) => plan.Id !== planId)
-      );
+      // Check the API response status
+      if (result && result.Status === true) {
+        // Remove the deleted plan from the state
+        setDietPlans((prevPlans) =>
+          prevPlans.filter((plan) => plan.Id !== planId)
+        );
 
-      // Set success message
-      setDeleteSuccess(true);
-      setTimeout(() => setDeleteSuccess(false), 3000);
+        // Set success message using API's message
+        setDeleteSuccess(result.Message || "Diet plan deleted successfully.");
+        setTimeout(() => setDeleteSuccess(false), 3000);
+      } else {
+        // Handle API error response
+        setDeleteError(result?.Message || "Failed to delete diet plan.");
+      }
     } catch (err) {
       console.error("Error deleting diet plan:", err);
       setDeleteError(err.message || "Failed to delete diet plan");
@@ -433,7 +436,6 @@ export default function Page() {
     const payload = {
       Name: editingPlan.Name,
       Description: editingPlan.Description,
-      Duration: editingPlan.Duration,
       TotalCalories: editingPlan.TotalCalories,
     };
 
@@ -470,10 +472,14 @@ export default function Page() {
   );
 
   // Helper function to get meal types from plan data
-  const getMealTypes = (meals) => {
-    if (!meals || !Array.isArray(meals)) return [];
-    return meals.map((meal) => meal.MealType).filter(Boolean);
-  };
+  // Helper function to get unique meal types from plan data
+const getMealTypes = (meals) => {
+  if (!meals || !Array.isArray(meals)) return [];
+  
+  // Extract MealType values, filter valid, then make unique
+  const mealTypes = meals.map((meal) => meal.MealType).filter(Boolean);
+  return [...new Set(mealTypes)]; // Deduplicate using Set
+};
 
   // Helper function to generate mock stats for display
   const generateStats = (plan) => {
@@ -641,7 +647,7 @@ export default function Page() {
 
                 {deleteSuccess && (
                   <div className="alert alert-success" role="alert">
-                    Diet plan deleted successfully!
+                    {deleteSuccess}
                   </div>
                 )}
                 {deleteError && (
@@ -684,9 +690,6 @@ export default function Page() {
                             <h6 className="mb-2">
                               {plan.Name || "Unnamed Plan"}
                             </h6>
-                            <p className="mb-2">
-                              Duration: {plan.Duration || "Not specified"}
-                            </p>
                             <p className="mb-2">
                               {plan.Description || "No description available"}
                             </p>
@@ -809,20 +812,7 @@ export default function Page() {
                       onChange={handleInputChange}
                     />
                   </div>
-                  <div className="mb-3">
-                    <label htmlFor="Duration" className="form-label">
-                      Duration
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="Duration"
-                      placeholder="e.g. 1 Month"
-                      required
-                      value={formData.Duration}
-                      onChange={handleInputChange}
-                    />
-                  </div>
+
                   <div className="mb-3">
                     <label htmlFor="Description" className="form-label">
                       Description
@@ -1082,21 +1072,7 @@ export default function Page() {
                           onChange={handleEditFormChange}
                         />
                       </div>
-                      <div className="mb-3">
-                        <label htmlFor="editDuration" className="form-label">
-                          Duration
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="editDuration"
-                          name="Duration"
-                          placeholder="e.g. 1 Month"
-                          required
-                          value={editingPlan.Duration || ""}
-                          onChange={handleEditFormChange}
-                        />
-                      </div>
+
                       <div className="mb-3">
                         <label htmlFor="editDescription" className="form-label">
                           Description

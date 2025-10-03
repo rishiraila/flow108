@@ -42,11 +42,13 @@ const enhancedFetch = async (url, options = {}, customConfig = {}) => {
     try {
       logger.log(`Attempt ${attempt}/${config.maxRetries}: ${url}`);
       
+      const defaultHeaders = options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' };
+
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
+          ...defaultHeaders,
           ...options.headers,
         },
       });
@@ -182,9 +184,15 @@ export const dietPlanApi = {
   },
   
   create: async (planData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan`, {
+    const formData = new FormData();
+    formData.append('Name', planData.Name);
+    formData.append('Description', planData.Description);
+    formData.append('TotalCalories', planData.TotalCalories);
+
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/Dietplan/Create`, {
       method: 'POST',
-      body: JSON.stringify(planData)
+      body: formData,
+      headers: {} // Let browser set Content-Type for FormData
     });
     return handleApiResponse(response);
   },
@@ -198,20 +206,19 @@ export const dietPlanApi = {
   },
   
   delete: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
       method: 'DELETE'
     });
     return handleApiResponse(response);
   }
 };
 
-// Meal related APIs
 export const mealApi = {
   getByPlan: async (planId) => {
     const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/meals`);
     return handleApiResponse(response);
   },
-  
+
   addToPlan: async (planId, mealData) => {
     const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/meals`, {
       method: 'POST',
@@ -219,11 +226,16 @@ export const mealApi = {
     });
     return handleApiResponse(response);
   },
-  
+
   delete: async (mealId) => {
     const response = await enhancedFetch(`${API_BASE_URL}/meals/${mealId}`, {
       method: 'DELETE'
     });
+    return handleApiResponse(response);
+  },
+
+  getAllMeals: async () => {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/GetAllMeals`);
     return handleApiResponse(response);
   }
 };
@@ -295,7 +307,7 @@ export const dietAssignmentApi = {
   
   // Assign diet plan to user
   assignToUser: async (userId, planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/users/${userId}/dietplans/${planId}`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`, {
       method: 'POST',
       body: JSON.stringify({})
     });
@@ -319,6 +331,23 @@ export const dietAssignmentApi = {
       logger.warn(`Failed to get user count for diet plan ${planId}:`, error);
       return 0;
     }
+  },
+
+  // Assign diet plan to all users
+  assignAllToPlan: async (planId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign-all`, {
+      method: 'POST',
+      body: JSON.stringify({})
+    });
+    return handleApiResponse(response);
+  },
+
+  // Unassign diet plan from all users
+  unassignAllFromPlan: async (planId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/unassign-all`, {
+      method: 'DELETE'
+    });
+    return handleApiResponse(response);
   }
 };
 
@@ -332,7 +361,7 @@ export const userApi = {
   getCount: async () => fetchUserCount(),
   
   assignPlan: async (userId, planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/users/${userId}/dietplans/${planId}`, {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`, {
       method: 'POST',
       body: JSON.stringify({})
     });

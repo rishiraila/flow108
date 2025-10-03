@@ -47,9 +47,10 @@ export default function Sidebar() {
       icon: "ri-restaurant-line",
       submenu: [
         { href: "/DietPlan", label: "Diet Plans", icon: "ri-clipboard-line" },
-       
-        { href: "/Recipies", label: "Recipes", icon: "ri-knife-line" },
-       
+        // { href: "/Meals", label: "Meals", icon: "ri-restaurant-2-line" },
+        // { href: "/Recipies", label: "Recipes", icon: "ri-knife-line" },
+        { href:"/Calories_Counter", label: "Calories Counter", icon: "ri-bar-chart-line" }
+
       ],
     },
   ];

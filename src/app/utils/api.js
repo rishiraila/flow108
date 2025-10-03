@@ -152,6 +152,25 @@ export const removeDietPlanAssignment = async (userId, planId) => {
   }
 };
 
+// Unassign user from diet plan
+export const unassignUserFromDietPlan = async (dietPlanId, userId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/${dietPlanId}/unassign/${userId}`,
+      {
+        method: "DELETE",
+        headers: {
+          accept: "*/*",
+        },
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error unassigning user from diet plan:", error);
+    throw new Error(`Failed to unassign user from diet plan: ${error.message}`);
+  }
+};
+
 // Removed duplicate fetchForumPosts function to fix redeclaration error
 export const fetchUserProfile = async (userId) => {
   try {
@@ -212,8 +231,8 @@ export const fetchAllUsers = async () => {
     const userMap = {};
     users.forEach((u) => {
       userMap[u.Id] = {
-        name: u.FullName || u.UserName || "Unknown",
-        avatar: u.ProfileImage || getDefaultAvatar(u.FullName || u.UserName),
+        name: u.Name || u.FullName || u.UserName || "Unknown",
+        avatar: u.ProfileImage || getDefaultAvatar(u.Name || u.FullName || u.UserName),
       };
     });
     return userMap;
@@ -237,6 +256,32 @@ export const addMealToPlan = async (planId, mealData) => {
   } catch (error) {
     console.error("Error adding meal to plan:", error);
     throw new Error(`Failed to add meal: ${error.message}`);
+  }
+};
+
+// Add single meal (multipart/form-data) to AdminDietPlan/addMeal endpoint
+export const addSingleMeal = async (mealData) => {
+  try {
+    const formData = new FormData();
+    formData.append('MealType', mealData.MealType);
+    formData.append('FoodItem', mealData.FoodItem);
+    formData.append('Quantity', mealData.Quantity);
+    formData.append('Calories', mealData.Calories.toString());
+    formData.append('Carbs', mealData.Carbs.toString());
+    formData.append('Protein', mealData.Protein.toString());
+    formData.append('Fats', mealData.Fats.toString());
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/addMeal`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error adding single meal:", error);
+    throw new Error(`Failed to add single meal: ${error.message}`);
   }
 };
 
@@ -267,6 +312,46 @@ export const deleteMealFromPlan = async (mealId) => {
   } catch (error) {
     console.error("Error deleting meal from plan:", error);
     throw new Error(`Failed to delete meal: ${error.message}`);
+  }
+};
+
+// Import meals from Excel file
+export const importMeals = async (planId, file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/import-meals`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error importing meals:", error);
+    throw new Error(`Failed to import meals: ${error.message}`);
+  }
+};
+
+// Import meals from Excel file (general import endpoint)
+export const importMealsFromExcel = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/import`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error importing meals from Excel:", error);
+    throw new Error(`Failed to import meals: ${error.message}`);
   }
 };
 
@@ -686,13 +771,13 @@ export const fetchAllWorkoutUserAssignments = async () => {
       `${API_BASE_URL}/admin/AllUserAssignments`
     );
     const data = await handleApiResponse(response);
-    
+
     // The API returns data in the format: { status, message, data: [...] }
     const userAssignments = data.data || [];
-    
+
     // Transform the nested structure into a flat list of assignments
     const flatAssignments = [];
-    
+
     userAssignments.forEach(user => {
       if (user.Plans && Array.isArray(user.Plans)) {
         user.Plans.forEach(plan => {
@@ -709,10 +794,133 @@ export const fetchAllWorkoutUserAssignments = async () => {
         });
       }
     });
-    
+
     return flatAssignments;
   } catch (error) {
     console.error("Error fetching workout user assignments:", error);
     throw new Error(`Failed to fetch workout user assignments: ${error.message}`);
   }
 };
+
+// Nutrition/Calories Counter API Functions
+
+// Upload nutrition file for processing
+export const uploadNutritionFile = async (file) => {
+  try {
+    const formData = new FormData();
+    formData.append('nutritionFile', file);
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/nutrition/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error uploading nutrition file:", error);
+    throw new Error(`Failed to upload nutrition file: ${error.message}`);
+  }
+};
+
+// Fetch processed nutrition data
+export const fetchNutritionData = async (userId = null) => {
+  try {
+    const url = userId
+      ? `${API_BASE_URL}/nutrition/data?userId=${userId}`
+      : `${API_BASE_URL}/nutrition/data`;
+
+    const response = await fetchWithTimeout(url);
+    const data = await handleApiResponse(response);
+
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching nutrition data:", error);
+    throw new Error(`Failed to fetch nutrition data: ${error.message}`);
+  }
+};
+
+// Process and store nutrition data
+export const processNutritionData = async (nutritionData) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/nutrition/process`,
+      {
+        method: 'POST',
+        body: JSON.stringify(nutritionData),
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error processing nutrition data:", error);
+    throw new Error(`Failed to process nutrition data: ${error.message}`);
+  }
+};
+
+// Get nutrition summary/stats
+export const fetchNutritionSummary = async (userId = null) => {
+  try {
+    const url = userId
+      ? `${API_BASE_URL}/nutrition/summary?userId=${userId}`
+      : `${API_BASE_URL}/nutrition/summary`;
+
+    const response = await fetchWithTimeout(url);
+    const data = await handleApiResponse(response);
+
+    return data.data || {
+      totalCalories: 0,
+      totalProtein: 0,
+      totalCarbs: 0,
+      totalFats: 0,
+      dailyGoals: {
+        calories: 2500,
+        protein: 150,
+        carbs: 250,
+        fats: 80
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching nutrition summary:", error);
+    throw new Error(`Failed to fetch nutrition summary: ${error.message}`);
+  }
+};
+
+// Update meal in diet plan
+export const updateMeal = async (mealId, mealData) => {
+  try {
+    const formData = new FormData();
+    formData.append('MealType', mealData.MealType);
+    formData.append('FoodItem', mealData.FoodItem);
+    formData.append('Quantity', mealData.Quantity);
+    formData.append('Calories', mealData.Calories.toString());
+    formData.append('Carbs', mealData.Carbs.toString());
+    formData.append('Protein', mealData.Protein.toString());
+    formData.append('Fats', mealData.Fats.toString());
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/update/meal/${mealId}`,
+      {
+        method: "PATCH",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error updating meal:", error);
+    throw new Error(`Failed to update meal: ${error.message}`);
+  }
+};
+
+// Fetch all meals
+export const fetchAllMeals = async () => {
+  try {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/AdminDietPlan/GetAllMeals`);
+    const data = await handleApiResponse(response);
+    return data.Data || [];
+  } catch (error) {
+    console.error("Error fetching all meals:", error);
+    throw new Error(`Failed to fetch all meals: ${error.message}`);
+  }
+};
+

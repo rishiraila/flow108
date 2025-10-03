@@ -1,11 +1,8 @@
-# TODO: Change Login Redirection to Dashboard
+# TODO: Implement Meals Display and Edit Functionality
 
 ## Tasks
-- [x] Update AdminLogin/page.js to redirect to '/Dashboard' instead of '/Users' after successful login
-
-## Status
-- [x] Analyze current login flow
-- [x] Identify redirection logic in AdminLogin/page.js
-- [x] Confirm Dashboard page exists at /Dashboard
-- [x] Edit AdminLogin/page.js to change router.push('/Users') to router.push('/Dashboard')
-- [ ] Test login functionality to verify redirection works correctly
+- [x] Add getAllMeals method to mealApi in apiClient.js
+- [x] Create new page src/app/Meals/page.js for displaying all meals
+- [x] Add "Meals" link to Diet submenu in Sidebar.js
+- [ ] Test the meals page and edit functionality
+- [ ] Verify API integration works correctly
