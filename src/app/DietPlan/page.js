@@ -13,13 +13,7 @@ export default function Page() {
   const [formData, setFormData] = useState({
     Name: "",
     Description: "",
-    TotalCalories: 0,
-    meals: {
-      Breakfast: false,
-      Lunch: false,
-      Dinner: false,
-      Snacks: false,
-    },
+    Meals: [{ Name: "", RecommendedCalories: 0 }],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -173,27 +167,59 @@ export default function Page() {
 
       console.log("Valid diet plans found:", validPlans.length);
 
-      // Fetch user counts for each diet plan
-      const plansWithUserCounts = await Promise.all(
-        validPlans.map(async (plan) => {
-          try {
-            const userCount = await fetchUserCountForPlan(plan.Id || plan.id);
-            return {
-              ...plan,
-              userCount: userCount,
-            };
-          } catch (err) {
-            console.error(
-              `Error fetching user count for plan ${plan.Id}:`,
-              err
-            );
-            return {
-              ...plan,
-              userCount: 0,
-            };
+      // Fetch assigned users for all plans to get accurate user counts
+      let plansWithUserCounts = [];
+      try {
+        const usersResponse = await fetch(
+          "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
+        );
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          if (usersData.Status && usersData.Data) {
+            const plansWithUsers = usersData.Data;
+            // Create a map for quick lookup
+            const userCountMap = {};
+            plansWithUsers.forEach(plan => {
+              userCountMap[plan.DietPlanId] = plan.AssignedUsers ? plan.AssignedUsers.length : 0;
+            });
+            // Set userCount for each plan
+            plansWithUserCounts = validPlans.map(plan => {
+              const planId = plan.Id || plan.id;
+              return {
+                ...plan,
+                userCount: userCountMap[planId] || 0,
+              };
+            });
+          } else {
+            throw new Error("Invalid users data structure");
           }
-        })
-      );
+        } else {
+          throw new Error("Failed to fetch users data");
+        }
+      } catch (err) {
+        console.error("Error fetching assigned users, falling back to individual calls:", err);
+        // Fallback to individual API calls
+        plansWithUserCounts = await Promise.all(
+          validPlans.map(async (plan) => {
+            try {
+              const userCount = await fetchUserCountForPlan(plan.Id || plan.id);
+              return {
+                ...plan,
+                userCount: userCount,
+              };
+            } catch (err) {
+              console.error(
+                `Error fetching user count for plan ${plan.Id}:`,
+                err
+              );
+              return {
+                ...plan,
+                userCount: 0,
+              };
+            }
+          })
+        );
+      }
 
       setDietPlans(plansWithUserCounts);
 
@@ -227,21 +253,28 @@ export default function Page() {
     }));
   };
 
-  const handleNumberChange = (e) => {
-    const { id, value } = e.target;
+
+
+  const handleMealChange = (index, field, value) => {
     setFormData((prev) => ({
       ...prev,
-      [id]: parseInt(value) || 0,
+      Meals: prev.Meals.map((meal, i) =>
+        i === index ? { ...meal, [field]: field === 'RecommendedCalories' ? parseInt(value) || 0 : value } : meal
+      ),
     }));
   };
 
-  const handleCheckboxChange = (meal) => {
+  const addMeal = () => {
     setFormData((prev) => ({
       ...prev,
-      meals: {
-        ...prev.meals,
-        [meal]: !prev.meals[meal],
-      },
+      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0 }],
+    }));
+  };
+
+  const removeMeal = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      Meals: prev.Meals.filter((_, i) => i !== index),
     }));
   };
 
@@ -251,14 +284,19 @@ export default function Page() {
     setError(null);
     setSuccess(false);
 
-    const selectedMeals = Object.keys(formData.meals).filter(
-      (key) => formData.meals[key]
-    );
+    // Filter out empty meals
+    const validMeals = formData.Meals.filter(meal => meal.Name.trim() && meal.RecommendedCalories > 0);
+
+    if (validMeals.length === 0) {
+      setError("Please add at least one meal with a name and recommended calories.");
+      setLoading(false);
+      return;
+    }
 
     const payload = {
       Name: formData.Name,
       Description: formData.Description,
-      TotalCalories: formData.TotalCalories,
+      Meals: validMeals,
     };
 
     try {
@@ -273,13 +311,7 @@ export default function Page() {
       setFormData({
         Name: "",
         Description: "",
-        TotalCalories: 0,
-        meals: {
-          Breakfast: false,
-          Lunch: false,
-          Dinner: false,
-          Snacks: false,
-        },
+        Meals: [{ Name: "", RecommendedCalories: 0 }],
       });
 
       // Refresh the diet plans list
@@ -405,7 +437,7 @@ export default function Page() {
   };
 
   const handleEditPlan = (plan) => {
-    setEditingPlan(plan);
+    setEditingPlan({ ...plan, Meals: plan.Meals || [{ Name: "", RecommendedCalories: 0 }] });
     setShowEditModal(true);
     setEditError(null);
     setEditSuccess(false);
@@ -427,22 +459,56 @@ export default function Page() {
     }));
   };
 
+  const handleEditMealChange = (index, field, value) => {
+    setEditingPlan((prev) => ({
+      ...prev,
+      Meals: prev.Meals.map((meal, i) =>
+        i === index ? { ...meal, [field]: field === 'RecommendedCalories' ? parseInt(value) || 0 : value } : meal
+      ),
+    }));
+  };
+
+  const addEditMeal = () => {
+    setEditingPlan((prev) => ({
+      ...prev,
+      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0 }],
+    }));
+  };
+
+  const removeEditMeal = (index) => {
+    setEditingPlan((prev) => ({
+      ...prev,
+      Meals: prev.Meals.filter((_, i) => i !== index),
+    }));
+  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setEditLoading(true);
     setEditError(null);
     setEditSuccess(false);
 
+    // Filter out empty meals
+    const validMeals = editingPlan.Meals.filter(meal => meal.Name.trim() && meal.RecommendedCalories > 0);
+
+    if (validMeals.length === 0) {
+      setEditError("Please add at least one meal with a name and recommended calories.");
+      setEditLoading(false);
+      return;
+    }
+
     const payload = {
+      Id: editingPlan.Id,
       Name: editingPlan.Name,
       Description: editingPlan.Description,
       TotalCalories: editingPlan.TotalCalories,
+      Meals: validMeals,
     };
 
     try {
       // Use the centralized API client for better error handling
       const { dietPlanApi } = await import("../utils/apiClient");
-      const result = await dietPlanApi.update(editingPlan.Id, payload);
+      const result = await dietPlanApi.update(payload);
 
       console.log("Diet plan updated successfully:", result);
 
@@ -472,62 +538,16 @@ export default function Page() {
   );
 
   // Helper function to get meal types from plan data
-  // Helper function to get unique meal types from plan data
+// Helper function to get unique meal types from plan data
 const getMealTypes = (meals) => {
   if (!meals || !Array.isArray(meals)) return [];
-  
-  // Extract MealType values, filter valid, then make unique
-  const mealTypes = meals.map((meal) => meal.MealType).filter(Boolean);
+
+  // Extract MealType or Name values, filter valid, then make unique
+  const mealTypes = meals.map((meal) => meal.MealType || meal.Name).filter(Boolean);
   return [...new Set(mealTypes)]; // Deduplicate using Set
 };
 
-  // Helper function to generate mock stats for display
-  const generateStats = (plan) => {
-    if (!plan.Meals || plan.Meals.length === 0) {
-      return [
-        { label: "Carbs", value: 0, cal: "0 g" },
-        { label: "Proteins", value: 0, cal: "0 g" },
-        { label: "Fats", value: 0, cal: "0 g" },
-        { label: "Calories", value: 0, cal: "0 kcal" },
-      ];
-    }
 
-    const totals = plan.Meals.reduce(
-      (acc, meal) => {
-        acc.carbs += Number(meal.Carbs) || 0;
-        acc.protein += Number(meal.Protein) || 0;
-        acc.fats += Number(meal.Fats) || 0;
-        acc.calories += Number(meal.Calories) || 0;
-        return acc;
-      },
-      { carbs: 0, protein: 0, fats: 0, calories: 0 }
-    );
-
-    const totalMacros = totals.carbs + totals.protein + totals.fats;
-
-    return [
-      {
-        label: "Carbs",
-        value: totalMacros ? (totals.carbs / totalMacros) * 100 : 0,
-        cal: `${totals.carbs} g`,
-      },
-      {
-        label: "Proteins",
-        value: totalMacros ? (totals.protein / totalMacros) * 100 : 0,
-        cal: `${totals.protein} g`,
-      },
-      {
-        label: "Fats",
-        value: totalMacros ? (totals.fats / totalMacros) * 100 : 0,
-        cal: `${totals.fats} g`,
-      },
-      {
-        label: "Calories",
-        value: 100,
-        cal: `${totals.calories} kcal`,
-      },
-    ];
-  };
 
   return (
     <div className="content-wrapper">
@@ -693,9 +713,14 @@ const getMealTypes = (meals) => {
                             <p className="mb-2">
                               {plan.Description || "No description available"}
                             </p>
-                            <p className="mb-2">
-                              Total Calories: {plan.TotalCalories || 0}
-                            </p>
+                            <div className="mb-2">
+                              <strong>Meals:</strong>
+                              <ul className="list-unstyled small">
+                                {plan.Meals?.map((meal, idx) => (
+                                  <li key={idx}>{meal.Name}: {meal.RecommendedCalories} cal</li>
+                                ))}
+                              </ul>
+                            </div>
 
                             {getMealTypes(plan.Meals).map((mealType) => (
                               <span
@@ -718,32 +743,20 @@ const getMealTypes = (meals) => {
                             <hr className="d-sm-none" />
                           </div>
                           <div className="col-sm-7 g-2 text-nowrap d-flex flex-column justify-content-between px-6 gap-3">
-                            {generateStats(plan).map((stat) => (
-                              <div
-                                className="d-flex align-items-center gap-2"
-                                key={stat.label}
-                              >
-                                <small style={{ width: 80 }}>
-                                  {stat.label}
-                                </small>
-                                <div
-                                  className="progress w-100 rounded-pill"
-                                  style={{ height: 8 }}
-                                >
-                                  <div
-                                    className="progress-bar bg-primary"
-                                    role="progressbar"
-                                    style={{ width: `${stat.value}%` }}
-                                    aria-valuenow={stat.value}
-                                    aria-valuemin="0"
-                                    aria-valuemax="100"
-                                  ></div>
-                                </div>
-                                <small className="w-px-20 text-end">
-                                  {stat.cal}
-                                </small>
+                            <div className="d-flex flex-column gap-2">
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-bowl-fill me-2 text-primary"></i>
+                                <span className="fw-medium">Total Meals: {plan.Meals?.length || 0}</span>
                               </div>
-                            ))}
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-fire me-2 text-danger"></i>
+                                <span className="fw-medium">Total Calories: {plan.TotalCalories || 0}</span>
+                              </div>
+                              <div className="d-flex align-items-center">
+                                <i className="bi bi-people me-2 text-info"></i>
+                                <span className="fw-medium">Assigned Users: {plan.userCount || 0}</span>
+                              </div>
+                            </div>
                             <div
                               style={{
                                 display: "flex",
@@ -828,39 +841,48 @@ const getMealTypes = (meals) => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="TotalCalories" className="form-label">
-                      Total Calories
-                    </label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      id="TotalCalories"
-                      placeholder="Enter total calories"
-                      required
-                      min="0"
-                      value={formData.TotalCalories}
-                      onChange={handleNumberChange}
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Meals Included</label>
-                    <div
-                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
-                    >
-                      {Object.keys(formData.meals).map((meal) => (
-                        <div key={meal}>
+                    <label className="form-label">Meals</label>
+                    {formData.Meals.map((meal, index) => (
+                      <div key={index} className="d-flex gap-2 mb-2 align-items-end">
+                        <div className="flex-grow-1">
                           <input
-                            type="checkbox"
-                            id={`meal-${meal}`}
-                            checked={formData.meals[meal]}
-                            onChange={() => handleCheckboxChange(meal)}
+                            type="text"
+                            className="form-control"
+                            placeholder="Meal name"
+                            value={meal.Name}
+                            onChange={(e) => handleMealChange(index, 'Name', e.target.value)}
+                            required
                           />
-                          <label htmlFor={`meal-${meal}`} className="ms-1">
-                            {meal}
-                          </label>
                         </div>
-                      ))}
-                    </div>
+                        <div style={{ width: '150px' }}>
+                          <input
+                            type="number"
+                            className="form-control"
+                            placeholder="Calories"
+                            min="0"
+                            value={meal.RecommendedCalories}
+                            onChange={(e) => handleMealChange(index, 'RecommendedCalories', e.target.value)}
+                            required
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger btn-sm"
+                          onClick={() => removeMeal(index)}
+                          disabled={formData.Meals.length === 1}
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary btn-sm mt-2"
+                      onClick={addMeal}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Add Meal
+                    </button>
                   </div>
                   <button
                     type="submit"
@@ -1106,6 +1128,50 @@ const getMealTypes = (meals) => {
                           value={editingPlan.TotalCalories || 0}
                           onChange={handleEditFormNumberChange}
                         />
+                      </div>
+                      <div className="mb-3">
+                        <label className="form-label">Meals</label>
+                        {editingPlan.Meals.map((meal, index) => (
+                          <div key={index} className="d-flex gap-2 mb-2 align-items-end">
+                            <div className="flex-grow-1">
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Meal name"
+                                value={meal.Name}
+                                onChange={(e) => handleEditMealChange(index, 'Name', e.target.value)}
+                                required
+                              />
+                            </div>
+                            <div style={{ width: '150px' }}>
+                              <input
+                                type="number"
+                                className="form-control"
+                                placeholder="Calories"
+                                min="0"
+                                value={meal.RecommendedCalories}
+                                onChange={(e) => handleEditMealChange(index, 'RecommendedCalories', e.target.value)}
+                                required
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm"
+                              onClick={() => removeEditMeal(index)}
+                              disabled={editingPlan.Meals.length === 1}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary btn-sm mt-2"
+                          onClick={addEditMeal}
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Add Meal
+                        </button>
                       </div>
                       <div className="modal-footer">
                         <button

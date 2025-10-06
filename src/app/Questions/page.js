@@ -494,16 +494,10 @@ export default function QuestionsPage() {
                           <div className="d-flex align-items-center mb-2">
                             <img
                               src={
-                                question.IsAnonymous
-                                  ? getDefaultAvatar("Anonymous")
-                                  : question.ProfilePictureUrl ||
-                                    getDefaultAvatar(question.UserName || "User")
+                                question.ProfilePictureUrl ||
+                                getDefaultAvatar(question.UserName || "User")
                               }
-                              alt={
-                                question.IsAnonymous
-                                  ? "Anonymous"
-                                  : question.UserName || "User"
-                              }
+                              alt={question.UserName || "User"}
                               className="rounded-circle me-2"
                               style={{
                                 width: "40px",
@@ -512,17 +506,13 @@ export default function QuestionsPage() {
                               }}
                               onError={(e) => {
                                 e.target.src = getDefaultAvatar(
-                                  question.IsAnonymous
-                                    ? "Anonymous"
-                                    : question.UserName || "User"
+                                  question.UserName || "User"
                                 );
                               }}
                             />
                             <div>
                               <small className="d-block fw-medium">
-                                {question.IsAnonymous
-                                  ? "Anonymous User"
-                                  : question.UserName || "User"}
+                                {question.UserName || "User"}
                               </small>
                               <small className="text-muted">
                                 {formatDate(question.CreatedOn)}

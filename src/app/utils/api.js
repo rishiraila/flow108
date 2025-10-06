@@ -305,8 +305,11 @@ export const assignRecipeToMeal = async (mealId, recipeId, recipeData) => {
 // Delete meal from plan
 export const deleteMealFromPlan = async (mealId) => {
   try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/meals/${mealId}`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/AdminDietPlan/${mealId}`, {
       method: "DELETE",
+      headers: {
+        accept: "*/*",
+      },
     });
     return await handleApiResponse(response);
   } catch (error) {

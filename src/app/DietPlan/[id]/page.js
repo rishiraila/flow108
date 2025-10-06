@@ -61,11 +61,11 @@ export default function DietPlanDetails() {
 
   // Transform API data to match component structure
   const transformMealsData = (apiMeals) => {
-    // Group meals by MealType
+    // Group meals by MealName
     const groupedMeals = {};
 
     apiMeals.forEach(meal => {
-      const mealType = meal.MealType || 'Breakfast'; // Default to Breakfast if not specified
+      const mealType = meal.MealName || 'Breakfast'; // Use MealName which is the string
       if (!groupedMeals[mealType]) {
         groupedMeals[mealType] = {
           id: mealType.toLowerCase(),

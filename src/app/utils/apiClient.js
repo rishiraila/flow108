@@ -184,21 +184,15 @@ export const dietPlanApi = {
   },
   
   create: async (planData) => {
-    const formData = new FormData();
-    formData.append('Name', planData.Name);
-    formData.append('Description', planData.Description);
-    formData.append('TotalCalories', planData.TotalCalories);
-
     const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/Dietplan/Create`, {
       method: 'POST',
-      body: formData,
-      headers: {} // Let browser set Content-Type for FormData
+      body: JSON.stringify(planData)
     });
     return handleApiResponse(response);
   },
   
-  update: async (planId, planData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}`, {
+  update: async (planData) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/update-diet-plan`, {
       method: 'PUT',
       body: JSON.stringify(planData)
     });
@@ -209,6 +203,10 @@ export const dietPlanApi = {
     const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
       method: 'DELETE'
     });
+    // For DELETE requests, handle empty responses
+    if (response === null || response === undefined) {
+      return { Status: true, Message: 'Diet plan deleted successfully' };
+    }
     return handleApiResponse(response);
   }
 };

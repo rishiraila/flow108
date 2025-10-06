@@ -1,4 +1,4 @@
-// components/Navbar.js
+ // components/Navbar.js
 'use client';
 import React from 'react';
 import Image from 'next/image';
@@ -12,7 +12,7 @@ export default function Navbar() {
   return (
     <nav className="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
       <div className="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
-        <a className="nav-item nav-link px-0 me-xl-6" href="#">
+        <a className="nav-item nav-link px-0 me-xl-6" href="#" onClick={(e) => e.preventDefault()}>
           <i className="ri-menu-fill ri-22px"></i>
         </a>
       </div>
@@ -21,7 +21,7 @@ export default function Navbar() {
         {/* Search */}
         <div className="navbar-nav align-items-center">
           <div className="nav-item navbar-search-wrapper mb-0">
-            <a className="nav-item nav-link search-toggler fw-normal px-0" href="#">
+            <a className="nav-item nav-link search-toggler fw-normal px-0" href="#" onClick={(e) => e.preventDefault()}>
               <i className="ri-search-line ri-22px scaleX-n1-rtl me-3"></i>
               <span className="d-none d-md-inline-block text-muted">Search (Ctrl+/)</span>
             </a>
@@ -32,7 +32,7 @@ export default function Navbar() {
         <ul className="navbar-nav flex-row align-items-center ms-auto">
           {/* Language Dropdown */}
           <li className="nav-item dropdown">
-            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown">
+            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-translate-2 ri-22px"></i>
             </a>
             <ul className="dropdown-menu dropdown-menu-end">
@@ -48,7 +48,7 @@ export default function Navbar() {
 
           {/* Style Switcher */}
           <li className="nav-item dropdown me-1 me-xl-0">
-            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown">
+            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-contrast-drop-line ri-22px"></i>
             </a>
             <ul className="dropdown-menu dropdown-menu-end">
@@ -67,7 +67,7 @@ export default function Navbar() {
 
           {/* Notifications (simplified) */}
           <li className="nav-item dropdown me-4 me-xl-1">
-            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown">
+            <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-notification-2-line ri-22px"></i>
               <span className="position-absolute top-0 start-50 translate-middle-y badge badge-dot bg-danger mt-2 border"></span>
             </a>
@@ -83,7 +83,7 @@ export default function Navbar() {
 
           {/* User Menu */}
           <li className="nav-item dropdown">
-            <a className="nav-link dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown">
+            <a className="nav-link dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <div className="avatar avatar-online">
                 <Image src="/assets/img/avatars/1.png" alt="Avatar" className="rounded-circle" width={40} height={40} />
               </div>

@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import React from "react";
-import { usePathname } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const menuItems = [
     { href: "/Dashboard", icon: "ri-dashboard-line", label: "Dashboard" },
@@ -55,6 +56,27 @@ export default function Sidebar() {
     },
   ];
 
+  const [openMenus, setOpenMenus] = useState({});
+
+  useEffect(() => {
+    // On pathname change, open the submenu that matches the current path
+    const newOpenMenus = {};
+    menuItems.forEach(item => {
+      if (item.submenu) {
+        const isOpen = item.submenu.some(sub => pathname.startsWith(sub.href));
+        newOpenMenus[item.label] = isOpen;
+      }
+    });
+    setOpenMenus(newOpenMenus);
+  }, [pathname]);
+
+  const toggleMenu = (label) => {
+    setOpenMenus(prev => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
+  };
+
   return (
     <aside
       id="layout-menu"
@@ -74,7 +96,7 @@ export default function Sidebar() {
             Flow 108
           </span>
         </Link>
-        <a href="#" className="layout-menu-toggle menu-link text-large ms-auto">
+        <a href="#" className="layout-menu-toggle menu-link text-large ms-auto" onClick={(e) => e.preventDefault()}>
           <svg
             width="24"
             height="24"
@@ -95,13 +117,9 @@ export default function Sidebar() {
             return (
               <li
                 key={item.label}
-                className={`menu-item ${
-                  item.submenu.some((sub) => pathname.startsWith(sub.href))
-                    ? "active open"
-                    : ""
-                }`}
+                className={`menu-item ${openMenus[item.label] ? "active open" : ""}`}
               >
-                <a href="#" className="menu-link menu-toggle">
+                <a href="#" className="menu-link menu-toggle" onClick={(e) => { e.preventDefault(); toggleMenu(item.label); }}>
                   <i className={`menu-icon tf-icons ${item.icon}`}></i>
                   <div>{item.label}</div>
                 </a>
@@ -109,13 +127,11 @@ export default function Sidebar() {
                   {item.submenu.map((sub) => (
                     <li
                       key={sub.href}
-                      className={`menu-item${
-                        pathname === sub.href ? " active" : ""
-                      }`}
+                      className={`menu-item${pathname === sub.href ? " active" : ""}`}
                     >
-                      <Link href={sub.href} className="menu-link">
+                      <a className="menu-link" onClick={() => router.push(sub.href)}>
                         <div>{sub.label}</div>
-                      </Link>
+                      </a>
                     </li>
                   ))}
                 </ul>
@@ -126,9 +142,7 @@ export default function Sidebar() {
           return (
             <li
               key={item.href}
-              className={`menu-item${
-                pathname.startsWith(item.href) ? " active" : ""
-              }`}
+              className={`menu-item${pathname.startsWith(item.href) ? " active" : ""}`}
             >
               <Link href={item.href} className="menu-link">
                 <i className={`menu-icon tf-icons ${item.icon}`}></i>

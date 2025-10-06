@@ -125,11 +125,11 @@ export default function CaloriesCounter() {
 
   // Transform API data to match component structure
   const transformMealsData = (apiMeals) => {
-    // Group meals by MealType
+    // Group meals by MealName
     const groupedMeals = {};
 
     apiMeals.forEach(meal => {
-      const mealType = meal.MealType || 'Breakfast'; // Default to Breakfast if not specified
+      const mealType = meal.MealName || 'Breakfast'; // Use MealName from API response
       if (!groupedMeals[mealType]) {
         groupedMeals[mealType] = {
           id: mealType.toLowerCase(),
@@ -207,7 +207,21 @@ export default function CaloriesCounter() {
 
     try {
       const result = await importMealsFromExcel(selectedFile);
-      setImportMessage({ type: 'success', text: `Successfully imported ${result.count} meals from ${selectedFile.name}` });
+
+      // Parse the success message from API response
+      const successMessage = result.Message || 'Meals imported successfully';
+      setImportMessage({ type: 'success', text: `${successMessage} from ${selectedFile.name}` });
+
+      // Refresh meals data after successful import
+      try {
+        const apiMeals = await fetchAllMeals();
+        const transformedMeals = transformMealsData(apiMeals);
+        setMeals(transformedMeals);
+      } catch (refreshError) {
+        console.error('Error refreshing meals after import:', refreshError);
+        // Don't show error for refresh failure, just log it
+      }
+
       setActiveTab('calculator');
     } catch (error) {
       setImportMessage({ type: 'error', text: error.message || 'Failed to import data. Please try again.' });
@@ -864,7 +878,7 @@ export default function CaloriesCounter() {
                             <td>
                               <span className="fw-medium">{item.mealName}</span>
                               <br />
-                              <small className="text-muted">{item.mealTime}</small>
+                              {/* <small className="text-muted">{item.mealTime}</small> */}
                             </td>
                             <td>{item.name}</td>
                             <td>{item.quantity}</td>
