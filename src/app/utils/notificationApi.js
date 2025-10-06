@@ -3,7 +3,7 @@
 const API_BASE_URL = "https://flow108.coinagesoft.com/api";
 
 // Common fetch wrapper with error handling and timeout
-const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
+const fetchWithTimeout = async (url, options = {}, timeout = 30000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -15,6 +15,14 @@ const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
           "Content-Type": "application/json",
           ...options.headers,
         };
+
+    // Add Authorization header if token exists
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem("token");
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -49,11 +57,20 @@ const handleApiResponse = async (response) => {
 // Create notification
 export const createNotification = async (notificationData) => {
   try {
+    const payload = {
+      Title: notificationData.Title,
+      Message: notificationData.Message,
+      ScheduledTime: notificationData.ScheduledTime || '',
+      TargetUserIds: notificationData.TargetUserIds || [],
+      SendToAll: notificationData.SendToAll,
+      SendNow: notificationData.SendNow
+    };
+
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/admin/notifications/create`,
       {
         method: "POST",
-        body: JSON.stringify(notificationData),
+        body: JSON.stringify(payload),
       }
     );
     return await handleApiResponse(response);

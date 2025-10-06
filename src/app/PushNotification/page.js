@@ -19,8 +19,6 @@ export default function PushNotificationPage() {
   const [editError, setEditError] = useState(null);
   const [editSuccess, setEditSuccess] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState(null);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     sent: 0,
@@ -32,11 +30,13 @@ export default function PushNotificationPage() {
     Title: '',
     Message: '',
     ScheduledTime: '',
-    TargetUserId: ''
+    TargetUserIds: [],
+    SendToAll: false,
+    SendNow: false
   });
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('ScheduledTime_desc');
+  const [sortBy, setSortBy] = useState('CreatedOn_desc');
 
   // Filtered and sorted notifications
   const filteredNotifications = useMemo(() => {
@@ -47,10 +47,10 @@ export default function PushNotificationPage() {
 
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'ScheduledTime_asc':
-          return new Date(a.ScheduledTime) - new Date(b.ScheduledTime);
-        case 'ScheduledTime_desc':
-          return new Date(b.ScheduledTime) - new Date(a.ScheduledTime);
+        case 'CreatedOn_asc':
+          return new Date(a.CreatedOn) - new Date(b.CreatedOn);
+        case 'CreatedOn_desc':
+          return new Date(b.CreatedOn) - new Date(a.CreatedOn);
         case 'Status':
           return a.Status.localeCompare(b.Status);
         case 'Title':
@@ -116,11 +116,24 @@ export default function PushNotificationPage() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    const { name, value, type, checked, options } = e.target;
+    if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else if (name === 'TargetUserIds') {
+      const selected = Array.from(options).filter(option => option.selected).map(option => option.value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: selected
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -128,14 +141,16 @@ export default function PushNotificationPage() {
     setLoading(true);
 
     try {
-      // Convert datetime-local to API format
-      const scheduledTime = new Date(formData.ScheduledTime).toISOString().slice(0, 19);
+      // Convert datetime-local to API format or empty string if not set
+      const scheduledTime = formData.ScheduledTime ? new Date(formData.ScheduledTime).toISOString().slice(0, 19) : '';
 
       const payload = {
         Title: formData.Title,
         Message: formData.Message,
         ScheduledTime: scheduledTime,
-        TargetUserId: formData.TargetUserId
+        TargetUserIds: formData.TargetUserIds,
+        SendToAll: formData.SendToAll,
+        SendNow: formData.SendNow
       };
 
       await createNotification(payload);
@@ -145,7 +160,9 @@ export default function PushNotificationPage() {
         Title: '',
         Message: '',
         ScheduledTime: '',
-        TargetUserId: ''
+        TargetUserIds: [],
+        SendToAll: false,
+        SendNow: false
       });
 
       // Refresh notifications
@@ -213,26 +230,20 @@ export default function PushNotificationPage() {
   };
 
   const handleDeleteNotification = async (id) => {
-    const confirmed = await showConfirm(
-      'Are you sure you want to delete this notification? This action cannot be undone.'
-    );
-
-    if (!confirmed) return;
+    if (!window.confirm('Are you sure you want to delete this notification? This action cannot be undone.')) return;
 
     try {
       setDeleteLoading(true);
-      setDeleteError(null);
 
       await deleteNotification(id);
 
       // Remove from state
       setNotifications(prev => prev.filter(n => n.Id !== id));
 
-      setDeleteSuccess(true);
-      setTimeout(() => setDeleteSuccess(false), 3000);
+      window.alert('Notification deleted successfully!');
     } catch (err) {
       console.error('Error deleting notification:', err);
-      setDeleteError(err.message || 'Failed to delete notification');
+      window.alert(err.message || 'Failed to delete notification');
     } finally {
       setDeleteLoading(false);
     }
@@ -322,34 +333,63 @@ export default function PushNotificationPage() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="ScheduledTime" className="form-label">Scheduled Time</label>
+                    <label htmlFor="ScheduledTime" className="form-label">Scheduled Time (optional)</label>
                     <input
                       type="datetime-local"
                       className="form-control"
                       id="ScheduledTime"
                       name="ScheduledTime"
-                      required
                       value={formData.ScheduledTime}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div className="mb-3">
-                    <label htmlFor="TargetUserId" className="form-label">Target User</label>
+                    <label htmlFor="TargetUserIds" className="form-label">Target Users (hold Ctrl to select multiple)</label>
                     <select
                       className="form-select"
-                      id="TargetUserId"
-                      name="TargetUserId"
-                      required
-                      value={formData.TargetUserId}
+                      id="TargetUserIds"
+                      name="TargetUserIds"
+                      multiple
+                      value={formData.TargetUserIds}
                       onChange={handleInputChange}
+                      style={{ height: '150px' }}
                     >
-                      <option value="">Select a user</option>
                       {Object.entries(users).map(([id, user]) => (
                         <option key={id} value={id}>
                           {user.name}
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="mb-3">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="SendToAll"
+                        name="SendToAll"
+                        checked={formData.SendToAll}
+                        onChange={handleInputChange}
+                      />
+                      <label className="form-check-label" htmlFor="SendToAll">
+                        Send to all users
+                      </label>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="SendNow"
+                        name="SendNow"
+                        checked={formData.SendNow}
+                        onChange={handleInputChange}
+                      />
+                      <label className="form-check-label" htmlFor="SendNow">
+                        Send immediately
+                      </label>
+                    </div>
                   </div>
                   <button
                     type="submit"
@@ -381,8 +421,8 @@ export default function PushNotificationPage() {
                     onChange={(e) => setSortBy(e.target.value)}
                     style={{ width: '200px' }}
                   >
-                    <option value="ScheduledTime_desc">Newest First</option>
-                    <option value="ScheduledTime_asc">Oldest First</option>
+                    <option value="CreatedOn_desc">Newest First</option>
+                    <option value="CreatedOn_asc">Oldest First</option>
                     <option value="Status">Status</option>
                     <option value="Title">Title</option>
                   </select>
@@ -401,17 +441,6 @@ export default function PushNotificationPage() {
                 {apiError && (
                   <div className="alert alert-danger" role="alert">
                     {apiError}
-                  </div>
-                )}
-
-                {deleteSuccess && (
-                  <div className="alert alert-success" role="alert">
-                    Notification deleted successfully!
-                  </div>
-                )}
-                {deleteError && (
-                  <div className="alert alert-danger" role="alert">
-                    {deleteError}
                   </div>
                 )}
 
@@ -439,14 +468,14 @@ export default function PushNotificationPage() {
                               <div className="d-flex gap-2 mb-2">
                                 <small className="text-muted">
                                   <i className="ri-calendar-line me-1"></i>
-                                  {notification.ScheduledTime ? new Date(notification.ScheduledTime).toLocaleString() : 'N/A'}
+                                  {notification.CreatedOn ? new Date(notification.CreatedOn).toLocaleString() : 'N/A'}
                                 </small>
                                 <small className={`badge bg-${notification.Status === 'Sent' ? 'success' : notification.Status === 'Pending' ? 'warning' : 'danger'}`}>
                                   {notification.Status}
                                 </small>
                               </div>
                               <small className="text-muted">
-                                User: {users[notification.TargetUserId]?.name || notification.TargetUserId}
+                                Recipients: {notification.Recipients ? notification.Recipients.map(recipient => users[recipient.UserId]?.name || recipient.UserId).join(', ') : (users[notification.TargetUserId]?.name || notification.TargetUserId)}
                               </small>
                             </div>
                             <div className="d-flex gap-2">
