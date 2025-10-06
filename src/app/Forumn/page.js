@@ -352,19 +352,23 @@ export default function Page() {
         </div>
 
         {/* Add Post Button */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4>Community Forum</h4>
-          <button
-            className="btn btn-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#addPostModal"
-          >
-            <i className="ri-add-line me-1"></i>Add New Post
-          </button>
+        <div className="row justify-content-center mb-4">
+          <div className="col-4">
+            <div className="d-flex justify-content-between align-items-center">
+              <h4>Community Forum</h4>
+              <button
+                className="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addPostModal"
+              >
+                <i className="ri-add-line me-1"></i>Add New Post
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="row g-6" style={{ maxHeight: "70vh", overflowY: "auto" }}>
-          <div className="col-md-8 col-xxl-8">
+        <div className="row g-6 justify-content-center" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <div className="col-4">
             <div className="card h-100">
               <div className="card-body pt-4" style={{ padding: "8px" }}>
                 {loading ? (
@@ -468,8 +472,8 @@ export default function Page() {
                               style={{
                                 width: "100%",
                                 borderRadius: "8px",
-                                objectFit: "cover",
-                                maxHeight: "250px",
+                                objectFit: "contain",
+                                maxHeight: "fit-content",
                               }}
                               onError={(e) => {
                                 e.target.style.display = "none";

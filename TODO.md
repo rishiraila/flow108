@@ -1,11 +1,2 @@
-# Update PushNotification Page to Use New API for Multiple Users
-
-## Tasks
-- [x] Update notificationApi.js createNotification to use new /api/admin/notifications/create endpoint with multipart/form-data
-- [x] Update PushNotification page form to support multiple user selection (TargetUserIds array)
-- [x] Add SendToAll checkbox to the form
-- [x] Add SendNow checkbox to the form
-- [x] Make ScheduledTime optional in the form
-- [x] Update form submission to handle multiple users and new parameters
-- [x] Update display to show multiple recipients
-- [ ] Test the updated functionality
+- [x] Update post media image styles in src/app/Forumn/page.js: change objectFit to "contain" and maxHeight to "fit-content"
+- [x] Center the forum column and change to col-4 width in src/app/Forumn/page.js, and center the Add New Post button in the same column width
