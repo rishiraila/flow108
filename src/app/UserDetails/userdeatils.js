@@ -13,20 +13,177 @@ export default function UserDetailsClient() {
   const [periodData, setPeriodData] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [activityData, setActivityData] = useState([]);
+  const [dietLogs, setDietLogs] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatedDate, setEstimatedDate] = useState(null);
 
+  // Period table states
+  const [periodSearchTerm, setPeriodSearchTerm] = useState('');
+  const [periodSortColumn, setPeriodSortColumn] = useState('');
+  const [periodSortDirection, setPeriodSortDirection] = useState('asc');
+
+  // Weight table states
+  const [weightSearchTerm, setWeightSearchTerm] = useState('');
+  const [weightSortColumn, setWeightSortColumn] = useState('');
+  const [weightSortDirection, setWeightSortDirection] = useState('asc');
+
+  // Diet table states
+  const [dietPage, setDietPage] = useState(1);
+  const dietPerPage = 5;
+  const [dietSearchTerm, setDietSearchTerm] = useState('');
+  const [dietSortColumn, setDietSortColumn] = useState('');
+  const [dietSortDirection, setDietSortDirection] = useState('asc');
+
+  // Filtered and sorted diet data
+  const filteredDietLogs = useMemo(() => {
+    let data = Array.isArray(dietLogs) ? dietLogs : [];
+
+    if (dietSearchTerm) {
+      const lowerSearch = dietSearchTerm.toLowerCase();
+      data = data.filter(log =>
+        (log.MealItem?.FoodItem || '').toLowerCase().includes(lowerSearch) ||
+        (log.MealName || '').toLowerCase().includes(lowerSearch) ||
+        (log.Quantity || '').toString().includes(lowerSearch) ||
+        (log.TotalCalories || '').toString().includes(lowerSearch) ||
+        log.LogDate.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    if (dietSortColumn) {
+      data = [...data].sort((a, b) => {
+        let aVal, bVal;
+        switch (dietSortColumn) {
+          case 'LogDate':
+            aVal = new Date(a.LogDate);
+            bVal = new Date(b.LogDate);
+            break;
+          case 'FoodItem':
+            aVal = a.MealItem?.FoodItem || '';
+            bVal = b.MealItem?.FoodItem || '';
+            break;
+          case 'MealName':
+            aVal = a.MealName || '';
+            bVal = b.MealName || '';
+            break;
+          case 'Quantity':
+            aVal = parseFloat(a.Quantity) || 0;
+            bVal = parseFloat(b.Quantity) || 0;
+            break;
+          case 'TotalCalories':
+            aVal = parseFloat(a.TotalCalories) || 0;
+            bVal = parseFloat(b.TotalCalories) || 0;
+            break;
+          default:
+            aVal = '';
+            bVal = '';
+        }
+        if (aVal < bVal) return dietSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return dietSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [dietLogs, dietSearchTerm, dietSortColumn, dietSortDirection]);
+
+  const totalDietPages = Math.ceil(filteredDietLogs.length / dietPerPage);
+  const paginatedDietLogs = filteredDietLogs.slice(
+    (dietPage - 1) * dietPerPage,
+    dietPage * dietPerPage
+  );
+
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(periodData.length / itemsPerPage);
-  const paginatedData = periodData.slice(
+
+  // Filtered and sorted period data
+  const filteredPeriodData = useMemo(() => {
+    let data = periodData;
+
+    if (periodSearchTerm) {
+      const lowerSearch = periodSearchTerm.toLowerCase();
+      data = data.filter(item =>
+        item.StartDate.toLowerCase().includes(lowerSearch) ||
+        (item.Severity && item.Severity.toLowerCase().includes(lowerSearch))
+      );
+    }
+
+    if (periodSortColumn) {
+      data = [...data].sort((a, b) => {
+        let aVal, bVal;
+        switch (periodSortColumn) {
+          case 'StartDate':
+            aVal = new Date(a.StartDate);
+            bVal = new Date(b.StartDate);
+            break;
+          case 'Severity':
+            aVal = a.Severity || '';
+            bVal = b.Severity || '';
+            break;
+          default:
+            aVal = '';
+            bVal = '';
+        }
+        if (aVal < bVal) return periodSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return periodSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [periodData, periodSearchTerm, periodSortColumn, periodSortDirection]);
+
+  const totalPages = Math.ceil(filteredPeriodData.length / itemsPerPage);
+  const paginatedData = filteredPeriodData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
   const [weightPage, setWeightPage] = useState(1);
   const weightPerPage = 5;
-  const totalWeightPages = Math.ceil(weightData.length / weightPerPage);
-  const paginatedWeightData = weightData.slice(
+
+  // Filtered and sorted weight data
+  const filteredWeightData = useMemo(() => {
+    let data = weightData;
+
+    if (weightSearchTerm) {
+      const lowerSearch = weightSearchTerm.toLowerCase();
+      data = data.filter(entry =>
+        entry.Date.toLowerCase().includes(lowerSearch) ||
+        entry.Weight.toString().includes(lowerSearch) ||
+        entry.BMI.toString().includes(lowerSearch)
+      );
+    }
+
+    if (weightSortColumn) {
+      data = [...data].sort((a, b) => {
+        let aVal, bVal;
+        switch (weightSortColumn) {
+          case 'Date':
+            aVal = new Date(a.Date);
+            bVal = new Date(b.Date);
+            break;
+          case 'Weight':
+            aVal = parseFloat(a.Weight);
+            bVal = parseFloat(b.Weight);
+            break;
+          case 'BMI':
+            aVal = parseFloat(a.BMI);
+            bVal = parseFloat(b.BMI);
+            break;
+          default:
+            aVal = '';
+            bVal = '';
+        }
+        if (aVal < bVal) return weightSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return weightSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [weightData, weightSearchTerm, weightSortColumn, weightSortDirection]);
+
+  const totalWeightPages = Math.ceil(filteredWeightData.length / weightPerPage);
+  const paginatedWeightData = filteredWeightData.slice(
     (weightPage - 1) * weightPerPage,
     weightPage * weightPerPage
   );
@@ -119,6 +276,7 @@ export default function UserDetailsClient() {
       fetchPeriodData(userId);
       fetchWeightData(userId);
       fetchActivityData(userId);
+      fetchDietLogs(userId);
     }
   }, [userId]);
 
@@ -194,6 +352,18 @@ export default function UserDetailsClient() {
     }
   };
 
+  const fetchDietLogs = async (uid) => {
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminDietPlan/allLogs/${uid}`
+      );
+      const data = await res.json();
+      setDietLogs(data);
+    } catch (error) {
+      console.error("Error fetching diet logs:", error);
+    }
+  };
+
   const calculateDuration = (startDateStr) => {
     const start = new Date(startDateStr);
     const now = new Date();
@@ -205,89 +375,6 @@ export default function UserDetailsClient() {
 
   return (
     <div className="container-xxl flex-grow-1 container-p-y">
-      <div className="row g-6 mb-6">
-        {/* <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-primary h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-primary">
-                    <i className="tf-icons ri-user-add-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">42</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Period Insight </h6>
-              <p className="mb-0">
-                <small className="text-muted">
-                  Current cycle duration in days{" "}
-                </small>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-warning h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-warning">
-                    <i className="ri-user-star-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">8</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Weight Insight</h6>
-              <p className="mb-0">
-                <small className="text-muted">Weight today at 31.8 BMI</small>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-danger h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-danger">
-                    <i className="ri-group-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">27</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Exercise Progress</h6>
-              <p className="mb-0">
-                <span className="me-1 fw-medium">+4.3%</span>
-                <small className="text-muted">
-                  {" "}
-                  completed workout sessions
-                </small>
-              </p>
-            </div>
-          </div>
-        </div> */}
-        {/* <div className="col-6 col-sm-6 col-lg-3 mb-2">
-          <div className="card card-border-shadow-info h-100">
-            <div className="card-body">
-              <div className="d-flex align-items-center mb-2">
-                <div className="avatar me-4">
-                  <span className="avatar-initial rounded-3 bg-label-info">
-                    <i className="ri-article-line ri-24px"></i>
-                  </span>
-                </div>
-                <h4 className="mb-0">13</h4>
-              </div>
-              <h6 className="mb-0 fw-normal">Diet Breach</h6>
-              <p className="mb-0">
-
-                <small className="text-muted">
-                  total number of days diet followed
-                </small>
-              </p>
-            </div>
-          </div>
-        </div> */}
-      </div>
       {profileData && (
         <div className="card mb-4 shadow-sm border-0">
           <div className="card-header  text-white rounded-top">
@@ -842,89 +929,101 @@ export default function UserDetailsClient() {
       </div> */}
 
       {/* <!-- diet insight table --> */}
-      {/* <div id="wrapper-userTableDiet">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4 className="mb-0">User Diet Table</h4>
+      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4 className="mb-0 fw-bold text-dark">User Diet Table</h4>
           <a
-            href="./dietdetails.html"
+            href="/Calories_Counter"
             className="btn btn-sm btn-outline-primary"
           >
             <i className="bi bi-bar-chart"></i> Calories Chart
           </a>
         </div>
 
-        <table
-          id="userTableDiet"
-          className="table table-bordered table-striped"
-        >
-          <thead className="table-primary">
-            <tr>
-              <th>Sr No.</th>
-              <th>Estemated BMI</th>
-              <th>target Weight</th>
-              <th>Current Weight </th>
-              <th>Target Calories</th>
-              <th>Total Calories</th>
-              <th>Diet Plan</th>
-              <th>Recipie name</th>
-              <th>Recipie Time [ Lunch / Dinner ]</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td>365</td>
-              <td>52</td>
-              <td>64</td>
-              <td>164</td>
-              <td>204</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-warning">Omlet</span>
-              </td>
-              <td>Lunch</td>
-              <td>26-02-2025</td>
-            </tr>
+        <div className="table-responsive">
+          <table
+            id="userTableDiet"
+            className="table table-bordered table-striped mb-0"
+          >
+            <thead className="table-primary">
+              <tr>
+                <th>Sr No.</th>
+                <th>Recipe Name</th>
+                <th>Meal Type</th>
+                <th>Quantity Consumed</th>
+                <th>Calories</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedDietLogs.length > 0 ? (
+                paginatedDietLogs.map((log, index) => {
+                  const formattedDate = new Date(log.LogDate).toLocaleDateString("en-GB");
+                  return (
+                    <tr key={index}>
+                      <td>{(dietPage - 1) * dietPerPage + index + 1}</td>
+                      <td>{log.MealItem?.FoodItem || 'N/A'}</td>
+                      <td>{log.MealName || 'N/A'}</td>
+                      <td>{log.Quantity || 'N/A'}</td>
+                      <td>{log.TotalCalories || 'N/A'}</td>
+                      <td>{formattedDate}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted">
+                    No diet logs available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-            <tr>
-              <td>2</td>
-              <td>365</td>
-              <td>52</td>
-              <td>64</td>
-              <td>164</td>
-              <td>204</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-warning">Chicken </span>
-              </td>
-              <td>Breakfast</td>
-              <td>27-02-2025</td>
-            </tr>
-
-            <tr>
-              <td>3</td>
-              <td>365</td>
-              <td>52</td>
-              <td>64</td>
-              <td>164</td>
-              <td>204</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-warning">Parathas</span>
-              </td>
-              <td>Dinner</td>
-              <td>28-02-2025</td>
-            </tr>
-          </tbody>
-        </table>
-      </div> */}
+        {/* Pagination */}
+        {totalDietPages > 1 && (
+          <nav className="mt-3">
+            <ul className="pagination justify-content-end mb-0">
+              <li className={`page-item ${dietPage === 1 ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setDietPage((prev) => prev - 1)}
+                >
+                  Previous
+                </button>
+              </li>
+              {Array.from({ length: totalDietPages }, (_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${
+                    dietPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setDietPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li
+                className={`page-item ${
+                  dietPage === totalDietPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setDietPage((prev) => prev + 1)}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+      </div>
 
       <div className="row g-6 mb-6">
         {/* <!-- Activity Timeline --> */}

@@ -1,15 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DietPlanAssignmentModal from "../DietPlanAssignmentModal";
 import EditMealModal from "../EditMealModal";
 import { fetchAllMeals, updateMeal } from "../../utils/api";
 import { useAlert } from "../../utils/alertcontxt";
+import { useConfirm } from "../../utils/confirmContext";
+import { dietPlanApi } from "../../utils/apiClient";
 
 export default function DietPlanDetails() {
   const params = useParams();
   const planId = params.id;
+  const router = useRouter();
+  const { showAlert } = useAlert();
+  const { showConfirm } = useConfirm();
+
+  // Delete state
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+
   // Assigned Users table controls
   const [userSearch, setUserSearch] = useState("");
   const [userSortKey, setUserSortKey] = useState("Name");
@@ -216,6 +227,42 @@ export default function DietPlanDetails() {
     }
   };
 
+  const handleDeletePlan = async () => {
+    const confirmed = await showConfirm(
+      "Are you sure you want to delete this diet plan? This action cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+
+      // Use the centralized API client for better error handling
+      const result = await dietPlanApi.delete(planId);
+
+      console.log("Delete API response:", result);
+
+      // Check the API response status
+      if (result && result.Status === true) {
+        // Show success message
+        showAlert("Diet plan deleted successfully.", "success");
+        // Redirect to diet plans list
+        router.push("/DietPlan");
+      } else {
+        // Handle API error response
+        setDeleteError(result?.Message || "Failed to delete diet plan.");
+      }
+    } catch (err) {
+      console.error("Error deleting diet plan:", err);
+      setDeleteError(err.message || "Failed to delete diet plan");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   // ====== Meals Pagination ======
   const filteredMeals = flattenedItems.filter((item) =>
     `${item.mealType} ${item.name}`.toLowerCase().includes(mealSearch.toLowerCase())
@@ -304,6 +351,23 @@ export default function DietPlanDetails() {
                 >
                   Back to Plans
                 </Link>
+                <button
+                  className="btn btn-danger me-2"
+                  onClick={handleDeletePlan}
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="ri-delete-bin-line me-1"></i>
+                      Delete Plan
+                    </>
+                  )}
+                </button>
                 {/* <button
                   className="btn btn-info"
                   onClick={() => {

@@ -199,16 +199,18 @@ export const dietPlanApi = {
     return handleApiResponse(response);
   },
   
-  delete: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
-      method: 'DELETE'
-    });
-    // For DELETE requests, handle empty responses
-    if (response === null || response === undefined) {
-      return { Status: true, Message: 'Diet plan deleted successfully' };
-    }
-    return handleApiResponse(response);
+ delete: async (planId) => {
+  console.log("🧹 Deleting plan:", planId);
+  const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
+    method: 'DELETE'
+  });
+  console.log("🧹 Delete raw response:", response);
+  if (response === null || response === undefined) {
+    return { Status: true, Message: 'Diet plan deleted successfully' };
   }
+  return handleApiResponse(response);
+}
+
 };
 
 export const mealApi = {
