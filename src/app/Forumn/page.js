@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { fetchForumPosts, fetchForumComments, fetchAllUsers } from "../utils/api";
 import AddPostModal from "./AddPostModal";
+import Masonry from 'react-masonry-css';
 
 export default function Page() {
   const [showDropdown, setShowDropdown] = useState(null); // track dropdown for each post
@@ -17,6 +18,8 @@ export default function Page() {
     Media: [],
   });
   const [showCommentsMap, setShowCommentsMap] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState('date_desc');
 
   const loadPosts = async () => {
     try {
@@ -42,8 +45,8 @@ export default function Page() {
             const user = usersResponse[comment.UserId];
             commentsByPostId[comment.PostId].push({
               ...comment,
-              UserName: comment.UserName || "Unknown User",
-              UserAvatar: user?.avatar || getDefaultAvatar(comment.UserName || "User")
+              UserName: comment.IsAnonymous ? `${user?.name || "User"} (Anonymous)` : (user?.name || "Unknown User"),
+              UserAvatar: comment.IsAnonymous ? getDefaultAvatar("Anonymous") : (user?.avatar || getDefaultAvatar(user?.name || "User"))
             });
           });
         }
@@ -261,12 +264,47 @@ export default function Page() {
     )}&background=random&size=50`;
   };
 
+  const filteredPosts = useMemo(() => {
+    let filtered = posts.filter(post =>
+      (post.Title && post.Title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (post.Description && post.Description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (post.UserName && post.UserName.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    switch (sortOption) {
+      case 'date_desc':
+        filtered.sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
+        break;
+      case 'date_asc':
+        filtered.sort((a, b) => new Date(a.CreatedAt) - new Date(b.CreatedAt));
+        break;
+      case 'likes_desc':
+        filtered.sort((a, b) => (b.LikeCount || 0) - (a.LikeCount || 0));
+        break;
+      case 'likes_asc':
+        filtered.sort((a, b) => (a.LikeCount || 0) - (b.LikeCount || 0));
+        break;
+      case 'comments_desc':
+        filtered.sort((a, b) => (b.Comments?.length || 0) - (a.Comments?.length || 0));
+        break;
+      case 'comments_asc':
+        filtered.sort((a, b) => (a.Comments?.length || 0) - (b.Comments?.length || 0));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  }, [posts, searchQuery, sortOption]);
+
+  const breakpointCols = { default: 3, 1100: 2, 700: 1 };
+
   return (
     <div className="content-wrapper">
       <div className="container-xxl flex-grow-1 container-p-y">
-        {/* Stats Cards - Reverted to original style from Questions page */}
+        {/* Stats Cards - Responsive layout */}
         <div className="row mb-5">
-          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+          <div className="col-12 col-sm-6 col-lg-3 mb-2">
             <div className="card card-border-shadow-primary h-100">
               <div className="card-body">
                 <div className="d-flex align-items-center mb-2">
@@ -278,15 +316,11 @@ export default function Page() {
                   <h4 className="mb-0">{posts.length}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Posts</h6>
-                {/* <p className="mb-0">
-                  <span className="me-1 fw-medium">Live Data</span>
-                  <small className="text-muted">from API</small>
-                </p> */}
               </div>
             </div>
           </div>
 
-          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+          <div className="col-12 col-sm-6 col-lg-3 mb-2">
             <div className="card card-border-shadow-warning h-100">
               <div className="card-body">
                 <div className="d-flex align-items-center mb-2">
@@ -300,15 +334,11 @@ export default function Page() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Likes</h6>
-                {/* <p className="mb-0">
-                  <span className="me-1 fw-medium">Live Data</span>
-                  <small className="text-muted">from API</small>
-                </p> */}
               </div>
             </div>
           </div>
 
-          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+          <div className="col-12 col-sm-6 col-lg-3 mb-2">
             <div className="card card-border-shadow-info h-100">
               <div className="card-body">
                 <div className="d-flex align-items-center mb-2">
@@ -320,15 +350,11 @@ export default function Page() {
                   <h4 className="mb-0">{posts.filter((post) => post.IsAnonymous).length}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Anonymous Posts</h6>
-                {/* <p className="mb-0">
-                  <span className="me-1 fw-medium">Live Data</span>
-                  <small className="text-muted">from API</small>
-                </p> */}
               </div>
             </div>
           </div>
 
-          <div className="col-6 col-sm-6 col-lg-3 mb-2">
+          <div className="col-12 col-sm-6 col-lg-3 mb-2">
             <div className="card card-border-shadow-danger h-100">
               <div className="card-body">
                 <div className="d-flex align-items-center mb-2">
@@ -342,365 +368,433 @@ export default function Page() {
                   </h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Comments</h6>
-                {/* <p className="mb-0">
-                  <span className="me-1 fw-medium">Live Data</span>
-                  <small className="text-muted">from API</small>
-                </p> */}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Add Post Button */}
-        <div className="row justify-content-center mb-4">
-          <div className="col-4">
-            <div className="d-flex justify-content-between align-items-center">
-              <h4>Community Forum</h4>
-              <button
-                className="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#addPostModal"
-              >
-                <i className="ri-add-line me-1"></i>Add New Post
-              </button>
-            </div>
+        {/* Add Post Button - Responsive */}
+        <div className="d-flex justify-content-between mb-4">
+          <div className="d-flex justify-content-between align-items-center w-100" >
+            <h4 className="mb-0">Community Forum</h4>
+            <button
+              className="btn btn-primary"
+              data-bs-toggle="modal"
+              data-bs-target="#addPostModal"
+            >
+              <i className="ri-add-line me-1"></i>Add New Post
+            </button>
           </div>
         </div>
 
-        <div className="row g-6 justify-content-center" style={{ maxHeight: "70vh", overflowY: "auto" }}>
-          <div className="col-4">
-            <div className="card h-100">
-              <div className="card-body pt-4" style={{ padding: "8px" }}>
-                {loading ? (
-                  <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
+        {/* Search and Sort */}
+      {/* Search and Sort */}
+{/* Search and Sort - Modern design */}
+<div className="d-flex justify-content-center mb-4">
+  <div
+    className="p-3 shadow-sm"
+    style={{
+      maxWidth: "700px",
+      width: "100%",
+      backgroundColor: "white",
+      borderRadius: "14px",
+      border: "1px solid #e9ecef",
+      display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: "12px",
+    }}
+  >
+    {/* Search Bar */}
+    <div
+      className="d-flex align-items-center px-2 py-1"
+      style={{
+        flex: "1 1 300px",
+        border: "1px solid #dee2e6",
+        borderRadius: "8px",
+        backgroundColor: "#f8f9fa",
+        transition: "all 0.2s ease",
+      }}
+    >
+      <i className="ri-search-line text-muted" style={{ marginRight: "8px", fontSize: "18px" }}></i>
+      <input
+        type="text"
+        placeholder="Search by title, description, or username..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        style={{
+          flex: 1,
+          border: "none",
+          outline: "none",
+          background: "transparent",
+          fontSize: "15px",
+          color: "#495057",
+        }}
+        onFocus={(e) => (e.target.parentElement.style.borderColor = "#007bff")}
+        onBlur={(e) => (e.target.parentElement.style.borderColor = "#dee2e6")}
+      />
+    </div>
+
+    {/* Sort Dropdown */}
+    <div
+      className="d-flex align-items-center justify-content-end"
+      style={{ flex: "0 0 180px" }}
+    >
+      <label className="fw-semibold me-2 text-dark" style={{ fontSize: "14px" }}>
+        Sort by:
+      </label>
+      <select
+        className="form-select"
+        style={{
+          fontSize: "14px",
+          borderRadius: "8px",
+          padding: "6px 10px",
+          border: "1px solid #dee2e6",
+          backgroundColor: "#f8f9fa",
+          color: "#495057",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+        }}
+        value={sortOption}
+        onChange={(e) => setSortOption(e.target.value)}
+        onFocus={(e) => (e.target.style.borderColor = "#007bff")}
+        onBlur={(e) => (e.target.style.borderColor = "#dee2e6")}
+      >
+        <option value="date_desc">Newest First</option>
+        <option value="date_asc">Oldest First</option>
+        <option value="likes_desc">Most Likes</option>
+        <option value="likes_asc">Least Likes</option>
+        <option value="comments_desc">Most Comments</option>
+        <option value="comments_asc">Least Comments</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+
+        <Masonry
+          breakpointCols={breakpointCols}
+          className="my-masonry-grid"
+          columnClassName="my-masonry-grid_column"
+        >
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Loading posts...</p>
+            </div>
+          ) : error ? (
+            <div className="alert alert-danger" role="alert">
+              Error loading posts: {error}
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="text-center py-5">
+              <p>No posts match your search.</p>
+            </div>
+          ) : (
+            filteredPosts.map((post) => {
+              const showComments = showCommentsMap[post.Id] || false;
+              return (
+                <div
+                  key={post.Id}
+                  data-post-id={post.Id}
+                  className="border"
+                  style={{
+                    borderRadius: "8px",
+                    padding: "12px",
+                    marginBottom: "16px",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
+                    fontSize: "14px",
+                  }}
+                >
+                  {/* User info */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <img
+                      src={
+                        post.ProfilePictureUrl ||
+                        getDefaultAvatar(post.UserName || "User")
+                      }
+                      alt={post.UserName || "User"}
+                      style={{
+                        borderRadius: "50%",
+                        width: "40px",
+                        height: "40px",
+                        objectFit: "cover",
+                      }}
+                      onError={(e) => {
+                        e.target.src = getDefaultAvatar(post.UserName || "User");
+                      }}
+                    />
+                    <div>
+                      <h6 style={{ margin: 0, fontSize: "16px" }}>
+                        {post.UserName} {post.IsAnonymous ? "(Anonymous)" : ""}
+                      </h6>
+                      <small>{formatDate(post.CreatedAt)}</small>
                     </div>
-                    <p className="mt-2">Loading posts...</p>
                   </div>
-                ) : error ? (
-                  <div className="alert alert-danger" role="alert">
-                    Error loading posts: {error}
-                  </div>
-                ) : posts.length === 0 ? (
-                  <div className="text-center py-5">
-                    <p>No posts found</p>
-                  </div>
-                ) : (
-                  posts.map((post) => {
-                    const showComments = showCommentsMap[post.Id] || false;
-                    return (
-                      <div
-                        key={post.Id}
-                        data-post-id={post.Id}
-                        className="border"
+
+                  {/* Post content */}
+                  <div style={{ marginBottom: "10px" }}>
+                    <h6
+                      style={{
+                        margin: "0 0 6px",
+                        fontWeight: "bold",
+                        fontSize: "16px",
+                      }}
+                    >
+                      {post.Title}
+                    </h6>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "14px",
+                        color: "#333",
+                      }}
+                    >
+                      {post.Description}
+                    </p>
+                    {post.Media && post.Media.Url && (
+                      <img
+                        src={post.Media.Url}
+                        alt="Post Media"
                         style={{
+                          width: "100%",
                           borderRadius: "8px",
-                          padding: "12px",
-                          marginBottom: "16px",
-                          boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-                          fontSize: "14px",
+                          objectFit: "contain",
+                          maxHeight: "fit-content",
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  {/* Post stats */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "10px",
+                      padding: "6px 0",
+                      borderTop: "1px solid #eee",
+                      borderBottom: "1px solid #eee",
+                      fontSize: "14px",
+                      color: "#6c757d",
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <span>
+                        <i className="bi bi-heart-fill text-danger"></i>{" "}
+                        {post.LikeCount || 0} Likes
+                      </span>
+                      <span>
+                        <i className="bi bi-chat-left-dots-fill text-primary"></i>{" "}
+                        {post.Comments?.length || 0} Comments
+                      </span>
+                    </div>
+
+                    <div className="d-flex justify-content-end gap-2">
+                      {/* <button
+                        className="btn btn-outline-primary btn-sm"
+                        onClick={() => {
+                          setEditingPost(post);
+                          setEditForm({
+                            Title: post.Title,
+                            Description: post.Description,
+                            IsAnonymous: post.IsAnonymous,
+                            Media: post.Media || [],
+                          });
+                          new bootstrap.Modal(
+                            document.getElementById("editPostModal")
+                          ).show();
                         }}
                       >
-                        {/* User info */}
+                        Edit
+                      </button> */}
+
+                      <button
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => deletePost(post.Id)} // delete function
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Comment toggle button */}
+                  <div style={{ marginBottom: "10px" }}>
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() =>
+                        setShowCommentsMap((prev) => ({
+                          ...prev,
+                          [post.Id]: !prev[post.Id],
+                        }))
+                      }
+                    >
+                      {showComments ? "Hide Comments" : "Show Comments"}
+                    </button>
+                  </div>
+
+                  {/* Comments section */}
+                  {showComments && post.Comments && post.Comments.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px",
+                        backgroundColor: "#f8f9fa",
+                        borderRadius: "8px",
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      <h6
+                        style={{
+                          margin: "0 0 8px",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          color: "#333",
+                        }}
+                      >
+                        Comments ({post.Comments.length})
+                      </h6>
+                      {post.Comments.map((comment) => (
                         <div
+                          key={comment.Id}
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "10px",
-                            marginBottom: "10px",
+                            padding: "8px",
+                            marginBottom: "8px",
+                            backgroundColor: "white",
+                            borderRadius: "6px",
+                            border: "1px solid #e9ecef",
                           }}
                         >
-                          <img
-                            src={
-                              post.IsAnonymous
-                                ? getDefaultAvatar("Anonymous")
-                                : post.ProfilePictureUrl ||
-                                  getDefaultAvatar(post.UserName || "User")
-                            }
-                            alt={
-                              post.IsAnonymous
-                                ? "Anonymous"
-                                : post.UserName || "User"
-                            }
+                          <div
                             style={{
-                              borderRadius: "50%",
-                              width: "40px",
-                              height: "40px",
-                              objectFit: "cover",
-                            }}
-                            onError={(e) => {
-                              e.target.src = getDefaultAvatar(
-                                post.IsAnonymous
-                                  ? "Anonymous"
-                                  : post.UserName || "User"
-                              );
-                            }}
-                          />
-                          <div>
-                            <h6 style={{ margin: 0, fontSize: "16px" }}>
-                              {post.IsAnonymous ? "Anonymous User" : post.UserName}
-                            </h6>
-                            <small>{formatDate(post.CreatedAt)}</small>
-                          </div>
-                        </div>
-
-                        {/* Post content */}
-                        <div style={{ marginBottom: "10px" }}>
-                          <h6
-                            style={{
-                              margin: "0 0 6px",
-                              fontWeight: "bold",
-                              fontSize: "16px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "4px",
                             }}
                           >
-                            {post.Title}
-                          </h6>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "14px",
-                              color: "#333",
-                            }}
-                          >
-                            {post.Description}
-                          </p>
-                          {post.Media && post.Media.Url && (
                             <img
-                              src={post.Media.Url}
-                              alt="Post Media"
+                              src={comment.UserAvatar || getDefaultAvatar(comment.UserName || "User")}
+                              alt={comment.UserName || "User"}
                               style={{
-                                width: "100%",
-                                borderRadius: "8px",
-                                objectFit: "contain",
-                                maxHeight: "fit-content",
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
                               }}
                               onError={(e) => {
-                                e.target.style.display = "none";
+                                e.target.src = getDefaultAvatar(comment.UserName || "User");
                               }}
                             />
-                          )}
-                        </div>
-
-                        {/* Post stats */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            marginBottom: "10px",
-                            padding: "6px 0",
-                            borderTop: "1px solid #eee",
-                            borderBottom: "1px solid #eee",
-                            fontSize: "14px",
-                            color: "#6c757d",
-                          }}
-                        >
-                          <div style={{ display: "flex", gap: "12px" }}>
-                            <span>
-                              <i className="bi bi-heart-fill text-danger"></i>{" "}
-                              {post.LikeCount || 0} Likes
-                            </span>
-                            <span>
-                              <i className="bi bi-chat-left-dots-fill text-primary"></i>{" "}
-                              {post.Comments?.length || 0} Comments
-                            </span>
+                            <small style={{ color: "#6c757d", fontWeight: "bold" }}>
+                              {comment.UserName || "Unknown User"}
+                            </small>
+                            <small style={{ color: "#adb5bd" }}>
+                              {formatDate(comment.CreatedAt)}
+                            </small>
                           </div>
-
-                          <div className="d-flex justify-content-end gap-2">
-                            {/* <button
-                              className="btn btn-outline-primary btn-sm"
-                              onClick={() => {
-                                setEditingPost(post);
-                                setEditForm({
-                                  Title: post.Title,
-                                  Description: post.Description,
-                                  IsAnonymous: post.IsAnonymous,
-                                  Media: post.Media || [],
-                                });
-                                new bootstrap.Modal(
-                                  document.getElementById("editPostModal")
-                                ).show();
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginTop: "4px",
+                            }}
+                          >
+                            <p
+                              style={{
+                                margin: "0",
+                                fontSize: "14px",
+                                color: "#333",
+                                lineHeight: "1.4",
+                                flex: 1,
                               }}
                             >
-                              Edit
-                            </button> */}
+                              {comment.Content}
+                            </p>
 
                             <button
-                              className="btn btn-outline-danger btn-sm"
-                              onClick={() => deletePost(post.Id)} // delete function
+                              className="btn btn-outline-danger btn-sm ms-2"
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    "⚠️ Are you sure you want to delete this comment?"
+                                  )
+                                ) {
+                                  deleteComment(comment.Id);
+                                  alert("🗑️ Comment deleted successfully!");
+                                }
+                              }}
                             >
-                              Delete
+                              <i className="ri-delete-bin-line"></i>
                             </button>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  )}
 
-                        {/* Comment toggle button */}
-                        <div style={{ marginBottom: "10px" }}>
-                          <button
-                            className="btn btn-sm btn-outline-secondary"
-                            onClick={() =>
-                              setShowCommentsMap((prev) => ({
-                                ...prev,
-                                [post.Id]: !prev[post.Id],
-                              }))
-                            }
-                          >
-                            {showComments ? "Hide Comments" : "Show Comments"}
-                          </button>
-                        </div>
-
-                        {/* Comments section */}
-                        {showComments && post.Comments && post.Comments.length > 0 && (
-                          <div
-                            style={{
-                              marginTop: "10px",
-                              padding: "10px",
-                              backgroundColor: "#f8f9fa",
-                              borderRadius: "8px",
-                              maxHeight: "200px",
-                              overflowY: "auto",
-                            }}
-                          >
-                            <h6
-                              style={{
-                                margin: "0 0 8px",
-                                fontSize: "14px",
-                                fontWeight: "bold",
-                                color: "#333",
-                              }}
-                            >
-                              Comments ({post.Comments.length})
-                            </h6>
-                            {post.Comments.map((comment) => (
-                              <div
-                                key={comment.Id}
-                                style={{
-                                  padding: "8px",
-                                  marginBottom: "8px",
-                                  backgroundColor: "white",
-                                  borderRadius: "6px",
-                                  border: "1px solid #e9ecef",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "8px",
-                                    marginBottom: "4px",
-                                  }}
-                                >
-                                  <img
-                                    src={comment.UserAvatar || getDefaultAvatar(comment.UserName || "User")}
-                                    alt={comment.UserName || "User"}
-                                    style={{
-                                      width: "32px",
-                                      height: "32px",
-                                      borderRadius: "50%",
-                                      objectFit: "cover",
-                                    }}
-                                    onError={(e) => {
-                                      e.target.src = getDefaultAvatar(comment.UserName || "User");
-                                    }}
-                                  />
-                                  <small style={{ color: "#6c757d", fontWeight: "bold" }}>
-                                    {comment.UserName || "Unknown User"}
-                                  </small>
-                                  <small style={{ color: "#adb5bd" }}>
-                                    {formatDate(comment.CreatedAt)}
-                                  </small>
-                                </div>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    marginTop: "4px",
-                                  }}
-                                >
-                                  <p
-                                    style={{
-                                      margin: "0",
-                                      fontSize: "14px",
-                                      color: "#333",
-                                      lineHeight: "1.4",
-                                      flex: 1,
-                                    }}
-                                  >
-                                    {comment.Content}
-                                  </p>
-
-                                  <button
-                                    className="btn btn-outline-danger btn-sm ms-2"
-                                    onClick={() => {
-                                      if (
-                                        confirm(
-                                          "⚠️ Are you sure you want to delete this comment?"
-                                        )
-                                      ) {
-                                        deleteComment(comment.Id);
-                                        alert("🗑️ Comment deleted successfully!");
-                                      }
-                                    }}
-                                  >
-                                    <i className="ri-delete-bin-line"></i>
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Comment input */}
-                        <div
-                          style={{
-                            marginTop: "12px",
-                            display: "flex",
-                            gap: "8px",
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={commentInputs[post.Id] || ""} // track input for each post
-                            onChange={(e) =>
-                              setCommentInputs({
-                                ...commentInputs,
-                                [post.Id]: e.target.value,
-                              })
-                            }
-                            placeholder="Add a comment..."
-                            style={{
-                              flex: 1,
-                              padding: "8px 12px",
-                              border: "1px solid #ddd",
-                              borderRadius: "20px",
-                              fontSize: "14px",
-                            }}
-                          />
-                          <button
-                            onClick={() => postComment(post.Id)} // call API
-                            style={{
-                              padding: "8px 16px",
-                              backgroundColor: "#007bff",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "20px",
-                              fontSize: "14px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            Post
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+                  {/* Comment input */}
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      display: "flex",
+                      gap: "8px",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={commentInputs[post.Id] || ""} // track input for each post
+                      onChange={(e) =>
+                        setCommentInputs({
+                          ...commentInputs,
+                          [post.Id]: e.target.value,
+                        })
+                      }
+                      placeholder="Add a comment..."
+                      style={{
+                        flex: 1,
+                        padding: "8px 12px",
+                        border: "1px solid #ddd",
+                        borderRadius: "20px",
+                        fontSize: "14px",
+                      }}
+                    />
+                    <button
+                      onClick={() => postComment(post.Id)} // call API
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#007bff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "20px",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Post
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </Masonry>
         <div
           className="modal fade"
           id="editPostModal"

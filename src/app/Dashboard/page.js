@@ -59,10 +59,8 @@ export default function Page() {
     const loadQuestions = async () => {
       try {
         const allQuestions = await fetchQuestions();
-        const latestQuestions = allQuestions
-          .sort((a, b) => new Date(b.CreatedOn) - new Date(a.CreatedOn))
-          .slice(0, 3);
-        setQuestions(allQuestions); // keep all for stats
+        const sortedQuestions = allQuestions.sort((a, b) => new Date(b.CreatedOn) - new Date(a.CreatedOn));
+        setQuestions(sortedQuestions);
       } catch (err) {
         console.error("Error fetching questions:", err);
         setErrorQuestions("Failed to load questions");
@@ -289,16 +287,10 @@ export default function Page() {
                         >
                           <img
                             src={
-                              post.IsAnonymous
-                                ? getDefaultAvatar("Anonymous")
-                                : post.ProfilePictureUrl ||
-                                  getDefaultAvatar(post.UserName || "User")
+                              post.ProfilePictureUrl ||
+                              getDefaultAvatar(post.UserName || "User")
                             }
-                            alt={
-                              post.IsAnonymous
-                                ? "Anonymous"
-                                : post.UserName || "User"
-                            }
+                            alt={post.UserName || "User"}
                             style={{
                               borderRadius: "50%",
                               width: "40px",
@@ -307,17 +299,13 @@ export default function Page() {
                             }}
                             onError={(e) => {
                               e.target.src = getDefaultAvatar(
-                                post.IsAnonymous
-                                  ? "Anonymous"
-                                  : post.UserName || "User"
+                                post.UserName || "User"
                               );
                             }}
                           />
                           <div>
                             <h6 className="mb-0" style={{ fontSize: "14px" }}>
-                              {post.IsAnonymous
-                                ? "Anonymous User"
-                                : post.UserName || "Unknown User"}
+                              {post.UserName} {post.IsAnonymous ? "(Anonymous)" : ""}
                             </h6>
                             <small className="text-muted">
                               {formatDate(post.CreatedAt)}
@@ -437,18 +425,10 @@ export default function Page() {
                                 <div className="d-flex align-items-center gap-2">
                                   <img
                                     src={
-                                      question.IsAnonymous
-                                        ? getDefaultAvatar("Anonymous")
-                                        : question.ProfilePictureUrl ||
-                                          getDefaultAvatar(
-                                            question.UserName || "User"
-                                          )
+                                      question.ProfilePictureUrl ||
+                                      getDefaultAvatar(question.UserName || "User")
                                     }
-                                    alt={
-                                      question.IsAnonymous
-                                        ? "Anonymous"
-                                        : question.UserName || "User"
-                                    }
+                                    alt={question.UserName || "User"}
                                     style={{
                                       borderRadius: "50%",
                                       width: "32px",
@@ -457,17 +437,13 @@ export default function Page() {
                                     }}
                                     onError={(e) => {
                                       e.target.src = getDefaultAvatar(
-                                        question.IsAnonymous
-                                          ? "Anonymous"
-                                          : question.UserName || "User"
+                                        question.UserName || "User"
                                       );
                                     }}
                                   />
                                   <div className="d-flex flex-column">
                                     <strong style={{ fontSize: "14px" }}>
-                                      {question.IsAnonymous
-                                        ? "Anonymous User"
-                                        : question.UserName || "Unknown User"}
+                                      {question.UserName || "User"}
                                     </strong>
                                     <small className="text-muted">
                                       {getTimeAgo(question.CreatedOn)}

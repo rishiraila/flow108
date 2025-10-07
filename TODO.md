@@ -1,2 +1,4 @@
-- [x] Update post media image styles in src/app/Forumn/page.js: change objectFit to "contain" and maxHeight to "fit-content"
-- [x] Center the forum column and change to col-4 width in src/app/Forumn/page.js, and center the Add New Post button in the same column width
+- [x] Update the card padding from p-3 to p-2 and gap from gap-3 to gap-2 in the Search and Sort section.
+- [x] Reduce the maxWidth of the input-group from 300px to 250px.
+- [x] Add inline styles to the input field: height: '32px', fontSize: '14px'.
+- [x] Reduce the minWidth of the select from 150px to 140px and add inline styles: height: '32px', fontSize: '14px'.

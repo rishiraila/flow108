@@ -14,6 +14,8 @@ export default function UserDetailsClient() {
   const [profileData, setProfileData] = useState(null);
   const [activityData, setActivityData] = useState([]);
   const [dietLogs, setDietLogs] = useState([]);
+  const [workouts, setWorkouts] = useState([]);
+  const [combinedActivityData, setCombinedActivityData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatedDate, setEstimatedDate] = useState(null);
@@ -34,6 +36,17 @@ export default function UserDetailsClient() {
   const [dietSearchTerm, setDietSearchTerm] = useState('');
   const [dietSortColumn, setDietSortColumn] = useState('');
   const [dietSortDirection, setDietSortDirection] = useState('asc');
+
+  // Workout table states
+  const [workoutPage, setWorkoutPage] = useState(1);
+  const workoutPerPage = 5;
+  const [workoutSearchTerm, setWorkoutSearchTerm] = useState('');
+  const [workoutSortColumn, setWorkoutSortColumn] = useState('');
+  const [workoutSortDirection, setWorkoutSortDirection] = useState('asc');
+
+  // Activity table states
+  const [activityPage, setActivityPage] = useState(1);
+  const activityPerPage = 5;
 
   // Filtered and sorted diet data
   const filteredDietLogs = useMemo(() => {
@@ -91,6 +104,59 @@ export default function UserDetailsClient() {
   const paginatedDietLogs = filteredDietLogs.slice(
     (dietPage - 1) * dietPerPage,
     dietPage * dietPerPage
+  );
+
+  // Filtered and sorted workout data
+  const filteredWorkouts = useMemo(() => {
+    let data = Array.isArray(workouts) ? workouts : [];
+
+    if (workoutSearchTerm) {
+      const lowerSearch = workoutSearchTerm.toLowerCase();
+      data = data.filter(workout =>
+        (workout.ActivityName || '').toLowerCase().includes(lowerSearch) ||
+        (workout.ActivityCategory || '').toLowerCase().includes(lowerSearch) ||
+        workout.LoggedDate.toLowerCase().includes(lowerSearch) ||
+        workout.DurationInMinutes.toString().includes(lowerSearch)
+      );
+    }
+
+    if (workoutSortColumn) {
+      data = [...data].sort((a, b) => {
+        let aVal, bVal;
+        switch (workoutSortColumn) {
+          case 'LoggedDate':
+            aVal = new Date(a.LoggedDate);
+            bVal = new Date(b.LoggedDate);
+            break;
+          case 'ActivityName':
+            aVal = a.ActivityName || '';
+            bVal = b.ActivityName || '';
+            break;
+          case 'ActivityCategory':
+            aVal = a.ActivityCategory || '';
+            bVal = b.ActivityCategory || '';
+            break;
+          case 'DurationInMinutes':
+            aVal = parseFloat(a.DurationInMinutes) || 0;
+            bVal = parseFloat(b.DurationInMinutes) || 0;
+            break;
+          default:
+            aVal = '';
+            bVal = '';
+        }
+        if (aVal < bVal) return workoutSortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return workoutSortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [workouts, workoutSearchTerm, workoutSortColumn, workoutSortDirection]);
+
+  const totalWorkoutPages = Math.ceil(filteredWorkouts.length / workoutPerPage);
+  const paginatedWorkouts = filteredWorkouts.slice(
+    (workoutPage - 1) * workoutPerPage,
+    workoutPage * workoutPerPage
   );
 
   const itemsPerPage = 5;
@@ -188,7 +254,46 @@ export default function UserDetailsClient() {
     weightPage * weightPerPage
   );
 
-  const activityByDate = activityData.reduce((acc, item) => {
+  // Activities for table
+  const activities = useMemo(() => {
+    if (combinedActivityData.length === 0) return [];
+
+    return combinedActivityData
+      .flatMap((event) =>
+        event.Entries.map((entry) => ({
+          date: new Date(event.Date),
+          title: entry.Title,
+          description: entry.Description,
+        }))
+      )
+      .sort((a, b) => b.date - a.date);
+  }, [combinedActivityData]);
+
+  const totalActivityPages = Math.ceil(activities.length / activityPerPage);
+  const paginatedActivities = activities.slice(
+    (activityPage - 1) * activityPerPage,
+    activityPage * activityPerPage
+  );
+
+  useEffect(() => {
+    const workoutEntries = workouts.map(workout => ({
+      Date: workout.LoggedDate,
+      Entries: [{
+        Title: `Workout: ${workout.ActivityName}`,
+        Description: `Category: ${workout.ActivityCategory}, Duration: ${workout.DurationInMinutes} minutes`
+      }]
+    }));
+    const dietEntries = dietLogs.map(diet => ({
+      Date: diet.LogDate,
+      Entries: [{
+        Title: `Diet: ${diet.MealItem?.FoodItem || diet.MealName}`,
+        Description: `Meal: ${diet.MealName}, Quantity: ${diet.Quantity}, Calories: ${diet.TotalCalories}`
+      }]
+    }));
+    setCombinedActivityData([...activityData, ...workoutEntries, ...dietEntries]);
+  }, [activityData, workouts, dietLogs]);
+
+  const activityByDate = combinedActivityData.reduce((acc, item) => {
     const date = new Date(item.Date).toISOString().split("T")[0];
     if (!acc[date]) acc[date] = [];
     acc[date].push(...item.Entries);
@@ -196,7 +301,7 @@ export default function UserDetailsClient() {
   }, {});
   const markersByDate = useMemo(() => {
     const map = {};
-    for (const item of activityData) {
+    for (const item of combinedActivityData) {
       const date = new Date(item.Date).toISOString().split("T")[0];
       if (!map[date]) {
         map[date] = {
@@ -208,7 +313,7 @@ export default function UserDetailsClient() {
         };
       }
       for (const entry of item.Entries) {
-        if (/diet/i.test(entry.Title) && /breached/i.test(entry.Title))
+        if (/diet/i.test(entry.Title))
           map[date].diet = true;
 
         if (/exercise|workout/i.test(entry.Title)) map[date].exercise = true;
@@ -219,7 +324,7 @@ export default function UserDetailsClient() {
       }
     }
     return map;
-  }, [activityData]);
+  }, [combinedActivityData]);
 
   const tileContent = ({ date }) => {
     const dateStr = date.toISOString().split("T")[0];
@@ -235,7 +340,7 @@ export default function UserDetailsClient() {
           {marker?.diet && (
             <img
               src="/dietfollow.svg"
-              alt="Diet Breached"
+              alt="Diet Followed"
               width={10}
               height={10}
             />
@@ -277,6 +382,7 @@ export default function UserDetailsClient() {
       fetchWeightData(userId);
       fetchActivityData(userId);
       fetchDietLogs(userId);
+      fetchWorkoutData(userId);
     }
   }, [userId]);
 
@@ -305,9 +411,9 @@ export default function UserDetailsClient() {
     }
   };
   useEffect(() => {
-    if (activityData.length > 0) {
+    if (combinedActivityData.length > 0) {
       // Flatten all entries with their dates
-      const allPeriodLogs = activityData
+      const allPeriodLogs = combinedActivityData
         .flatMap((event) =>
           event.Entries.map((entry) => ({
             date: new Date(event.Date),
@@ -326,7 +432,7 @@ export default function UserDetailsClient() {
         setEstimatedDate(estimated);
       }
     }
-  }, [activityData]);
+  }, [combinedActivityData]);
 
   const fetchWeightData = async (uid) => {
     try {
@@ -361,6 +467,18 @@ export default function UserDetailsClient() {
       setDietLogs(data);
     } catch (error) {
       console.error("Error fetching diet logs:", error);
+    }
+  };
+
+  const fetchWorkoutData = async (uid) => {
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/user/activity/user/${uid}/activities`
+      );
+      const data = await res.json();
+      setWorkouts(data.Data.Workouts || []);
+    } catch (error) {
+      console.error("Error fetching workout data:", error);
     }
   };
 
@@ -616,10 +734,10 @@ export default function UserDetailsClient() {
       label = "Period Log";
       labelColor = "text-danger";
     } else if (/diet/i.test(title)) {
-      styles.backgroundColor = "#e6fff2";
-      styles.borderLeft = "4px solid #28a745";
-      label = "Diet Entry";
-      labelColor = "text-success";
+      styles.backgroundColor = "#e3f2fd";
+      styles.borderLeft = "4px solid #2196f3";
+      label = "Diet Log";
+      labelColor = "text-primary";
     } else if (/exercise|workout/i.test(title)) {
       styles.backgroundColor = "#f0f0f0";
       styles.borderLeft = "4px solid #6c757d";
@@ -856,77 +974,7 @@ export default function UserDetailsClient() {
         )}
       </div>
 
-      {/* <!-- exercise insight table --> */}
-      {/* <div id="wrapper-userTableExercise">
-        <h4 className="mb-3">User Exercise Table</h4>
-        <table
-          id="userTableExercise"
-          className="table table-bordered table-striped"
-        >
-          <thead className="table-primary">
-            <tr>
-              <th>Sr No.</th>
-              <th>Estemated BMI</th>
-              <th>target Weight</th>
-              <th>Reg. Weight </th>
-              <th>Current Weight </th>
-              <th>Workout Plan</th>
-              <th>Incomplete Exercises </th>
-              <th>Total Completed exercises</th>
-              <th>Completion Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td>365</td>
-              <td>52</td>
-              <td>68</td>
-              <td>64</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-danger">3</span>
-              </td>
-              <td>7</td>
-              <td>27-02-2025</td>
-            </tr>
-
-            <tr>
-              <td>2</td>
-              <td>365</td>
-              <td>52</td>
-              <td>68</td>
-              <td>64</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-danger">1</span>
-              </td>
-              <td>9</td>
-              <td>28-02-2025</td>
-            </tr>
-
-            <tr>
-              <td>3</td>
-              <td>365</td>
-              <td>52</td>
-              <td>68</td>
-              <td>64</td>
-              <td>
-                <span className="badge rounded-pill text-bg-info">Yogic</span>
-              </td>
-              <td>
-                <span className="badge text-bg-danger">2</span>
-              </td>
-              <td>8</td>
-              <td>29-02-2025</td>
-            </tr>
-          </tbody>
-        </table>
-      </div> */}
+     
 
       {/* <!-- diet insight table --> */}
       <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
@@ -1025,209 +1073,176 @@ export default function UserDetailsClient() {
         )}
       </div>
 
-      <div className="row g-6 mb-6">
-        {/* <!-- Activity Timeline --> */}
-        {/* <div className="col-12 col-xxl-4">
-          <div className="card h-100">
-            <div className="card-header">
-              <div className="d-flex justify-content-between">
-                <h5 className="mb-0">List of Questions</h5>
-              </div>
-            </div>
-            <div className="card-body pt-4">
-              <ul className="timeline card-timeline mb-0">
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-primary"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        How much water should I drink daily?
-                      </h6>
-                      <small className="text-muted">12 min ago</small>
-                    </div>
-                    <p className="mb-2">Shreyas Kshirsagar | 17-04-2025 </p>
+      {/* <!-- activity insight table --> */}
+      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4 className="mb-0 fw-bold text-dark">User Activity Table</h4>
+        </div>
 
-                    <button className="btn btn-sm btn-outline-success answer-btn">
-                      Answer
-                    </button>
+        <div className="table-responsive">
+          <table className="table table-bordered table-striped mb-0">
+            <thead className="table-primary">
+              <tr>
+                <th>Sr No.</th>
+                <th>Date</th>
+                <th>Title</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedActivities.length > 0 ? (
+                paginatedActivities.map((activity, index) => {
+                  const formattedDate = activity.date.toLocaleDateString("en-GB");
+                  return (
+                    <tr key={index}>
+                      <td>{(activityPage - 1) * activityPerPage + index + 1}</td>
+                      <td>{formattedDate}</td>
+                      <td>{activity.title}</td>
+                      <td>{activity.description}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4" className="text-center text-muted">
+                    No activity data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary submit-answer ">
-                        Submit
-                      </button>
-                    </div>
-                  </div>
+        {/* Pagination */}
+        {totalActivityPages > 1 && (
+          <nav className="mt-3">
+            <ul className="pagination justify-content-end mb-0">
+              <li className={`page-item ${activityPage === 1 ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setActivityPage((prev) => prev - 1)}
+                >
+                  Previous
+                </button>
+              </li>
+              {Array.from({ length: totalActivityPages }, (_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${
+                    activityPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setActivityPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
                 </li>
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-success"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        What is the best diet for weight loss?
-                      </h6>
-                      <small className="text-muted">45 min ago</small>
-                    </div>
-
-                    <p className="mb-2">Rishikesh Raila | 01-04-2025 </p>
-
-                    <button className="btn btn-sm btn-outline-success answer-btn">
-                      Answer
-                    </button>
-
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary submit-answer ">
-                        Submit
-                      </button>
-                    </div>
-                  </div>
-                </li>
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-info"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        What are some healthy snack options?
-                      </h6>
-                      <small className="text-muted">2 Day Ago</small>
-                    </div>
-                    <p className="mb-2">Shivraj Babar | 29-03-2025 </p>
-
-                    <button className="btn btn-sm btn-outline-success answer-btn">
-                      Answer
-                    </button>
-
-                    <div
-                      className="answer-form mt-2"
-                      style={{ display: "none" }}
-                    >
-                      <input
-                        type="text"
-                        className="form-control mb-2"
-                        placeholder="Type your answer..."
-                      />
-                      <button className="btn btn-sm btn-primary submit-answer ">
-                        Submit
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div> */}
-        {/* <!-- Activity Timeline --> */}
-
-        {/* <!-- Activity Timeline --> */}
-        {/* <div className="col-12 col-xxl-8">
-          <div className="card h-100">
-            <div className="card-header">
-              <div className="d-flex justify-content-between">
-                <h5 className="mb-0">Answered Questions</h5>
-              </div>
-            </div>
-            <div className="card-body pt-4">
-              <ul className="timeline card-timeline mb-0">
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-primary"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        How much water should I drink daily?
-                      </h6>
-                      <small className="text-muted">12 min ago</small>
-                    </div>
-
-                    <p className="mb-2">Shreyas Kshirsagar | 17-04-2025 </p>
-
-                    <p className="answer">
-                      <b>Admin </b>On average, adults should drink about 8
-                      glasses (2 liters) of water per day. However, needs vary
-                      depending on body size, activity level, and climate.
-                    </p>
-
-                    <button className="btn btn-outline-primary editBtn">
-                      <i className="bi bi-pencil-fill"></i>
-                    </button>
-                    <button className="btn btn-outline-danger">
-                      <i className="bi bi-trash-fill"></i>
-                    </button>
-                  </div>
-                </li>
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-success"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        What is the best diet for weight loss?
-                      </h6>
-                      <small className="text-muted">45 min ago</small>
-                    </div>
-
-                    <p className="mb-2">Rishikesh Raila | 01-04-2025 </p>
-
-                    <p className="answer">
-                      <b>Admin </b>There’s no one-size-fits-all. Effective diets
-                      include Mediterranean, low-carb, intermittent fasting, and
-                      calorie-controlled diets. The best one is sustainable and
-                      matches your lifestyle.
-                    </p>
-
-                    <button className="btn btn-outline-primary editBtn">
-                      <i className="bi bi-pencil-fill"></i>
-                    </button>
-                    <button className="btn btn-outline-danger">
-                      <i className="bi bi-trash-fill"></i>
-                    </button>
-                  </div>
-                </li>
-                <li className="timeline-item timeline-item-transparent">
-                  <span className="timeline-point timeline-point-info"></span>
-                  <div className="timeline-event">
-                    <div className="timeline-header mb-3">
-                      <h6 className="mb-0">
-                        What are some healthy snack options?
-                      </h6>
-                      <small className="text-muted">2 Day Ago</small>
-                    </div>
-
-                    <p className="mb-2">Shivraj Babar | 29-03-2025 </p>
-
-                    <p className="answer">
-                      <b>Admin </b>Try nuts, fruits, Greek yogurt, boiled eggs,
-                      vegetable sticks with hummus, or a smoothie. Avoid
-                      processed snacks high in sugar or sodium.
-                    </p>
-
-                    <button className="btn btn-outline-primary editBtn">
-                      <i className="bi bi-pencil-fill"></i>
-                    </button>
-                    <button className="btn btn-outline-danger">
-                      <i className="bi bi-trash-fill"></i>
-                    </button>
-                  </div>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div> */}
-        {/* <!-- Activity Timeline --> */}
+              ))}
+              <li
+                className={`page-item ${
+                  activityPage === totalActivityPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setActivityPage((prev) => prev + 1)}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
       </div>
+
+      {/* <!-- workout insight table --> */}
+      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4 className="mb-0 fw-bold text-dark">User Workout Table</h4>
+        </div>
+
+        <div className="table-responsive">
+          <table className="table table-bordered table-striped mb-0">
+            <thead className="table-primary">
+              <tr>
+                <th>Sr No.</th>
+                <th>Activity Name</th>
+                <th>Category</th>
+                <th>Duration (Minutes)</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedWorkouts.length > 0 ? (
+                paginatedWorkouts.map((workout, index) => {
+                  const formattedDate = new Date(workout.LoggedDate).toLocaleDateString("en-GB");
+                  return (
+                    <tr key={index}>
+                      <td>{(workoutPage - 1) * workoutPerPage + index + 1}</td>
+                      <td>{workout.ActivityName || 'N/A'}</td>
+                      <td>{workout.ActivityCategory || 'N/A'}</td>
+                      <td>{workout.DurationInMinutes || 'N/A'}</td>
+                      <td>{formattedDate}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center text-muted">
+                    No workout data available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalWorkoutPages > 1 && (
+          <nav className="mt-3">
+            <ul className="pagination justify-content-end mb-0">
+              <li className={`page-item ${workoutPage === 1 ? "disabled" : ""}`}>
+                <button
+                  className="page-link"
+                  onClick={() => setWorkoutPage((prev) => prev - 1)}
+                >
+                  Previous
+                </button>
+              </li>
+              {Array.from({ length: totalWorkoutPages }, (_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${
+                    workoutPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setWorkoutPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li
+                className={`page-item ${
+                  workoutPage === totalWorkoutPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setWorkoutPage((prev) => prev + 1)}
+                >
+                  Next
+                </button>
+              </li>
+            </ul>
+          </nav>
+        )}
+      </div>
+
     </div>
   );
 }
