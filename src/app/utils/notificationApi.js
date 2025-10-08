@@ -57,20 +57,26 @@ const handleApiResponse = async (response) => {
 // Create notification
 export const createNotification = async (notificationData) => {
   try {
-    const payload = {
-      Title: notificationData.Title,
-      Message: notificationData.Message,
-      ScheduledTime: notificationData.ScheduledTime || '',
-      TargetUserIds: notificationData.TargetUserIds || [],
-      SendToAll: notificationData.SendToAll,
-      SendNow: notificationData.SendNow
-    };
+    const formData = new FormData();
+
+    formData.append('Title', notificationData.Title);
+    formData.append('Message', notificationData.Message);
+    formData.append('ScheduledTime', notificationData.ScheduledTime || '');
+    formData.append('SendToAll', notificationData.SendToAll.toString());
+    formData.append('SendNow', notificationData.SendNow.toString());
+
+    // Append each TargetUserId
+    if (notificationData.TargetUserIds && Array.isArray(notificationData.TargetUserIds)) {
+      notificationData.TargetUserIds.forEach(id => {
+        formData.append('TargetUserIds', id);
+      });
+    }
 
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/admin/notifications/create`,
       {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: formData,
       }
     );
     return await handleApiResponse(response);

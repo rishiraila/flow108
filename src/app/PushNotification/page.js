@@ -456,7 +456,7 @@ export default function PushNotificationPage() {
                   </div>
                 )}
 
-                <div className="row" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                <div className="row" style={{ maxHeight: '530px', overflowY: 'auto' }}>
                   {!apiLoading &&
                     filteredNotifications.map((notification) => (
                       <div className="card mb-3" key={notification.Id}>
