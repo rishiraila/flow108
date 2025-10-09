@@ -264,6 +264,11 @@ export default function Page() {
     )}&background=random&size=50`;
   };
 
+  const isVideo = (url) => {
+    const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.ogg'];
+    return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+  };
+
   const filteredPosts = useMemo(() => {
     let filtered = posts.filter(post =>
       (post.Title && post.Title.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -563,19 +568,35 @@ export default function Page() {
                       {post.Description}
                     </p>
                     {post.Media && post.Media.Url && (
-                      <img
-                        src={post.Media.Url}
-                        alt="Post Media"
-                        style={{
-                          width: "100%",
-                          borderRadius: "8px",
-                          objectFit: "contain",
-                          maxHeight: "fit-content",
-                        }}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
-                      />
+                      isVideo(post.Media.Url) ? (
+                        <video
+                          src={post.Media.Url}
+                          controls
+                          style={{
+                            width: "100%",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                            maxHeight: "fit-content",
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <img
+                          src={post.Media.Url}
+                          alt="Post Media"
+                          style={{
+                            width: "100%",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                            maxHeight: "fit-content",
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      )
                     )}
                   </div>
 

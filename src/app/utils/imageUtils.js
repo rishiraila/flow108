@@ -64,6 +64,20 @@ export const createImageWithFallback = ({
 };
 
 /**
+ * Checks if a given URL or filename represents a video file
+ * @param {string} url - The URL or filename to check
+ * @returns {boolean} - True if it's a video file
+ */
+export const isVideoFile = (url) => {
+  if (!url || typeof url !== 'string') return false;
+
+  const videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.mkv', '.m4v'];
+  const lowerUrl = url.toLowerCase();
+
+  return videoExtensions.some(ext => lowerUrl.includes(ext));
+};
+
+/**
  * Processes workout data to ensure image URLs are properly formatted
  * @param {Object|Array} data - Workout data (single object or array)
  * @returns {Object|Array} - Processed data with formatted image URLs

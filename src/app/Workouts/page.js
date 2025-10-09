@@ -2,7 +2,40 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchAllWorkouts, addWorkout, updateWorkout, deleteWorkout } from "../utils/api";
-import { getImageUrl } from "../utils/imageUtils";
+import { getImageUrl, isVideoFile, processWorkoutImages } from "../utils/imageUtils";
+
+// MediaDisplay component to handle both images and videos
+const MediaDisplay = ({ src, alt, className, style, onError }) => {
+  const isVideo = isVideoFile(src);
+
+  if (isVideo) {
+    return (
+      <video
+        src={getImageUrl(src)}
+        className={className}
+        style={style}
+        controls
+        onError={onError}
+        muted
+      >
+        Your browser does not support the video tag.
+      </video>
+    );
+  }
+
+  return (
+    <img
+      src={getImageUrl(src)}
+      className={className}
+      alt={alt}
+      style={style}
+      onError={(e) => {
+        e.target.src = getImageUrl('');
+        if (onError) onError(e);
+      }}
+    />
+  );
+};
 
 export default function WorkoutsPage() {
   const [workouts, setWorkouts] = useState([]);
@@ -27,6 +60,10 @@ export default function WorkoutsPage() {
   const [addErrorAlert, setAddErrorAlert] = useState(false);
   const [editSuccessAlert, setEditSuccessAlert] = useState(false);
   const [editErrorAlert, setEditErrorAlert] = useState(false);
+
+  // File error states
+  const [addFileError, setAddFileError] = useState('');
+  const [editFileError, setEditFileError] = useState('');
 
   // Fetch workouts from API
   useEffect(() => {
@@ -58,7 +95,11 @@ export default function WorkoutsPage() {
     try {
       setLoading(true);
       const workoutsData = await fetchAllWorkouts();
-      setWorkouts(workoutsData);
+      console.log("Fetched workouts data:", workoutsData);
+      // Process images URLs to absolute URLs
+      const processedWorkouts = processWorkoutImages(workoutsData);
+      console.log("Processed workouts data:", processedWorkouts);
+      setWorkouts(processedWorkouts);
       setError(null);
     } catch (err) {
       console.error("Error fetching workouts:", err);
@@ -151,6 +192,7 @@ export default function WorkoutsPage() {
   const openEditModal = (workout) => {
     setEditingWorkout({ ...workout });
     setShowEditModal(true);
+    setEditFileError('');
   };
 
   const openWorkoutModal = (workout) => {
@@ -175,7 +217,7 @@ export default function WorkoutsPage() {
                 <h5 className="mb-0">Workouts</h5>
                 <button
                   className="btn btn-primary"
-                  onClick={() => setShowAddModal(true)}
+                  onClick={() => { setShowAddModal(true); setAddFileError(''); }}
                 >
                   Add Workout
                 </button>
@@ -203,10 +245,10 @@ export default function WorkoutsPage() {
                     {workouts.map((workout) => (
                       <div key={workout.Id} className="col-md-4 mb-4">
                         <div className="card h-100 d-flex flex-column">
-                          <img
-                            src={getImageUrl(workout.Image)}
-                            className="card-img-top"
+                          <MediaDisplay
+                            src={workout.Image}
                             alt={workout.Title}
+                            className="card-img-top"
                             style={{ height: "200px", objectFit: "cover" }}
                             onError={(e) => {
                               e.target.src = "/placeholder.jpg";
@@ -338,7 +380,7 @@ export default function WorkoutsPage() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Workout Image</label>
+                    <label className="form-label">Workout Image/Videos</label>
                     <div className="card">
                       <div className="card-body text-center">
                         <div className="mb-2">
@@ -348,17 +390,34 @@ export default function WorkoutsPage() {
                           type="file"
                           className="form-control"
                           name="Image"
-                          accept="image/*"
+                          accept="image/*,video/*"
                           onChange={(e) => {
                             const file = e.target.files[0];
-                            setNewWorkout((prev) => ({ ...prev, Image: file }));
+                            if (file) {
+                              const isImage = file.type.startsWith('image/');
+                              const isVideo = file.type.startsWith('video/');
+                              if (isImage && file.size > 1024 * 1024) {
+                                setAddFileError('Image size must be below 1MB');
+                                return;
+                              }
+                              if (isVideo && file.size > 10 * 1024 * 1024) {
+                                setAddFileError('Video size must be below 10MB');
+                                return;
+                              }
+                              setAddFileError('');
+                              setNewWorkout((prev) => ({ ...prev, Image: file }));
+                            } else {
+                              setAddFileError('');
+                              setNewWorkout((prev) => ({ ...prev, Image: null }));
+                            }
                           }}
                         />
                         <div className="form-text mt-2">
-                          Upload an image for this workout (optional)
+                          Upload an image (max 1MB) or video (max 10MB) for this workout.
                         </div>
                       </div>
                     </div>
+                    {addFileError && <div className="alert alert-danger mt-2">{addFileError}</div>}
                   </div>
                   <div className="modal-footer">
                     <button
@@ -368,7 +427,7 @@ export default function WorkoutsPage() {
                     >
                       Cancel
                     </button>
-                    <button type="submit" className="btn btn-primary">
+                    <button type="submit" className="btn btn-primary" disabled={!!addFileError}>
                       Add Workout
                     </button>
                   </div>
@@ -442,7 +501,7 @@ export default function WorkoutsPage() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Workout Image</label>
+                    <label className="form-label">Workout Image/Video</label>
                     <div className="card">
                       <div className="card-body text-center">
                         <div className="mb-2">
@@ -452,17 +511,34 @@ export default function WorkoutsPage() {
                           type="file"
                           className="form-control"
                           name="Image"
-                          accept="image/*"
+                          accept="image/*,video/*"
                           onChange={(e) => {
                             const file = e.target.files[0];
-                            setEditingWorkout((prev) => ({ ...prev, Image: file }));
+                            if (file) {
+                              const isImage = file.type.startsWith('image/');
+                              const isVideo = file.type.startsWith('video/');
+                              if (isImage && file.size > 1024 * 1024) {
+                                setEditFileError('Image size must be below 1MB');
+                                return;
+                              }
+                              if (isVideo && file.size > 10 * 1024 * 1024) {
+                                setEditFileError('Video size must be below 10MB');
+                                return;
+                              }
+                              setEditFileError('');
+                              setEditingWorkout((prev) => ({ ...prev, Image: file }));
+                            } else {
+                              setEditFileError('');
+                              setEditingWorkout((prev) => ({ ...prev, Image: null }));
+                            }
                           }}
                         />
                         <div className="form-text mt-2">
-                          Upload an image for this workout (optional)
+                          Upload an image (max 1MB) or video (max 10MB) for this workout.
                         </div>
                       </div>
                     </div>
+                    {editFileError && <div className="alert alert-danger mt-2">{editFileError}</div>}
                   </div>
                   <div className="modal-footer">
                     <button
@@ -472,7 +548,7 @@ export default function WorkoutsPage() {
                     >
                       Cancel
                     </button>
-                    <button type="submit" className="btn btn-primary">
+                    <button type="submit" className="btn btn-primary" disabled={!!editFileError}>
                       Update Workout
                     </button>
                   </div>
@@ -503,10 +579,10 @@ export default function WorkoutsPage() {
               <div className="modal-body">
                 <div className="row">
                   <div className="col-md-6">
-                    <img
-                      src={getImageUrl(selectedWorkout.Image)}
-                      className="img-fluid rounded mb-3"
+                    <MediaDisplay
+                      src={selectedWorkout.Image}
                       alt={selectedWorkout.Title}
+                      className="img-fluid rounded mb-3"
                       style={{
                         maxHeight: "300px",
                         objectFit: "cover",

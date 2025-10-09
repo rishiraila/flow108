@@ -1,4 +1,8 @@
-- [x] Update the card padding from p-3 to p-2 and gap from gap-3 to gap-2 in the Search and Sort section.
-- [x] Reduce the maxWidth of the input-group from 300px to 250px.
-- [x] Add inline styles to the input field: height: '32px', fontSize: '14px'.
-- [x] Reduce the minWidth of the select from 150px to 140px and add inline styles: height: '32px', fontSize: '14px'.
+- [ ] Add file size validation in the onChange handler of the file input in Add Workout Modal
+- [ ] Add file size validation in the onChange handler of the file input in Edit Workout Modal
+- [ ] Show appropriate error alert if file size exceeds the limit
+- [ ] Prevent setting the file in state if validation fails
+- [ ] Update form text to mention size limits
+- [ ] Test the file size validation by trying to upload files exceeding the limits
+- [ ] Verify error alerts show correctly and file is not accepted
+- [ ] Verify files within limits are accepted and workout can be added/edited successfully
