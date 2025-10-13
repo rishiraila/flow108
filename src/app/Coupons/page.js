@@ -1,53 +1,72 @@
 'use client';
 import React, { useState } from 'react';
 
-export default function DashboardPage() {
-  const [coupons, setCoupons] = useState([
+export default function BannersTestimonialsPage() {
+  const [testimonials, setTestimonials] = useState([
     {
       id: 1,
-      name: 'Email Marketing Campaign',
-      code: 'EMC2023',
-      discount: 24,
-      validity: '2023-12-31',
-      usage: 'New Subscribers',
+      name: 'John Doe',
+      message: 'Great service! Highly recommend.',
+      date: '2023-10-01',
+      imageUrl: '',
     },
     {
       id: 2,
-      name: 'Google Workspace',
-      code: 'GW2023',
-      discount: -12,
-      validity: '2024-01-31',
-      usage: 'Enterprise Customers',
+      name: 'Jane Smith',
+      message: 'Amazing experience, will come back.',
+      date: '2023-10-05',
+      imageUrl: '',
     },
   ]);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [newCoupon, setNewCoupon] = useState({ name: '', code: '', discount: '', validity: '', usage: '' });
-  const [editCoupon, setEditCoupon] = useState(null);
+  const [banners, setBanners] = useState([
+    {
+      id: 1,
+      title: 'Welcome Banner',
+      description: 'Welcome to our platform!',
+      imageUrl: '',
+    },
+    {
+      id: 2,
+      title: 'Promotion Banner',
+      description: 'Special offer this month.',
+      imageUrl: '',
+    },
+  ]);
 
-  const handleAddCoupon = () => {
-    const id = coupons.length + 1;
-    setCoupons([...coupons, { ...newCoupon, id }]);
-    setShowAddModal(false);
-    setNewCoupon({ name: '', code: '', discount: '', validity: '', usage: '' });
+  const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
+  const [showAddBannerModal, setShowAddBannerModal] = useState(false);
+  const [newTestimonial, setNewTestimonial] = useState({ name: '', message: '', imageUrl: '' });
+  const [newBanner, setNewBanner] = useState({ title: '', description: '', imageUrl: '' });
+
+  const handleAddTestimonial = () => {
+    const id = testimonials.length + 1;
+    const date = new Date().toISOString().split('T')[0];
+    setTestimonials([...testimonials, { ...newTestimonial, id, date }]);
+    setShowAddTestimonialModal(false);
+    setNewTestimonial({ name: '', message: '', imageUrl: '' });
   };
 
-  const handleDeleteCoupon = (id) => {
-    if (confirm('Are you sure you want to delete this coupon?')) {
-      setCoupons(coupons.filter((c) => c.id !== id));
+  const handleAddBanner = () => {
+    const id = banners.length + 1;
+    setBanners([...banners, { ...newBanner, id }]);
+    setShowAddBannerModal(false);
+    setNewBanner({ title: '', description: '', imageUrl: '' });
+  };
+
+  const handleImageUpload = (e, type) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (type === 'testimonial') {
+          setNewTestimonial({ ...newTestimonial, imageUrl: event.target.result });
+        } else if (type === 'banner') {
+          setNewBanner({ ...newBanner, imageUrl: event.target.result });
+        }
+      };
+      reader.readAsDataURL(file);
     }
-  };
-
-  const handleEditClick = (coupon) => {
-    setEditCoupon(coupon);
-    setShowEditModal(true);
-  };
-
-  const handleUpdateCoupon = () => {
-    setCoupons(coupons.map((c) => (c.id === editCoupon.id ? editCoupon : c)));
-    setShowEditModal(false);
-    setEditCoupon(null);
   };
 
   return (
@@ -60,15 +79,15 @@ export default function DashboardPage() {
               <div className="d-flex align-items-center mb-2">
                 <div className="avatar me-4">
                   <span className="avatar-initial rounded-3 bg-label-primary">
-                    <i className="tf-icons ri-user-add-line ri-24px"></i>
+                    <i className="tf-icons ri-image-line ri-24px"></i>
                   </span>
                 </div>
-                <h4 className="mb-0">42</h4>
+                <h4 className="mb-0">{banners.length}</h4>
               </div>
-              <h6 className="mb-0 fw-normal">User Registered</h6>
+              <h6 className="mb-0 fw-normal">Total Banners</h6>
               <p className="mb-0">
-                <span className="me-1 fw-medium">+18.2%</span>
-                <small className="text-muted">than last week</small>
+                <span className="me-1 fw-medium">+{banners.filter(b => b.imageUrl).length}</span>
+                <small className="text-muted">with images</small>
               </p>
             </div>
           </div>
@@ -80,15 +99,15 @@ export default function DashboardPage() {
               <div className="d-flex align-items-center mb-2">
                 <div className="avatar me-4">
                   <span className="avatar-initial rounded-3 bg-label-warning">
-                    <i className="ri-user-star-line ri-24px"></i>
+                    <i className="ri-star-line ri-24px"></i>
                   </span>
                 </div>
-                <h4 className="mb-0">8</h4>
+                <h4 className="mb-0">{testimonials.length}</h4>
               </div>
-              <h6 className="mb-0 fw-normal">Paid Members</h6>
+              <h6 className="mb-0 fw-normal">Total Testimonials</h6>
               <p className="mb-0">
-                <span className="me-1 fw-medium">-8.7%</span>
-                <small className="text-muted">than last week</small>
+                <span className="me-1 fw-medium">+{testimonials.filter(t => t.imageUrl).length}</span>
+                <small className="text-muted">with images</small>
               </p>
             </div>
           </div>
@@ -100,15 +119,15 @@ export default function DashboardPage() {
               <div className="d-flex align-items-center mb-2">
                 <div className="avatar me-4">
                   <span className="avatar-initial rounded-3 bg-label-danger">
-                    <i className="ri-group-line ri-24px"></i>
+                    <i className="ri-eye-line ri-24px"></i>
                   </span>
                 </div>
-                <h4 className="mb-0">27</h4>
+                <h4 className="mb-0">{banners.length + testimonials.length}</h4>
               </div>
-              <h6 className="mb-0 fw-normal">Total Questions</h6>
+              <h6 className="mb-0 fw-normal">Total Items</h6>
               <p className="mb-0">
-                <span className="me-1 fw-medium">+4.3%</span>
-                <small className="text-muted">than last week</small>
+                <span className="me-1 fw-medium">+{banners.filter(b => b.imageUrl).length + testimonials.filter(t => t.imageUrl).length}</span>
+                <small className="text-muted">with images</small>
               </p>
             </div>
           </div>
@@ -120,27 +139,27 @@ export default function DashboardPage() {
               <div className="d-flex align-items-center mb-2">
                 <div className="avatar me-4">
                   <span className="avatar-initial rounded-3 bg-label-info">
-                    <i className="ri-article-line ri-24px"></i>
+                    <i className="ri-calendar-line ri-24px"></i>
                   </span>
                 </div>
-                <h4 className="mb-0">13</h4>
+                <h4 className="mb-0">{new Set(testimonials.map(t => t.date)).size}</h4>
               </div>
-              <h6 className="mb-0 fw-normal">Total Posts</h6>
+              <h6 className="mb-0 fw-normal">Unique Dates</h6>
               <p className="mb-0">
-                <span className="me-1 fw-medium">-2.5%</span>
-                <small className="text-muted">than last week</small>
+                <span className="me-1 fw-medium">+{testimonials.length}</span>
+                <small className="text-muted">testimonials</small>
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Coupons Table */}
-      <div className="card">
+      {/* Testimonials Section */}
+      <div className="card mb-4">
         <div className="card-header d-flex justify-content-between">
-          <h5 className="mb-0">Coupons</h5>
-          <button className="btn btn-sm btn-primary" onClick={() => setShowAddModal(true)}>
-            Add Coupon
+          <h5 className="mb-0">Testimonials</h5>
+          <button className="btn btn-sm btn-primary" onClick={() => setShowAddTestimonialModal(true)}>
+            Add Testimonial
           </button>
         </div>
         <div className="card-body table-responsive">
@@ -148,39 +167,30 @@ export default function DashboardPage() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Code</th>
-                <th className="text-end">Discount</th>
-                <th className="text-end">Validity</th>
-                <th>Usage</th>
-                <th>Actions</th>
+                <th>Message</th>
+                <th>Date</th>
+                <th>Image</th>
               </tr>
             </thead>
             <tbody>
-              {coupons.map((coupon) => (
-                <tr key={coupon.id}>
-                  <td>{coupon.name}</td>
+              {testimonials.map((testimonial) => (
+                <tr key={testimonial.id}>
+                  <td>{testimonial.name}</td>
+                  <td>{testimonial.message}</td>
+                  <td>{testimonial.date}</td>
                   <td>
-                    <span className="badge bg-primary">{coupon.code}</span>
-                  </td>
-                  <td className={`text-end fw-bold ${coupon.discount >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {coupon.discount}%
-                  </td>
-                  <td className="text-end">{coupon.validity}</td>
-                  <td>{coupon.usage}</td>
-                  <td>
-                    <button className="btn btn-sm btn-outline-primary me-1" onClick={() => handleEditClick(coupon)}>
-                      <i className="ri-edit-2-line"></i>
-                    </button>
-                    <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteCoupon(coupon.id)}>
-                      <i className="ri-delete-bin-line"></i>
-                    </button>
+                    {testimonial.imageUrl ? (
+                      <img src={testimonial.imageUrl} alt={testimonial.name} style={{ width: '100px', height: 'auto' }} />
+                    ) : (
+                      'No Image'
+                    )}
                   </td>
                 </tr>
               ))}
-              {coupons.length === 0 && (
+              {testimonials.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="text-center text-muted">
-                    No coupons available
+                  <td colSpan="4" className="text-center text-muted">
+                    No testimonials available
                   </td>
                 </tr>
               )}
@@ -189,47 +199,82 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Add Coupon Modal */}
-      {showAddModal && (
+      {/* Banners Section */}
+      <div className="card">
+        <div className="card-header d-flex justify-content-between">
+          <h5 className="mb-0">Banners</h5>
+          <button className="btn btn-sm btn-primary" onClick={() => setShowAddBannerModal(true)}>
+            Add Banner
+          </button>
+        </div>
+        <div className="card-body table-responsive">
+          <table className="table table-bordered">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Image</th>
+              </tr>
+            </thead>
+            <tbody>
+              {banners.map((banner) => (
+                <tr key={banner.id}>
+                  <td>{banner.title}</td>
+                  <td>{banner.description}</td>
+                  <td>
+                    {banner.imageUrl ? (
+                      <img src={banner.imageUrl} alt={banner.title} style={{ width: '100px', height: 'auto' }} />
+                    ) : (
+                      'No Image'
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {banners.length === 0 && (
+                <tr>
+                  <td colSpan="3" className="text-center text-muted">
+                    No banners available
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add Testimonial Modal */}
+      {showAddTestimonialModal && (
         <div className="modal-backdrop">
           <div className="modal-content-custom">
-            <h5 className="mb-3">Add Coupon</h5>
-            <input className="form-control mb-2" placeholder="Name" value={newCoupon.name}
-              onChange={(e) => setNewCoupon({ ...newCoupon, name: e.target.value })} />
-            <input className="form-control mb-2" placeholder="Code" value={newCoupon.code}
-              onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })} />
-            <input className="form-control mb-2" type="number" placeholder="Discount %" value={newCoupon.discount}
-              onChange={(e) => setNewCoupon({ ...newCoupon, discount: e.target.value })} />
-            <input className="form-control mb-2" type="date" value={newCoupon.validity}
-              onChange={(e) => setNewCoupon({ ...newCoupon, validity: e.target.value })} />
-            <input className="form-control mb-3" placeholder="Usage" value={newCoupon.usage}
-              onChange={(e) => setNewCoupon({ ...newCoupon, usage: e.target.value })} />
+            <h5 className="mb-3">Add Testimonial</h5>
+            <input className="form-control mb-2" placeholder="Name" value={newTestimonial.name}
+              onChange={(e) => setNewTestimonial({ ...newTestimonial, name: e.target.value })} />
+            <textarea className="form-control mb-2" placeholder="Message" rows="3" value={newTestimonial.message}
+              onChange={(e) => setNewTestimonial({ ...newTestimonial, message: e.target.value })} />
+            <input type="file" className="form-control mb-3" accept="image/*"
+              onChange={(e) => handleImageUpload(e, 'testimonial')} />
             <div className="d-flex justify-content-end gap-2">
-              <button className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button className="btn btn-success" onClick={handleAddCoupon}>Add</button>
+              <button className="btn btn-secondary" onClick={() => setShowAddTestimonialModal(false)}>Cancel</button>
+              <button className="btn btn-success" onClick={handleAddTestimonial}>Add</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Coupon Modal */}
-      {showEditModal && editCoupon && (
+      {/* Add Banner Modal */}
+      {showAddBannerModal && (
         <div className="modal-backdrop">
           <div className="modal-content-custom">
-            <h5 className="mb-3">Edit Coupon</h5>
-            <input className="form-control mb-2" placeholder="Name" value={editCoupon.name}
-              onChange={(e) => setEditCoupon({ ...editCoupon, name: e.target.value })} />
-            <input className="form-control mb-2" placeholder="Code" value={editCoupon.code}
-              onChange={(e) => setEditCoupon({ ...editCoupon, code: e.target.value })} />
-            <input className="form-control mb-2" type="number" placeholder="Discount %" value={editCoupon.discount}
-              onChange={(e) => setEditCoupon({ ...editCoupon, discount: e.target.value })} />
-            <input className="form-control mb-2" type="date" value={editCoupon.validity}
-              onChange={(e) => setEditCoupon({ ...editCoupon, validity: e.target.value })} />
-            <input className="form-control mb-3" placeholder="Usage" value={editCoupon.usage}
-              onChange={(e) => setEditCoupon({ ...editCoupon, usage: e.target.value })} />
+            <h5 className="mb-3">Add Banner</h5>
+            <input className="form-control mb-2" placeholder="Title" value={newBanner.title}
+              onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })} />
+            <textarea className="form-control mb-2" placeholder="Description" rows="2" value={newBanner.description}
+              onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })} />
+            <input type="file" className="form-control mb-3" accept="image/*"
+              onChange={(e) => handleImageUpload(e, 'banner')} />
             <div className="d-flex justify-content-end gap-2">
-              <button className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-              <button className="btn btn-success" onClick={handleUpdateCoupon}>Update</button>
+              <button className="btn btn-secondary" onClick={() => setShowAddBannerModal(false)}>Cancel</button>
+              <button className="btn btn-success" onClick={handleAddBanner}>Add</button>
             </div>
           </div>
         </div>

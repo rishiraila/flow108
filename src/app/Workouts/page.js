@@ -413,7 +413,7 @@ export default function WorkoutsPage() {
                           }}
                         />
                         <div className="form-text mt-2">
-                          Upload an image (max 1MB) or video (max 10MB) for this workout.
+                          Upload an image (max 1MB) or video (max 10MB with 1280x720 pixels) for this workout.
                         </div>
                       </div>
                     </div>
@@ -534,7 +534,7 @@ export default function WorkoutsPage() {
                           }}
                         />
                         <div className="form-text mt-2">
-                          Upload an image (max 1MB) or video (max 10MB) for this workout.
+                          Upload an image (max 1MB) or video (max 10MB 1280x720) for this workout.
                         </div>
                       </div>
                     </div>

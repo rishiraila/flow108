@@ -333,6 +333,20 @@ export default function PushNotificationPage() {
                     />
                   </div>
                   <div className="mb-3">
+                    <label htmlFor="Image" className="form-label">Image (Optional)</label>
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="Image"
+                      name="Image"
+                      rows="3"
+                      placeholder="Upload image URL here"
+                      required
+                      value={formData.Message}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div className="mb-3">
                     <label htmlFor="ScheduledTime" className="form-label">Scheduled Time (optional)</label>
                     <input
                       type="datetime-local"

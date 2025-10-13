@@ -269,6 +269,13 @@ export default function Page() {
     return videoExtensions.some(ext => url.toLowerCase().includes(ext));
   };
 
+  const downloadMedia = (url) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = url.split('/').pop() || 'media';
+    link.click();
+  };
+
   const filteredPosts = useMemo(() => {
     let filtered = posts.filter(post =>
       (post.Title && post.Title.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -568,35 +575,59 @@ export default function Page() {
                       {post.Description}
                     </p>
                     {post.Media && post.Media.Url && (
-                      isVideo(post.Media.Url) ? (
-                        <video
-                          src={post.Media.Url}
-                          controls
+                      <div style={{ position: "relative" }}>
+                        {isVideo(post.Media.Url) ? (
+                          <video
+                            src={post.Media.Url}
+                            controls
+                            style={{
+                              width: "100%",
+                              borderRadius: "8px",
+                              objectFit: "contain",
+                              maxHeight: "fit-content",
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <img
+                            src={post.Media.Url}
+                            alt="Post Media"
+                            style={{
+                              width: "100%",
+                              borderRadius: "8px",
+                              objectFit: "contain",
+                              maxHeight: "fit-content",
+                            }}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        )}
+                        <button
+                          onClick={() => downloadMedia(post.Media.Url)}
                           style={{
-                            width: "100%",
-                            borderRadius: "8px",
-                            objectFit: "contain",
-                            maxHeight: "fit-content",
+                            position: "absolute",
+                            top: "10px",
+                            right: "10px",
+                            backgroundColor: "rgba(0, 0, 0, 0.7)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "50%",
+                            width: "40px",
+                            height: "40px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "18px",
+                            cursor: "pointer",
                           }}
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <img
-                          src={post.Media.Url}
-                          alt="Post Media"
-                          style={{
-                            width: "100%",
-                            borderRadius: "8px",
-                            objectFit: "contain",
-                            maxHeight: "fit-content",
-                          }}
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
-                      )
+                          title="Download Media"
+                        >
+                          ↓
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -723,7 +754,7 @@ export default function Page() {
                               }}
                             />
                             <small style={{ color: "#6c757d", fontWeight: "bold" }}>
-                              {comment.UserName || "Unknown User"}
+                              {comment.UserName || ""}
                             </small>
                             <small style={{ color: "#adb5bd" }}>
                               {formatDate(comment.CreatedAt)}

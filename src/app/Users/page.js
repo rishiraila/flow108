@@ -391,18 +391,18 @@ export default function Page() {
                       >
                         Email{getSortArrow("Email")}
                       </th>
-                      <th
+                      {/* <th
                         onClick={() => handleSort("Plan")}
                         style={{ cursor: "pointer" }}
                       >
                         Plan{getSortArrow("Plan")}
-                      </th>
-                      <th
+                      </th> */}
+                      {/* <th
                         onClick={() => handleSort("IsApproved")}
                         style={{ cursor: "pointer" }}
                       >
                         Status{getSortArrow("IsApproved")}
-                      </th>
+                      </th> */}
                       {view === "userList" && <th>Actions</th>}
                     </tr>
                   </thead>
@@ -414,8 +414,8 @@ export default function Page() {
                         </td>
                         <td>{user.Name}</td>
                         <td>{user.Email}</td>
-                        <td>{user.Plan || "Flow Plan"}</td>
-                        <td>
+                        {/* <td>{user.Plan || "Flow Plan"}</td> */}
+                        {/* <td>
                           {view === "requestApproval" ? (
                             <select
                               className="form-select form-select-sm"
@@ -440,7 +440,7 @@ export default function Page() {
                               {user.IsApproved ? "Active" : "Pending"}
                             </span>
                           )}
-                        </td>
+                        </td> */}
                         {view === "userList" && (
                           <td>
                             <a href={`/UserDetails?id=${user.Id}`}>
