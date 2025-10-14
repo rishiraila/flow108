@@ -13,7 +13,7 @@ export default function Page() {
   const [formData, setFormData] = useState({
     Name: "",
     Description: "",
-    Meals: [{ Name: "", RecommendedCalories: 0 }],
+    Meals: [{ Name: "", RecommendedCalories: 0, RecommendedProtein: 0, RecommendedCarbs: 0, RecommendedFats: 0 }],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -131,100 +131,72 @@ export default function Page() {
       setApiLoading(true);
       setApiError(null);
 
-      // Use the centralized API client for better error handling
-      const { dietPlanApi } = await import("../utils/apiClient");
-      const data = await dietPlanApi.getAll();
+      const response = await fetch("https://flow108.coinagesoft.com/api/AdminDietPlan");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
+      const data = await response.json();
       console.log("API Response:", data); // Debug log
 
-      // Validate response structure
-      if (!data || typeof data !== "object") {
-        throw new Error("Invalid API response format");
-      }
-
-      // Extract diet plans from response
-      let plansData = [];
-
-      if (data.Data && Array.isArray(data.Data)) {
-        plansData = data.Data;
-      } else if (data.data && Array.isArray(data.data.Data)) {
-        plansData = data.data.Data;
-      } else if (Array.isArray(data)) {
-        plansData = data;
-      } else {
-        console.warn("Unexpected API response structure:", data);
-        plansData = [];
-      }
-
-      // Validate each plan has required properties
-      const validPlans = plansData.filter(
-        (plan) =>
-          plan &&
-          typeof plan === "object" &&
-          (plan.Id || plan.id) &&
-          (plan.Name || plan.name || plan.Name === "")
-      );
-
-      console.log("Valid diet plans found:", validPlans.length);
-
-      // Fetch assigned users for all plans to get accurate user counts
-      let plansWithUserCounts = [];
-      try {
-        const usersResponse = await fetch(
-          "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
-        );
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          if (usersData.Status && usersData.Data) {
-            const plansWithUsers = usersData.Data;
-            // Create a map for quick lookup
-            const userCountMap = {};
-            plansWithUsers.forEach(plan => {
-              userCountMap[plan.DietPlanId] = plan.AssignedUsers ? plan.AssignedUsers.length : 0;
-            });
-            // Set userCount for each plan
-            plansWithUserCounts = validPlans.map(plan => {
-              const planId = plan.Id || plan.id;
-              return {
-                ...plan,
-                userCount: userCountMap[planId] || 0,
-              };
-            });
-          } else {
-            throw new Error("Invalid users data structure");
-          }
-        } else {
-          throw new Error("Failed to fetch users data");
-        }
-      } catch (err) {
-        console.error("Error fetching assigned users, falling back to individual calls:", err);
-        // Fallback to individual API calls
-        plansWithUserCounts = await Promise.all(
-          validPlans.map(async (plan) => {
-            try {
-              const userCount = await fetchUserCountForPlan(plan.Id || plan.id);
-              return {
-                ...plan,
-                userCount: userCount,
-              };
-            } catch (err) {
-              console.error(
-                `Error fetching user count for plan ${plan.Id}:`,
-                err
-              );
-              return {
-                ...plan,
-                userCount: 0,
-              };
+      if (data.Status && data.Data && Array.isArray(data.Data)) {
+        // Fetch assigned users for all plans to get accurate user counts
+        let plansWithUserCounts = [];
+        try {
+          const usersResponse = await fetch(
+            "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
+          );
+          if (usersResponse.ok) {
+            const usersData = await usersResponse.json();
+            if (usersData.Status && usersData.Data) {
+              const plansWithUsers = usersData.Data;
+              // Create a map for quick lookup
+              const userCountMap = {};
+              plansWithUsers.forEach(plan => {
+                userCountMap[plan.DietPlanId] = plan.AssignedUsers ? plan.AssignedUsers.length : 0;
+              });
+              // Set userCount for each plan
+              plansWithUserCounts = data.Data.map(plan => {
+                const planId = plan.Id || plan.id;
+                return {
+                  ...plan,
+                  userCount: userCountMap[planId] || 0,
+                };
+              });
+            } else {
+              throw new Error("Invalid users data structure");
             }
-          })
-        );
-      }
+          } else {
+            throw new Error("Failed to fetch users data");
+          }
+        } catch (err) {
+          console.error("Error fetching assigned users, falling back to individual calls:", err);
+          // Fallback to individual API calls
+          plansWithUserCounts = await Promise.all(
+            data.Data.map(async (plan) => {
+              try {
+                const userCount = await fetchUserCountForPlan(plan.Id || plan.id);
+                return {
+                  ...plan,
+                  userCount: userCount,
+                };
+              } catch (err) {
+                console.error(
+                  `Error fetching user count for plan ${plan.Id}:`,
+                  err
+                );
+                return {
+                  ...plan,
+                  userCount: 0,
+                };
+              }
+            })
+          );
+        }
 
-      setDietPlans(plansWithUserCounts);
-
-      if (validPlans.length === 0 && plansData.length > 0) {
-        console.warn("All plans filtered out due to invalid structure");
+        setDietPlans(plansWithUserCounts);
+      } else {
+        throw new Error(data.Message || "Failed to fetch diet plans");
       }
     } catch (err) {
       console.error("Error fetching diet plans:", err);
@@ -259,7 +231,7 @@ export default function Page() {
     setFormData((prev) => ({
       ...prev,
       Meals: prev.Meals.map((meal, i) =>
-        i === index ? { ...meal, [field]: field === 'RecommendedCalories' ? parseInt(value) || 0 : value } : meal
+        i === index ? { ...meal, [field]: ['RecommendedCalories', 'RecommendedProtein', 'RecommendedCarbs', 'RecommendedFats'].includes(field) ? parseInt(value) || 0 : value } : meal
       ),
     }));
   };
@@ -267,7 +239,7 @@ export default function Page() {
   const addMeal = () => {
     setFormData((prev) => ({
       ...prev,
-      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0 }],
+      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0, RecommendedProtein: 0, RecommendedCarbs: 0, RecommendedFats: 0 }],
     }));
   };
 
@@ -300,25 +272,39 @@ export default function Page() {
     };
 
     try {
-      // Use the centralized API client for better error handling
-      const { dietPlanApi } = await import("../utils/apiClient");
-      const result = await dietPlanApi.create(payload);
-
-      console.log("Diet plan created successfully:", result);
-      setSuccess(true);
-
-      // Reset form
-      setFormData({
-        Name: "",
-        Description: "",
-        Meals: [{ Name: "", RecommendedCalories: 0 }],
+      const response = await fetch("https://flow108.coinagesoft.com/api/AdminDietPlan/Dietplan/Create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
-      // Refresh the diet plans list
-      fetchDietPlans();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      // Hide success message after 3 seconds
-      setTimeout(() => setSuccess(false), 3000);
+      const result = await response.json();
+
+      if (result.Status) {
+        console.log("Diet plan created successfully:", result);
+        setSuccess(true);
+
+        // Reset form
+        setFormData({
+          Name: "",
+          Description: "",
+          Meals: [{ Name: "", RecommendedCalories: 0, RecommendedProtein: 0, RecommendedCarbs: 0, RecommendedFats: 0 }],
+        });
+
+        // Refresh the diet plans list
+        fetchDietPlans();
+
+        // Hide success message after 3 seconds
+        setTimeout(() => setSuccess(false), 3000);
+      } else {
+        throw new Error(result.Message || "Failed to create diet plan");
+      }
     } catch (err) {
       console.error("Error creating diet plan:", err);
       setError(err.message || "Failed to create diet plan");
@@ -437,7 +423,7 @@ export default function Page() {
   };
 
   const handleEditPlan = (plan) => {
-    setEditingPlan({ ...plan, Meals: plan.Meals || [{ Name: "", RecommendedCalories: 0 }] });
+    setEditingPlan({ ...plan, Meals: plan.Meals?.map(meal => ({ ...meal, RecommendedProtein: meal.RecommendedProtein || 0, RecommendedCarbs: meal.RecommendedCarbs || 0, RecommendedFats: meal.RecommendedFats || 0 })) || [{ Name: "", RecommendedCalories: 0, RecommendedProtein: 0, RecommendedCarbs: 0, RecommendedFats: 0 }] });
     setShowEditModal(true);
     setEditError(null);
     setEditSuccess(false);
@@ -463,7 +449,7 @@ export default function Page() {
     setEditingPlan((prev) => ({
       ...prev,
       Meals: prev.Meals.map((meal, i) =>
-        i === index ? { ...meal, [field]: field === 'RecommendedCalories' ? parseInt(value) || 0 : value } : meal
+        i === index ? { ...meal, [field]: ['RecommendedCalories', 'RecommendedProtein', 'RecommendedCarbs', 'RecommendedFats'].includes(field) ? parseInt(value) || 0 : value } : meal
       ),
     }));
   };
@@ -471,7 +457,7 @@ export default function Page() {
   const addEditMeal = () => {
     setEditingPlan((prev) => ({
       ...prev,
-      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0 }],
+      Meals: [...prev.Meals, { Name: "", RecommendedCalories: 0, RecommendedProtein: 0, RecommendedCarbs: 0, RecommendedFats: 0 }],
     }));
   };
 
@@ -501,7 +487,6 @@ export default function Page() {
       Id: editingPlan.Id,
       Name: editingPlan.Name,
       Description: editingPlan.Description,
-      TotalCalories: editingPlan.TotalCalories,
       Meals: validMeals,
     };
 
@@ -843,36 +828,79 @@ const getMealTypes = (meals) => {
                   <div className="mb-3">
                     <label className="form-label">Meals</label>
                     {formData.Meals.map((meal, index) => (
-                      <div key={index} className="d-flex gap-2 mb-2 align-items-end">
-                        <div className="flex-grow-1">
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Meal name"
-                            value={meal.Name}
-                            onChange={(e) => handleMealChange(index, 'Name', e.target.value)}
-                            required
-                          />
+                      <div key={index} className="mb-3 border rounded p-3">
+                        <div className="row g-2 mb-2">
+                          <div className="col-md-6">
+                            <label className="form-label">Meal Name</label>
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="Enter meal name"
+                              value={meal.Name}
+                              onChange={(e) => handleMealChange(index, 'Name', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-2">
+                            <label className="form-label">Calories</label>
+                            <input
+                              type="number"
+                              className="form-control"
+                              placeholder="0"
+                              min="0"
+                              value={meal.RecommendedCalories}
+                              onChange={(e) => handleMealChange(index, 'RecommendedCalories', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-2">
+                            <label className="form-label">Protein (g)</label>
+                            <input
+                              type="number"
+                              className="form-control"
+                              placeholder="0"
+                              min="0"
+                              value={meal.RecommendedProtein}
+                              onChange={(e) => handleMealChange(index, 'RecommendedProtein', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-2">
+                            <label className="form-label">Carbs (g)</label>
+                            <input
+                              type="number"
+                              className="form-control"
+                              placeholder="0"
+                              min="0"
+                              value={meal.RecommendedCarbs}
+                              onChange={(e) => handleMealChange(index, 'RecommendedCarbs', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-2">
+                            <label className="form-label">Fats (g)</label>
+                            <input
+                              type="number"
+                              className="form-control"
+                              placeholder="0"
+                              min="0"
+                              value={meal.RecommendedFats}
+                              onChange={(e) => handleMealChange(index, 'RecommendedFats', e.target.value)}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-2 d-flex align-items-end">
+                            <label className="form-label">&nbsp;</label>
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm w-100"
+                              onClick={() => removeMeal(index)}
+                              disabled={formData.Meals.length === 1}
+                            >
+                              <i className="bi bi-trash"></i>
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ width: '150px' }}>
-                          <input
-                            type="number"
-                            className="form-control"
-                            placeholder="Calories"
-                            min="0"
-                            value={meal.RecommendedCalories}
-                            onChange={(e) => handleMealChange(index, 'RecommendedCalories', e.target.value)}
-                            required
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-outline-danger btn-sm"
-                          onClick={() => removeMeal(index)}
-                          disabled={formData.Meals.length === 1}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
                       </div>
                     ))}
                     <button
@@ -1111,57 +1139,81 @@ const getMealTypes = (meals) => {
                         />
                       </div>
                       <div className="mb-3">
-                        <label
-                          htmlFor="editTotalCalories"
-                          className="form-label"
-                        >
-                          Total Calories
-                        </label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          id="editTotalCalories"
-                          name="TotalCalories"
-                          placeholder="Enter total calories"
-                          required
-                          min="0"
-                          value={editingPlan.TotalCalories || 0}
-                          onChange={handleEditFormNumberChange}
-                        />
-                      </div>
-                      <div className="mb-3">
                         <label className="form-label">Meals</label>
                         {editingPlan.Meals.map((meal, index) => (
-                          <div key={index} className="d-flex gap-2 mb-2 align-items-end">
-                            <div className="flex-grow-1">
-                              <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Meal name"
-                                value={meal.Name}
-                                onChange={(e) => handleEditMealChange(index, 'Name', e.target.value)}
-                                required
-                              />
+                          <div key={index} className="mb-3 border rounded p-3">
+                            <div className="row g-2 mb-2">
+                              <div className="col-md-5">
+                                <label className="form-label">Meal Name</label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  placeholder="Enter meal name"
+                                  value={meal.Name}
+                                  onChange={(e) => handleEditMealChange(index, 'Name', e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <label className="form-label">Calories</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedCalories}
+                                  onChange={(e) => handleEditMealChange(index, 'RecommendedCalories', e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <label className="form-label">Protein (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedProtein}
+                                  onChange={(e) => handleEditMealChange(index, 'RecommendedProtein', e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <label className="form-label">Carbs (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedCarbs}
+                                  onChange={(e) => handleEditMealChange(index, 'RecommendedCarbs', e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2">
+                                <label className="form-label">Fats (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedFats}
+                                  onChange={(e) => handleEditMealChange(index, 'RecommendedFats', e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2 d-flex align-items-end">
+                                <label className="form-label">&nbsp;</label>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-danger btn-sm w-100"
+                                  onClick={() => removeEditMeal(index)}
+                                  disabled={editingPlan.Meals.length === 1}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
                             </div>
-                            <div style={{ width: '150px' }}>
-                              <input
-                                type="number"
-                                className="form-control"
-                                placeholder="Calories"
-                                min="0"
-                                value={meal.RecommendedCalories}
-                                onChange={(e) => handleEditMealChange(index, 'RecommendedCalories', e.target.value)}
-                                required
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm"
-                              onClick={() => removeEditMeal(index)}
-                              disabled={editingPlan.Meals.length === 1}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
                           </div>
                         ))}
                         <button

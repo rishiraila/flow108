@@ -37,7 +37,8 @@ export default function Sidebar() {
     },
     { href: "/Forumn", icon: "ri-discuss-line", label: "Forum" },
     { href: "/Questions", icon: "ri-question-answer-line", label: "Questions" },
-    { href: "/Coupons", icon: "ri-image-2-line", label: "Banners & Testimonials" },
+    { href: "/Banners", icon: "ri-image-2-line", label: "Banners" },
+    { href: "/Testimonials", icon: "ri-image-2-line", label: " Testimonials" },
     {
       href: "/PushNotification",
       icon: "ri-notification-3-line",

@@ -125,33 +125,40 @@ export default function CaloriesCounter() {
 
   // Transform API data to match component structure
   const transformMealsData = (apiMeals) => {
-    // Group meals by MealName
+    // Ensure apiMeals is an array
+    if (!Array.isArray(apiMeals)) {
+      console.error('apiMeals is not an array:', apiMeals);
+      return [];
+    }
+
+    // Group meals by Category
     const groupedMeals = {};
 
     apiMeals.forEach(meal => {
-      const mealType = meal.MealName || 'Breakfast'; // Use MealName from API response
-      if (!groupedMeals[mealType]) {
-        groupedMeals[mealType] = {
-          id: mealType.toLowerCase(),
-          name: mealType,
-          time: getMealTime(mealType),
+      const category = meal.Category || 'Vegetarian'; // Use Category from API response
+      if (!groupedMeals[category]) {
+        groupedMeals[category] = {
+          id: category.toLowerCase().replace(/\s+/g, '-'),
+          name: category,
+          time: getMealTime(category),
           items: []
         };
       }
 
-      // Add item to the meal
-      groupedMeals[mealType].items.push({
+      // Add item to the category
+      groupedMeals[category].items.push({
         id: meal.Id,
         name: meal.FoodItem || 'Unknown Item',
         quantity: meal.Quantity || '1 serving',
         calories: meal.Calories || 0,
         carbs: meal.Carbs || 0,
         protein: meal.Protein || 0,
-        fats: meal.Fats || 0
+        fats: meal.Fats || 0,
+        category: meal.Category || 'Vegetarian'
       });
     });
 
-    // Calculate totals for each meal
+    // Calculate totals for each category
     Object.values(groupedMeals).forEach(meal => {
       meal.totalCalories = meal.items.reduce((sum, item) => sum + item.calories, 0);
       meal.totalProtein = meal.items.reduce((sum, item) => sum + item.protein, 0);
@@ -159,24 +166,18 @@ export default function CaloriesCounter() {
       meal.totalFats = meal.items.reduce((sum, item) => sum + item.fats, 0);
     });
 
-    // Convert to array and sort by typical meal order
-    const mealOrder = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+    // Convert to array and sort by category
+    const categoryOrder = ['Vegetarian', 'Non-vegetarian', 'Egg'];
     return Object.values(groupedMeals).sort((a, b) => {
-      const aIndex = mealOrder.indexOf(a.name);
-      const bIndex = mealOrder.indexOf(b.name);
+      const aIndex = categoryOrder.indexOf(a.name);
+      const bIndex = categoryOrder.indexOf(b.name);
       return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
     });
   };
 
-  // Get default time for meal type
-  const getMealTime = (mealType) => {
-    const timeMap = {
-      'Breakfast': '08:00 AM',
-      'Lunch': '12:30 PM',
-      'Snack': '03:00 PM',
-      'Dinner': '07:00 PM'
-    };
-    return timeMap[mealType] || '12:00 PM';
+  // Get default time for category (not applicable, return empty)
+  const getMealTime = (category) => {
+    return '';
   };
 
   // Handle file upload
@@ -285,6 +286,12 @@ export default function CaloriesCounter() {
       mealId: meal.id
     }))
   );
+
+  // Calculate food item statistics
+  const totalFoodItems = allItems.length;
+  const vegTotal = allItems.filter(item => item.category === 'Vegetarian').length;
+  const eggTotal = allItems.filter(item => item.category === 'Egg').length;
+  const nonVegTotal = allItems.filter(item => item.category === 'Non- vegetarian').length;
 
   // Filter items
   const filteredItems = allItems.filter(item =>
@@ -716,79 +723,67 @@ export default function CaloriesCounter() {
           )}
 
           {/* Daily Summary Cards */}
-          <div className="row mb-4">
-            <div className="col-md-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body text-center">
-                  <div className="mb-2">
-                    <i className="bi bi-fire text-danger" style={{ fontSize: '2rem' }}></i>
+          <div className="row mb-5">
+            <div className="col-12 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-primary h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-primary">
+                        <i className="tf-icons ri-list-unordered ri-24px"></i>
+                      </span>
+                    </div>
+                    <h4 className="mb-0">{totalFoodItems}</h4>
                   </div>
-                  <h3 className="text-primary mb-1">{dailyTotals.calories}</h3>
-                  <p className="text-muted mb-2">Calories</p>
-                  <div className="progress mb-2" style={{ height: '6px' }}>
-                    <div
-                      className="progress-bar bg-danger"
-                      style={{ width: `${calculatePercentage(dailyTotals.calories, dailyGoals.calories)}%` }}
-                    ></div>
-                  </div>
-                  <small className="text-muted">Goal: {dailyGoals.calories}</small>
+                  <h6 className="mb-0 fw-normal">Total Food Items</h6>
                 </div>
               </div>
             </div>
 
-            <div className="col-md-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body text-center">
-                  <div className="mb-2">
-                    <i className="bi bi-egg-fried text-warning" style={{ fontSize: '2rem' }}></i>
+            <div className="col-12 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-success h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-success">
+                        <i className="tf-icons ri-leaf-line ri-24px"></i>
+                      </span>
+                    </div>
+                    <h4 className="mb-0">{vegTotal}</h4>
                   </div>
-                  <h3 className="text-warning mb-1">{dailyTotals.protein}g</h3>
-                  <p className="text-muted mb-2">Protein</p>
-                  <div className="progress mb-2" style={{ height: '6px' }}>
-                    <div
-                      className="progress-bar bg-warning"
-                      style={{ width: `${calculatePercentage(dailyTotals.protein, dailyGoals.protein)}%` }}
-                    ></div>
-                  </div>
-                  <small className="text-muted">Goal: {dailyGoals.protein}g</small>
+                  <h6 className="mb-0 fw-normal">Vegetarian Items</h6>
                 </div>
               </div>
             </div>
 
-            <div className="col-md-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body text-center">
-                  <div className="mb-2">
-                    <i className="bi bi-cup-straw text-info" style={{ fontSize: '2rem' }}></i>
+            <div className="col-12 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-warning h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-warning">
+                        <i className="tf-icons ri-egg-line ri-24px"></i>
+                      </span>
+                    </div>
+                    <h4 className="mb-0">{eggTotal}</h4>
                   </div>
-                  <h3 className="text-info mb-1">{dailyTotals.carbs}g</h3>
-                  <p className="text-muted mb-2">Carbs</p>
-                  <div className="progress mb-2" style={{ height: '6px' }}>
-                    <div
-                      className="progress-bar bg-info"
-                      style={{ width: `${calculatePercentage(dailyTotals.carbs, dailyGoals.carbs)}%` }}
-                    ></div>
-                  </div>
-                  <small className="text-muted">Goal: {dailyGoals.carbs}g</small>
+                  <h6 className="mb-0 fw-normal">Egg Items</h6>
                 </div>
               </div>
             </div>
 
-            <div className="col-md-3">
-              <div className="card border-0 shadow-sm h-100">
-                <div className="card-body text-center">
-                  <div className="mb-2">
-                    <i className="bi bi-droplet text-success" style={{ fontSize: '2rem' }}></i>
+            <div className="col-12 col-sm-6 col-lg-3 mb-2">
+              <div className="card card-border-shadow-danger h-100">
+                <div className="card-body">
+                  <div className="d-flex align-items-center mb-2">
+                    <div className="avatar me-4">
+                      <span className="avatar-initial rounded-3 bg-label-danger">
+                        <i className="tf-icons ri-restaurant-line ri-24px"></i>
+                      </span>
+                    </div>
+                    <h4 className="mb-0">{nonVegTotal}</h4>
                   </div>
-                  <h3 className="text-success mb-1">{dailyTotals.fats}g</h3>
-                  <p className="text-muted mb-2">Fats</p>
-                  <div className="progress mb-2" style={{ height: '6px' }}>
-                    <div
-                      className="progress-bar bg-success"
-                      style={{ width: `${calculatePercentage(dailyTotals.fats, dailyGoals.fats)}%` }}
-                    ></div>
-                  </div>
-                  <small className="text-muted">Goal: {dailyGoals.fats}g</small>
+                  <h6 className="mb-0 fw-normal">Non-vegetarian</h6>
                 </div>
               </div>
             </div>
@@ -819,7 +814,7 @@ export default function CaloriesCounter() {
                         }}
                       />
                     </div>
-                    <select
+                    {/* <select
                       className="form-select"
                       style={{ width: '150px' }}
                       value={selectedMeal}
@@ -833,7 +828,7 @@ export default function CaloriesCounter() {
                       <option value="Lunch">Lunch</option>
                       <option value="Snack">Snack</option>
                       <option value="Dinner">Dinner</option>
-                    </select>
+                    </select> */}
                   </div>
                 </div>
                 <div className="card-body p-0">
@@ -843,7 +838,7 @@ export default function CaloriesCounter() {
                         <tr>
                           <th className="border-0 fw-semibold" onClick={() => handleSort('mealName')} style={{cursor: 'pointer'}}>
                             <i className="bi bi-clock me-1"></i>
-                            Meal {sortBy === 'mealName' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Category {sortBy === 'mealName' && (sortOrder === 'asc' ? '↑' : '↓')}
                           </th>
                           <th className="border-0 fw-semibold" onClick={() => handleSort('name')} style={{cursor: 'pointer'}}>
                             <i className="bi bi-egg me-1"></i>
@@ -900,14 +895,47 @@ export default function CaloriesCounter() {
                     </table>
                   </div>
                 </div>
-                <div className="card-footer ">
-                  <div className="row align-items-center">
-                    <div className="col-md-4">
-                      <small className="text-muted">
-                        Showing <strong>{paginatedItems.length}</strong> of <strong>{totalItems}</strong> food items across <strong>{new Set(filteredItems.map(item => item.mealName)).size}</strong> meals
-                      </small>
+                <div className="card-footer">
+                  <div className="row mb-2">
+                    <div className="col-md-6">
+                      <div className="row">
+                        <div className="col-3">
+                          <small className="text-muted">
+                            <strong>{totalFoodItems}</strong> Total Items
+                          </small>
+                        </div>
+                        <div className="col-3">
+                          <small className="text-muted">
+                            <strong>{vegTotal}</strong> Vegetarian
+                          </small>
+                        </div>
+                        <div className="col-3">
+                          <small className="text-muted">
+                            <strong>{eggTotal}</strong> Egg
+                          </small>
+                        </div>
+                        <div className="col-3">
+                          <small className="text-muted">
+                            <strong>{nonVegTotal}</strong> Non-Veg
+                          </small>
+                        </div>
+                      </div>
                     </div>
-                    <div className="col-md-4 text-center mt-2 mt-md-0">
+                    <div className="col-md-6 text-end">
+                      <div className="btn-group btn-group-sm">
+                        <button className="btn btn-outline-primary">
+                          <i className="bi bi-download me-1"></i>
+                          Export
+                        </button>
+                        <button className="btn btn-outline-primary" onClick={() => setShowModal(true)}>
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Add Item
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-12 text-center">
                       {totalPages > 1 && (
                         <nav aria-label="Table pagination">
                           <ul className="pagination pagination-sm mb-0 justify-content-center">
@@ -942,18 +970,6 @@ export default function CaloriesCounter() {
                           </ul>
                         </nav>
                       )}
-                    </div>
-                    <div className="col-md-4 text-end">
-                      <div className="btn-group btn-group-sm">
-                        <button className="btn btn-outline-primary">
-                          <i className="bi bi-download me-1"></i>
-                          Export
-                        </button>
-                        <button className="btn btn-outline-primary" onClick={() => setShowModal(true)}>
-                          <i className="bi bi-plus-circle me-1"></i>
-                          Add Item
-                        </button>
-                      </div>
                     </div>
                   </div>
                 </div>

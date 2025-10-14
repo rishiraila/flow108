@@ -892,20 +892,18 @@ export const fetchNutritionSummary = async (userId = null) => {
 // Update meal in diet plan
 export const updateMeal = async (mealId, mealData) => {
   try {
-    const formData = new FormData();
-    formData.append('MealType', mealData.MealType);
-    formData.append('FoodItem', mealData.FoodItem);
-    formData.append('Quantity', mealData.Quantity);
-    formData.append('Calories', mealData.Calories.toString());
-    formData.append('Carbs', mealData.Carbs.toString());
-    formData.append('Protein', mealData.Protein.toString());
-    formData.append('Fats', mealData.Fats.toString());
-
     const response = await fetchWithTimeout(
-      `${API_BASE_URL}/AdminDietPlan/update/meal/${mealId}`,
+      `${API_BASE_URL}/AdminDietPlan/${mealId}`,
       {
-        method: "PATCH",
-        body: formData,
+        method: "PUT",
+        body: JSON.stringify({
+          FoodItem: mealData.FoodItem,
+          Quantity: mealData.Quantity,
+          Calories: mealData.Calories,
+          Carbs: mealData.Carbs,
+          Protein: mealData.Protein,
+          Fats: mealData.Fats
+        }),
       }
     );
     return await handleApiResponse(response);
@@ -924,6 +922,137 @@ export const fetchAllMeals = async () => {
   } catch (error) {
     console.error("Error fetching all meals:", error);
     throw new Error(`Failed to fetch all meals: ${error.message}`);
+  }
+};
+
+// Banner API Functions
+
+// Fetch all banners
+export const fetchBanners = async () => {
+  try {
+    const response = await fetchWithTimeout(`${API_BASE_URL}/admin/banners`);
+    const data = await handleApiResponse(response);
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching banners:", error);
+    throw new Error(`Failed to fetch banners: ${error.message}`);
+  }
+};
+
+// Add new banner
+export const addBanner = async (name, imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('Name', name);
+    formData.append('imageFile', imageFile);
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error adding banner:", error);
+    throw new Error(`Failed to add banner: ${error.message}`);
+  }
+};
+
+// Update banner
+export const updateBanner = async (id, name, imageFile = null) => {
+  try {
+    const formData = new FormData();
+    formData.append('Name', name);
+    if (imageFile) {
+      formData.append('imageFile', imageFile);
+    }
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners/${id}`,
+      {
+        method: "PUT",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error updating banner:", error);
+    throw new Error(`Failed to update banner: ${error.message}`);
+  }
+};
+
+// Delete banner
+export const deleteBanner = async (id) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error deleting banner:", error);
+    throw new Error(`Failed to delete banner: ${error.message}`);
+  }
+};
+
+// Get single banner
+export const getBanner = async (id) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners/${id}`
+    );
+    const data = await handleApiResponse(response);
+    return data.data || data;
+  } catch (error) {
+    console.error("Error fetching banner:", error);
+    throw new Error(`Failed to fetch banner: ${error.message}`);
+  }
+};
+
+// Assign banner to users
+export const assignBanner = async (bannerId, userIds, assignToAll = false) => {
+  try {
+    const formData = new FormData();
+    formData.append('BannerId', bannerId);
+
+    // Append each user ID as a separate 'UserIds' field
+    userIds.forEach(userId => {
+      formData.append('UserIds', userId);
+    });
+
+    if (assignToAll) {
+      formData.append('AssignToAll', 'true');
+    }
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners/assign`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error assigning banner:", error);
+    throw new Error(`Failed to assign banner: ${error.message}`);
+  }
+};
+
+// Get banners for user
+export const getUserBanners = async (userId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/banners/user/${userId}`
+    );
+    const data = await handleApiResponse(response);
+    return data.data || [];
+  } catch (error) {
+    console.error("Error fetching user banners:", error);
+    throw new Error(`Failed to fetch user banners: ${error.message}`);
   }
 };
 

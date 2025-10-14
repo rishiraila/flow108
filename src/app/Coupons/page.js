@@ -1,5 +1,6 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchBanners, addBanner } from '../utils/api';
 
 export default function BannersTestimonialsPage() {
   const [testimonials, setTestimonials] = useState([
@@ -19,25 +20,40 @@ export default function BannersTestimonialsPage() {
     },
   ]);
 
-  const [banners, setBanners] = useState([
-    {
-      id: 1,
-      title: 'Welcome Banner',
-      description: 'Welcome to our platform!',
-      imageUrl: '',
-    },
-    {
-      id: 2,
-      title: 'Promotion Banner',
-      description: 'Special offer this month.',
-      imageUrl: '',
-    },
-  ]);
+  const [banners, setBanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [showAddTestimonialModal, setShowAddTestimonialModal] = useState(false);
   const [showAddBannerModal, setShowAddBannerModal] = useState(false);
   const [newTestimonial, setNewTestimonial] = useState({ name: '', message: '', imageUrl: '' });
-  const [newBanner, setNewBanner] = useState({ title: '', description: '', imageUrl: '' });
+  const [newBanner, setNewBanner] = useState({ title: '', description: '', imageFile: null });
+
+  // Load banners on component mount
+  useEffect(() => {
+    const loadBanners = async () => {
+      try {
+        setLoading(true);
+        const bannerData = await fetchBanners();
+        // Transform API data to match component structure
+        const transformedBanners = bannerData.map((banner, index) => ({
+          id: banner.Id || index + 1,
+          title: banner.Name,
+          description: '', // API doesn't have description
+          imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+        }));
+        setBanners(transformedBanners);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading banners:', err);
+        setError('Failed to load banners');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBanners();
+  }, []);
 
   const handleAddTestimonial = () => {
     const id = testimonials.length + 1;
@@ -47,25 +63,47 @@ export default function BannersTestimonialsPage() {
     setNewTestimonial({ name: '', message: '', imageUrl: '' });
   };
 
-  const handleAddBanner = () => {
-    const id = banners.length + 1;
-    setBanners([...banners, { ...newBanner, id }]);
-    setShowAddBannerModal(false);
-    setNewBanner({ title: '', description: '', imageUrl: '' });
+  const handleAddBanner = async () => {
+    if (!newBanner.title || !newBanner.imageFile) {
+      alert('Please provide a title and select an image file.');
+      return;
+    }
+
+    try {
+      const result = await addBanner(newBanner.title, newBanner.imageFile);
+      if (result.status) {
+        // Reload banners after successful addition
+        const bannerData = await fetchBanners();
+        const transformedBanners = bannerData.map((banner, index) => ({
+          id: banner.Id || index + 1,
+          title: banner.Name,
+          description: '',
+          imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+        }));
+        setBanners(transformedBanners);
+        setShowAddBannerModal(false);
+        setNewBanner({ title: '', description: '', imageFile: null });
+      } else {
+        alert('Failed to add banner: ' + (result.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding banner:', error);
+      alert('Failed to add banner. Please try again.');
+    }
   };
 
   const handleImageUpload = (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (type === 'testimonial') {
+      if (type === 'testimonial') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
           setNewTestimonial({ ...newTestimonial, imageUrl: event.target.result });
-        } else if (type === 'banner') {
-          setNewBanner({ ...newBanner, imageUrl: event.target.result });
-        }
-      };
-      reader.readAsDataURL(file);
+        };
+        reader.readAsDataURL(file);
+      } else if (type === 'banner') {
+        setNewBanner({ ...newBanner, imageFile: file });
+      }
     }
   };
 

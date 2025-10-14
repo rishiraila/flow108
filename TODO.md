@@ -1,8 +1,10 @@
-- [ ] Add file size validation in the onChange handler of the file input in Add Workout Modal
-- [ ] Add file size validation in the onChange handler of the file input in Edit Workout Modal
-- [ ] Show appropriate error alert if file size exceeds the limit
-- [ ] Prevent setting the file in state if validation fails
-- [ ] Update form text to mention size limits
-- [ ] Test the file size validation by trying to upload files exceeding the limits
-- [ ] Verify error alerts show correctly and file is not accepted
-- [ ] Verify files within limits are accepted and workout can be added/edited successfully
+# TODO for Testimonials Page
+
+- [x] Create the main Testimonials page component with stats cards
+- [x] Implement API functions for fetching and creating testimonials
+- [x] Add modal for creating new testimonials with Title, Description, and Image upload
+- [x] Display testimonials in card format similar to Questions page
+- [x] Handle image display and upload functionality
+- [x] Add edit and delete functionality for testimonials
+- [x] Fix image display to show full images without cropping
+- [ ] Test the page functionality

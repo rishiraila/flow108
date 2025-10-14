@@ -4,10 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import DietPlanAssignmentModal from "../DietPlanAssignmentModal";
 import EditMealModal from "../EditMealModal";
-import { fetchAllMeals, updateMeal } from "../../utils/api";
 import { useAlert } from "../../utils/alertcontxt";
 import { useConfirm } from "../../utils/confirmContext";
 import { dietPlanApi } from "../../utils/apiClient";
+import { fetchAllMeals } from "../../utils/api";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -39,110 +39,98 @@ export default function DietPlanDetails() {
 
   // Meals state
   const [meals, setMeals] = useState([]);
-  const [showEditMealModal, setShowEditMealModal] = useState(false);
-  const [editingMeal, setEditingMeal] = useState(null);
-  const [flattenedItems, setFlattenedItems] = useState([]);
   const [mealSearch, setMealSearch] = useState("");
   const [mealSortKey, setMealSortKey] = useState("mealType");
   const [mealSortOrder, setMealSortOrder] = useState("asc");
   const [mealPage, setMealPage] = useState(1);
-  const mealsPerPage = 10;
+  const mealsPerPage = 5;
 
-  // Fetch diet plan details
+  // Edit Meal Modal state
+  const [showEditMealModal, setShowEditMealModal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState(null);
+
+  // All Meals state
+  const [allMeals, setAllMeals] = useState([]);
+  const [allMealSearch, setAllMealSearch] = useState("");
+  const [allMealSortKey, setAllMealSortKey] = useState("FoodItem");
+  const [allMealSortOrder, setAllMealSortOrder] = useState("asc");
+  const [allMealPage, setAllMealPage] = useState(1);
+  const allMealsPerPage = 5;
+
+  // Flatten meals for display
+  const flattenedItems = meals.flatMap(meal =>
+    (meal.FoodItems || []).map(item => ({ ...item, mealType: meal.MealType }))
+  );
+
+  // Calculate nutrition totals
+  const totalMeals = meals.length;
+  const totalFoodItems = flattenedItems.length;
+  const totalCalories = flattenedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
+  const totalCarbs = flattenedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
+  const totalProtein = flattenedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
+  const totalFats = flattenedItems.reduce((sum, item) => sum + (item.fats || 0), 0);
+
+  // ====== All Meals Pagination ======
+  const filteredAllMeals = allMeals.filter((meal) =>
+    meal.FoodItem.toLowerCase().includes(allMealSearch.toLowerCase())
+  );
+
+  const sortedAllMeals = [...filteredAllMeals].sort((a, b) => {
+    const valA = a[allMealSortKey] || "";
+    const valB = b[allMealSortKey] || "";
+    if (valA < valB) return allMealSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return allMealSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const paginatedAllMeals = sortedAllMeals.slice(
+    (allMealPage - 1) * allMealsPerPage,
+    allMealPage * allMealsPerPage
+  );
+
+  // ====== Meals Pagination ======
+  const filteredMeals = flattenedItems.filter((item) =>
+    `${item.mealType} ${item.name}`.toLowerCase().includes(mealSearch.toLowerCase())
+  );
+
+  const sortedMeals = [...filteredMeals].sort((a, b) => {
+    let valA, valB;
+    if (mealSortKey === 'mealType') {
+      valA = a.mealType;
+      valB = b.mealType;
+    } else {
+      valA = a[mealSortKey];
+      valB = b[mealSortKey];
+    }
+    if (typeof valA === 'string') {
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+    }
+    if (valA < valB) return mealSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return mealSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const paginatedMeals = sortedMeals.slice(
+    (mealPage - 1) * mealsPerPage,
+    mealPage * mealsPerPage
+  );
+
+  const handleSaveMeal = (updatedMeal) => {
+    // Implement save logic here
+    console.log("Saving meal:", updatedMeal);
+    // Close modal
+    setShowEditMealModal(false);
+    setEditingMeal(null);
+  };
+
+  // Fetch diet plan details and all meals
   useEffect(() => {
     if (planId) {
       fetchDietPlanDetails();
-      fetchMeals();
+      fetchAllMealsData();
     }
   }, [planId]);
-
-  const fetchMeals = async () => {
-    try {
-      const apiMeals = await fetchAllMeals();
-      const transformedMeals = transformMealsData(apiMeals);
-      setMeals(transformedMeals);
-      const flattened = transformedMeals.flatMap(meal =>
-        meal.items.map(item => ({ mealType: meal.name, ...item }))
-      );
-      setFlattenedItems(flattened);
-    } catch (err) {
-      console.error("Failed to fetch meals:", err);
-    }
-  };
-
-  // Transform API data to match component structure
-  const transformMealsData = (apiMeals) => {
-    // Group meals by MealName
-    const groupedMeals = {};
-
-    apiMeals.forEach(meal => {
-      const mealType = meal.MealName || 'Breakfast'; // Use MealName which is the string
-      if (!groupedMeals[mealType]) {
-        groupedMeals[mealType] = {
-          id: mealType.toLowerCase(),
-          name: mealType,
-          time: getMealTime(mealType),
-          items: []
-        };
-      }
-
-      // Add item to the meal
-      groupedMeals[mealType].items.push({
-        name: meal.FoodItem || 'Unknown Item',
-        quantity: meal.Quantity || '1 serving',
-        calories: meal.Calories || 0,
-        carbs: meal.Carbs || 0,
-        protein: meal.Protein || 0,
-        fats: meal.Fats || 0
-      });
-    });
-
-    // Calculate totals for each meal
-    Object.values(groupedMeals).forEach(meal => {
-      meal.totalCalories = meal.items.reduce((sum, item) => sum + item.calories, 0);
-      meal.totalProtein = meal.items.reduce((sum, item) => sum + item.protein, 0);
-      meal.totalCarbs = meal.items.reduce((sum, item) => sum + item.carbs, 0);
-      meal.totalFats = meal.items.reduce((sum, item) => sum + item.fats, 0);
-    });
-
-    // Convert to array and sort by typical meal order
-    const mealOrder = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
-    return Object.values(groupedMeals).sort((a, b) => {
-      const aIndex = mealOrder.indexOf(a.name);
-      const bIndex = mealOrder.indexOf(b.name);
-      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-    });
-  };
-
-  // Get default time for meal type
-  const getMealTime = (mealType) => {
-    const timeMap = {
-      'Breakfast': '08:00 AM',
-      'Lunch': '12:30 PM',
-      'Snack': '03:00 PM',
-      'Dinner': '07:00 PM'
-    };
-    return timeMap[mealType] || '12:00 PM';
-  };
-
-  const handleEditMealClick = (meal) => {
-    setEditingMeal(meal);
-    setShowEditMealModal(true);
-  };
-
-  const handleSaveMeal = async (updatedMeal) => {
-    if (!editingMeal) return;
-    try {
-      await updateMeal(editingMeal.Id, updatedMeal);
-      setShowEditMealModal(false);
-      setEditingMeal(null);
-      // Refresh meals list
-      fetchMeals();
-    } catch (err) {
-      console.error("Failed to update meal:", err);
-      throw err;
-    }
-  };
   // ====== Assigned Users ======
   const filteredUsers = assignedUsers.filter((u) =>
     `${u.Name} ${u.Email}`.toLowerCase().includes(userSearch.toLowerCase())
@@ -171,6 +159,7 @@ export default function DietPlanDetails() {
       const planData = await response.json();
       if (planData.Status && planData.Data) {
         setDietPlan(planData.Data);
+        setMeals(planData.Data.Meals || []);
 
         // Fetch assigned users
         try {
@@ -227,6 +216,27 @@ export default function DietPlanDetails() {
     }
   };
 
+  const fetchAllMealsData = async () => {
+    try {
+      const data = await fetchAllMeals();
+      if (data && (data.Status === true || data.Status === undefined) && data.Data) {
+        setAllMeals(data.Data);
+      } else {
+        console.error("Failed to fetch all meals", data);
+        setAllMeals([]);
+      }
+    } catch (err) {
+      console.error("Error fetching all meals:", err);
+      setAllMeals([]);
+    }
+  };
+
+  const handleAddToPlan = (meal) => {
+    // Placeholder action for adding meal to plan
+    console.log("Adding meal to plan:", meal);
+    // TODO: Implement actual add to plan logic
+  };
+
   const handleDeletePlan = async () => {
     const confirmed = await showConfirm(
       "Are you sure you want to delete this diet plan? This action cannot be undone."
@@ -263,33 +273,7 @@ export default function DietPlanDetails() {
     }
   };
 
-  // ====== Meals Pagination ======
-  const filteredMeals = flattenedItems.filter((item) =>
-    `${item.mealType} ${item.name}`.toLowerCase().includes(mealSearch.toLowerCase())
-  );
 
-  const sortedMeals = [...filteredMeals].sort((a, b) => {
-    let valA, valB;
-    if (mealSortKey === 'mealType') {
-      valA = a.mealType;
-      valB = b.mealType;
-    } else {
-      valA = a[mealSortKey];
-      valB = b[mealSortKey];
-    }
-    if (typeof valA === 'string') {
-      valA = valA.toLowerCase();
-      valB = valB.toLowerCase();
-    }
-    if (valA < valB) return mealSortOrder === "asc" ? -1 : 1;
-    if (valA > valB) return mealSortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
-
-  const paginatedMeals = sortedMeals.slice(
-    (mealPage - 1) * mealsPerPage,
-    mealPage * mealsPerPage
-  );
 
   if (loading) {
     return (
@@ -391,17 +375,29 @@ export default function DietPlanDetails() {
                     <p>
                       <strong>Total Calories:</strong> {dietPlan.TotalCalories}
                     </p>
+                    <p>
+                      <strong>Total Carbs:</strong> {dietPlan.TotalCarbs}g
+                    </p>
+                    <p>
+                      <strong>Total Protein:</strong> {dietPlan.TotalProtein}g
+                    </p>
+                    <p>
+                      <strong>Total Fats:</strong> {dietPlan.TotalFats}g
+                    </p>
                   </div>
                   <div className="col-md-6">
-                    {/* <button
-                      className="btn btn-info btn-sm mt-2"
-                      onClick={() => {
-                        setAssignmentModalMode("view");
-                        setShowDietPlanAssignmentModal(true);
-                      }}
-                    >
-                      Assign Users
-                    </button> */}
+                    <h6>Meals:</h6>
+                    {meals.length > 0 ? (
+                      <ul className="list-unstyled">
+                        {meals.map((meal, index) => (
+                          <li key={index} className="mb-2">
+                            <strong>{meal.Name}:</strong> {meal.RecommendedCalories} cal, {meal.RecommendedProtein}g protein, {meal.RecommendedCarbs}g carbs, {meal.RecommendedFats}g fats
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No meals available.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -530,155 +526,126 @@ export default function DietPlanDetails() {
             </div>
 
             {/* Meals Section */}
+           
+
+            {/* All Meals Section */}
             <div className="card mb-4">
               <div className="card-header">
-                <h5 className="mb-0">Meals</h5>
+                <h5 className="mb-0">All Meals</h5>
               </div>
               <div className="card-body">
-                {flattenedItems.length === 0 ? (
-                  <p>No meals found for this diet plan.</p>
+                <div className="d-flex justify-content-between mb-3">
+                  <input
+                    type="text"
+                    className="form-control w-25"
+                    placeholder="Search all meals..."
+                    value={allMealSearch}
+                    onChange={(e) => {
+                      setAllMealSearch(e.target.value);
+                      setAllMealPage(1); // reset page when searching
+                    }}
+                  />
+                </div>
+                {allMeals.length === 0 ? (
+                  <p>No meals available.</p>
                 ) : (
                   <>
-                    <div className="d-flex justify-content-between mb-3">
-                      <input
-                        type="text"
-                        className="form-control w-25"
-                        placeholder="Search meals..."
-                        value={mealSearch}
-                        onChange={(e) => {
-                          setMealSearch(e.target.value);
-                          setMealPage(1); // reset page when searching
-                        }}
-                      />
-                    </div>
                     <div className="table-responsive">
                       <table className="table table-striped table-hover">
                         <thead>
                           <tr>
                             <th
                               onClick={() => {
-                                setMealSortKey("mealType");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
-                                );
-                              }}
-                              style={{ cursor: "pointer" }}
-                            >
-                              Meal Type{" "}
-                              {mealSortKey === "mealType"
-                                ? mealSortOrder === "asc"
-                                  ? "↑"
-                                  : "↓"
-                                : ""}
-                            </th>
-                            <th
-                              onClick={() => {
-                                setMealSortKey("name");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
+                                setAllMealSortKey("FoodItem");
+                                setAllMealSortOrder(
+                                  allMealSortOrder === "asc" ? "desc" : "asc"
                                 );
                               }}
                               style={{ cursor: "pointer" }}
                             >
                               Food Item{" "}
-                              {mealSortKey === "name"
-                                ? mealSortOrder === "asc"
+                              {allMealSortKey === "FoodItem"
+                                ? allMealSortOrder === "asc"
                                   ? "↑"
                                   : "↓"
                                 : ""}
                             </th>
                             <th
                               onClick={() => {
-                                setMealSortKey("quantity");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
-                                );
-                              }}
-                              style={{ cursor: "pointer" }}
-                            >
-                              Qty{" "}
-                              {mealSortKey === "quantity"
-                                ? mealSortOrder === "asc"
-                                  ? "↑"
-                                  : "↓"
-                                : ""}
-                            </th>
-                            <th
-                              onClick={() => {
-                                setMealSortKey("calories");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
+                                setAllMealSortKey("Calories");
+                                setAllMealSortOrder(
+                                  allMealSortOrder === "asc" ? "desc" : "asc"
                                 );
                               }}
                               style={{ cursor: "pointer" }}
                             >
                               Calories{" "}
-                              {mealSortKey === "calories"
-                                ? mealSortOrder === "asc"
+                              {allMealSortKey === "Calories"
+                                ? allMealSortOrder === "asc"
                                   ? "↑"
                                   : "↓"
                                 : ""}
                             </th>
                             <th
                               onClick={() => {
-                                setMealSortKey("carbs");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
+                                setAllMealSortKey("Carbs");
+                                setAllMealSortOrder(
+                                  allMealSortOrder === "asc" ? "desc" : "asc"
                                 );
                               }}
                               style={{ cursor: "pointer" }}
                             >
                               Carbs{" "}
-                              {mealSortKey === "carbs"
-                                ? mealSortOrder === "asc"
+                              {allMealSortKey === "Carbs"
+                                ? allMealSortOrder === "asc"
                                   ? "↑"
                                   : "↓"
                                 : ""}
                             </th>
                             <th
                               onClick={() => {
-                                setMealSortKey("protein");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
+                                setAllMealSortKey("Protein");
+                                setAllMealSortOrder(
+                                  allMealSortOrder === "asc" ? "desc" : "asc"
                                 );
                               }}
                               style={{ cursor: "pointer" }}
                             >
                               Protein{" "}
-                              {mealSortKey === "protein"
-                                ? mealSortOrder === "asc"
+                              {allMealSortKey === "Protein"
+                                ? allMealSortOrder === "asc"
                                   ? "↑"
                                   : "↓"
                                 : ""}
                             </th>
                             <th
                               onClick={() => {
-                                setMealSortKey("fats");
-                                setMealSortOrder(
-                                  mealSortOrder === "asc" ? "desc" : "asc"
+                                setAllMealSortKey("Fats");
+                                setAllMealSortOrder(
+                                  allMealSortOrder === "asc" ? "desc" : "asc"
                                 );
                               }}
                               style={{ cursor: "pointer" }}
                             >
                               Fats{" "}
-                              {mealSortKey === "fats"
-                                ? mealSortOrder === "asc"
+                              {allMealSortKey === "Fats"
+                                ? allMealSortOrder === "asc"
                                   ? "↑"
                                   : "↓"
                                 : ""}
                             </th>
+                          
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedMeals.map((item, index) => (
-                            <tr key={index}>
-                              <td>{item.mealType}</td>
-                              <td>{item.name}</td>
-                              <td>{item.quantity}</td>
-                              <td>{item.calories}</td>
-                              <td>{item.carbs}g</td>
-                              <td>{item.protein}g</td>
-                              <td>{item.fats}g</td>
+                          {paginatedAllMeals.map((meal, index) => (
+                            <tr key={meal.FoodItemId || index}>
+                              <td>{meal.FoodItem}</td>
+                              <td>{meal.Calories}</td>
+                              <td>{meal.Carbs}g</td>
+                              <td>{meal.Protein}g</td>
+                              <td>{meal.Fats}g</td>
+                             
                             </tr>
                           ))}
                         </tbody>
@@ -688,26 +655,26 @@ export default function DietPlanDetails() {
                     <div className="d-flex justify-content-between align-items-center mt-3">
                       <button
                         className="btn btn-outline-secondary btn-sm"
-                        onClick={() => setMealPage((p) => Math.max(p - 1, 1))}
-                        disabled={mealPage === 1}
+                        onClick={() => setAllMealPage((p) => Math.max(p - 1, 1))}
+                        disabled={allMealPage === 1}
                       >
                         Prev
                       </button>
                       <span>
-                        Page {mealPage} of{" "}
-                        {Math.ceil(filteredMeals.length / mealsPerPage)}
+                        Page {allMealPage} of{" "}
+                        {Math.ceil(filteredAllMeals.length / allMealsPerPage)}
                       </span>
                       <button
                         className="btn btn-outline-secondary btn-sm"
                         onClick={() =>
-                          setMealPage((p) =>
-                            p < Math.ceil(filteredMeals.length / mealsPerPage)
+                          setAllMealPage((p) =>
+                            p < Math.ceil(filteredAllMeals.length / allMealsPerPage)
                               ? p + 1
                               : p
                           )
                         }
                         disabled={
-                          mealPage >= Math.ceil(filteredMeals.length / mealsPerPage)
+                          allMealPage >= Math.ceil(filteredAllMeals.length / allMealsPerPage)
                         }
                       >
                         Next
