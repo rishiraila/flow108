@@ -263,7 +263,7 @@ export const addMealToPlan = async (planId, mealData) => {
 export const addSingleMeal = async (mealData) => {
   try {
     const formData = new FormData();
-    formData.append('MealType', mealData.MealType);
+    formData.append('Category', mealData.Category);
     formData.append('FoodItem', mealData.FoodItem);
     formData.append('Quantity', mealData.Quantity);
     formData.append('Calories', mealData.Calories.toString());

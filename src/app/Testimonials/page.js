@@ -96,10 +96,19 @@ export default function TestimonialsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [selectedTestimonialForAssignment, setSelectedTestimonialForAssignment] = useState(null);
+  const [currentEditImageUrl, setCurrentEditImageUrl] = useState(null);
+  const [editPreviewImage, setEditPreviewImage] = useState(null);
 
   useEffect(() => {
     loadTestimonials();
   }, []);
+
+  useEffect(() => {
+    if (!selectedTestimonial && editPreviewImage) {
+      URL.revokeObjectURL(editPreviewImage);
+      setEditPreviewImage(null);
+    }
+  }, [selectedTestimonial]);
 
   const loadTestimonials = async () => {
     try {
@@ -164,6 +173,11 @@ export default function TestimonialsPage() {
   const handleEditImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (editPreviewImage) {
+        URL.revokeObjectURL(editPreviewImage);
+      }
+      const previewUrl = URL.createObjectURL(file);
+      setEditPreviewImage(previewUrl);
       setEditTestimonial({
         ...editTestimonial,
         ImagePath: file,
@@ -194,6 +208,7 @@ export default function TestimonialsPage() {
       modal?.hide();
 
       setSelectedTestimonial(null);
+      setCurrentEditImageUrl(null);
     } catch (err) {
       alert("Failed to update testimonial: " + err.message);
     } finally {
@@ -221,12 +236,18 @@ export default function TestimonialsPage() {
   };
 
   const openEditModal = (testimonial) => {
+    if (editPreviewImage) {
+      URL.revokeObjectURL(editPreviewImage);
+      setEditPreviewImage(null);
+    }
     setSelectedTestimonial(testimonial);
     setEditTestimonial({
       Title: testimonial.Title,
       Description: testimonial.Description,
-      ImagePath: null, // Reset image for edit
+      ImagePath: null,
     });
+    setCurrentEditImageUrl(testimonial.ImagePath ? `https://flow108.coinagesoft.com${testimonial.ImagePath}` : null);
+    setEditPreviewImage(null);
 
     const modal = new bootstrap.Modal(
       document.getElementById("editTestimonialModal")
@@ -252,6 +273,30 @@ export default function TestimonialsPage() {
       year: "numeric",
     });
   };
+
+  // Calculate stats
+  const calculateStats = () => {
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    let total = testimonials.length;
+    let thisMonthCount = 0;
+    let thisWeekCount = 0;
+    let todayCount = 0;
+
+    testimonials.forEach(testimonial => {
+      const createdDate = new Date(testimonial.CreatedOn || new Date());
+      if (createdDate >= thisMonth) thisMonthCount++;
+      if (createdDate >= thisWeek) thisWeekCount++;
+      if (createdDate >= today) todayCount++;
+    });
+
+    return { total, thisMonthCount, thisWeekCount, todayCount };
+  };
+
+  const stats = calculateStats();
 
   if (loading) {
     return (
@@ -280,7 +325,7 @@ export default function TestimonialsPage() {
       <div className="container-xxl flex-grow-1 container-p-y">
         {/* Stats Cards */}
         <div className="row mb-5">
-          <div className="col-12 col-sm-6 col-lg-4 mb-2">
+          <div className="col-12 col-sm-6 col-lg-3 mb-4">
             <div className="card card-border-shadow-primary h-100">
               <div className="card-body">
                 <div className="d-flex align-items-center mb-2">
@@ -289,9 +334,54 @@ export default function TestimonialsPage() {
                       <i className="tf-icons ri-star-line ri-24px"></i>
                     </span>
                   </div>
-                  <h4 className="mb-0">{testimonials.length}</h4>
+                  <h4 className="mb-0">{stats.total}</h4>
                 </div>
                 <h6 className="mb-0 fw-normal">Total Testimonials</h6>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3 mb-4">
+            <div className="card card-border-shadow-info h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-info">
+                      <i className="tf-icons ri-calendar-line ri-24px"></i>
+                    </span>
+                  </div>
+                  <h4 className="mb-0">{stats.thisMonthCount}</h4>
+                </div>
+                <h6 className="mb-0 fw-normal">This Month</h6>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3 mb-4">
+            <div className="card card-border-shadow-warning h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-warning">
+                      <i className="tf-icons ri-calendar-event-line ri-24px"></i>
+                    </span>
+                  </div>
+                  <h4 className="mb-0">{stats.thisWeekCount}</h4>
+                </div>
+                <h6 className="mb-0 fw-normal">This Week</h6>
+              </div>
+            </div>
+          </div>
+          <div className="col-12 col-sm-6 col-lg-3 mb-4">
+            <div className="card card-border-shadow-success h-100">
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-2">
+                  <div className="avatar me-4">
+                    <span className="avatar-initial rounded-3 bg-label-success">
+                      <i className="tf-icons ri-calendar-todo-line ri-24px"></i>
+                    </span>
+                  </div>
+                  <h4 className="mb-0">{stats.todayCount}</h4>
+                </div>
+                <h6 className="mb-0 fw-normal">Today</h6>
               </div>
             </div>
           </div>
@@ -320,45 +410,53 @@ export default function TestimonialsPage() {
               <div className="card-body">
                 <div className="row">
                   {testimonials.map((testimonial) => (
-                    <div key={testimonial.Id} className="col-md-6 mb-4">
-                      <div className="card h-100">
-                        <div className="card-body">
+                    <div key={testimonial.Id} className="col-lg-4 col-md-6 mb-4">
+                      <div className="card h-100 shadow-sm">
+                        <div className="card-body d-flex flex-column">
                           {testimonial.ImagePath && (
-                            <img
-                              src={`https://flow108.coinagesoft.com${testimonial.ImagePath}`}
-                              alt={testimonial.Title}
-                              className="img-fluid rounded mb-3"
-                              style={{ width: "100%", height: "auto", maxHeight: "300px", objectFit: "contain" }}
-                              onError={(e) => {
-                                e.target.src = "/placeholder.svg";
-                              }}
-                            />
+                            <div className="text-center mb-3">
+                              <img
+                                src={`https://flow108.coinagesoft.com${testimonial.ImagePath}`}
+                                alt={testimonial.Title}
+                                className="img-fluid rounded"
+                                style={{ width: "100%", height: "200px", objectFit: "cover" }}
+                                onError={(e) => {
+                                  e.target.src = "/placeholder.svg";
+                                }}
+                              />
+                            </div>
                           )}
-                          <h6 className="card-title">{testimonial.Title}</h6>
-                          <p className="card-text">{testimonial.Description}</p>
-                          <small className="text-muted">
+                          <h6 className="card-title fw-bold">{testimonial.Title}</h6>
+                          <p className="card-text text-muted flex-grow-1" style={{ fontSize: "0.9rem" }}>
+                            {testimonial.Description.length > 100
+                              ? `${testimonial.Description.substring(0, 100)}...`
+                              : testimonial.Description}
+                          </p>
+                          <small className="text-muted mb-3">
                             Created: {formatDate(testimonial.CreatedOn || new Date().toISOString())}
                           </small>
-                          <div className="mt-3">
-                            <button
-                              className="btn btn-sm btn-outline-primary me-2"
-                              onClick={() => openEditModal(testimonial)}
-                            >
-                              <i className="ri-edit-line me-1"></i>Edit
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-success me-2"
-                              onClick={() => openAssignmentModal(testimonial)}
-                            >
-                              <i className="ri-user-add-line me-1"></i>Assign
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDeleteTestimonial(testimonial.Id)}
-                              disabled={deleteLoading}
-                            >
-                              <i className="ri-delete-bin-line me-1"></i>Delete
-                            </button>
+                          <div className="mt-auto">
+                            <div className=" d-flex gap-2">
+                              <button
+                                className="btn btn-sm btn-outline-primary flex-fill"
+                                onClick={() => openEditModal(testimonial)}
+                              >
+                                <i className="ri-edit-line me-1"></i>
+                              </button>
+                              {/* <button
+                                className="btn btn-sm btn-outline-success flex-fill"
+                                onClick={() => openAssignmentModal(testimonial)}
+                              >
+                                <i className="ri-user-add-line me-1"></i>Assign
+                              </button> */}
+                              <button
+                                className="btn btn-sm btn-outline-danger flex-fill"
+                                onClick={() => handleDeleteTestimonial(testimonial.Id)}
+                                disabled={deleteLoading}
+                              >
+                                <i className="ri-delete-bin-line me-1"></i>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -526,7 +624,19 @@ export default function TestimonialsPage() {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Image (Optional - leave empty to keep current)</label>
+                  <label className="form-label">Current Image</label>
+                  {(currentEditImageUrl || editPreviewImage) && (
+                    <img
+                      src={editPreviewImage || currentEditImageUrl}
+                      alt="Preview"
+                      className="img-fluid rounded mb-2"
+                      style={{ maxWidth: "200px", maxHeight: "200px", objectFit: "contain" }}
+                      onError={(e) => {
+                        e.target.src = "/placeholder.svg";
+                      }}
+                    />
+                  )}
+                  <label className="form-label mt-3">New Image (Optional - leave empty to keep current)</label>
                   <input
                     type="file"
                     className="form-control"

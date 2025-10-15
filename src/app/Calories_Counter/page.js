@@ -78,6 +78,7 @@ export default function CaloriesCounter() {
   const [showModal, setShowModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
   const [isLoadingMeals, setIsLoadingMeals] = useState(false);
   const [mealsError, setMealsError] = useState(null);
   const [newItem, setNewItem] = useState({
@@ -87,7 +88,7 @@ export default function CaloriesCounter() {
     carbs: '',
     protein: '',
     fats: '',
-    meal: 'Breakfast'
+    category: 'Vegetarian'
   });
 
   // Edit meal states
@@ -135,7 +136,8 @@ export default function CaloriesCounter() {
     const groupedMeals = {};
 
     apiMeals.forEach(meal => {
-      const category = meal.Category || 'Vegetarian'; // Use Category from API response
+      const validCategories = ['Vegetarian', 'Non- vegetarian', 'Egg'];
+      const category = validCategories.includes(meal.Category) ? meal.Category : 'Vegetarian'; // Use Category from API response only if valid, else default to 'Vegetarian'
       if (!groupedMeals[category]) {
         groupedMeals[category] = {
           id: category.toLowerCase().replace(/\s+/g, '-'),
@@ -154,7 +156,7 @@ export default function CaloriesCounter() {
         carbs: meal.Carbs || 0,
         protein: meal.Protein || 0,
         fats: meal.Fats || 0,
-        category: meal.Category || 'Vegetarian'
+        category: validCategories.includes(meal.Category) ? meal.Category : 'Vegetarian'
       });
     });
 
@@ -353,31 +355,26 @@ export default function CaloriesCounter() {
       // Call API to add single meal
       try {
         await addSingleMeal({
-          MealType: newItem.meal,
           FoodItem: newItem.name,
           Quantity: newItem.quantity,
           Calories: item.calories,
           Carbs: item.carbs,
           Protein: item.protein,
-          Fats: item.fats
+          Fats: item.fats,
+          Category: newItem.category
         });
 
-        // Update local state after successful API call
-        const updatedMeals = meals.map(meal => {
-          if (meal.name === newItem.meal) {
-            return {
-              ...meal,
-              items: [...meal.items, item],
-              totalCalories: meal.totalCalories + item.calories,
-              totalCarbs: meal.totalCarbs + item.carbs,
-              totalProtein: meal.totalProtein + item.protein,
-              totalFats: meal.totalFats + item.fats
-            };
-          }
-          return meal;
-        });
+        // Refresh meals from server to get the new item with ID
+        try {
+          const apiMeals = await fetchAllMeals();
+          const transformedMeals = transformMealsData(apiMeals);
+          setMeals(transformedMeals);
+        } catch (refreshError) {
+          console.error('Error refreshing meals after add:', refreshError);
+          // Don't show error for refresh failure, just log it
+        }
 
-        setMeals(updatedMeals);
+        setSuccessMessage('Food item added successfully!');
         setShowModal(false);
         setNewItem({
           name: '',
@@ -386,7 +383,7 @@ export default function CaloriesCounter() {
           carbs: '',
           protein: '',
           fats: '',
-          meal: 'Breakfast'
+          category: 'Vegetarian'
         });
       } catch (error) {
         console.error("Failed to add meal via API:", error);
@@ -405,7 +402,7 @@ export default function CaloriesCounter() {
       carbs: '',
       protein: '',
       fats: '',
-      meal: 'Breakfast'
+      category: 'Vegetarian'
     });
   };
 
@@ -722,6 +719,18 @@ export default function CaloriesCounter() {
             </div>
           )}
 
+          {/* Success Message */}
+          {successMessage && (
+            <div className="row mb-4">
+              <div className="col-12">
+                <div className="alert alert-success">
+                  <i className="bi bi-check-circle me-2"></i>
+                  {successMessage}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Daily Summary Cards */}
           <div className="row mb-5">
             <div className="col-12 col-sm-6 col-lg-3 mb-2">
@@ -762,7 +771,8 @@ export default function CaloriesCounter() {
                   <div className="d-flex align-items-center mb-2">
                     <div className="avatar me-4">
                       <span className="avatar-initial rounded-3 bg-label-warning">
-                        <i className="tf-icons ri-egg-line ri-24px"></i>
+                      <i className="tf-icons ri-toast-line ri-24px"></i>
+
                       </span>
                     </div>
                     <h4 className="mb-0">{eggTotal}</h4>
@@ -1182,23 +1192,23 @@ export default function CaloriesCounter() {
                       </div>
                     </div>
                     <div className="row g-3 mt-2">
-                      <div className="col-12">
-                        <label htmlFor="meal" className="form-label">
-                          <i className="bi bi-clock me-1"></i>Meal
+                      <div className="col-md-6">
+                        <label htmlFor="category" className="form-label">
+                          <i className="bi bi-tag me-1"></i>Category
                         </label>
                         <select
                           className="form-select"
-                          id="meal"
-                          name="meal"
-                          value={newItem.meal}
+                          id="category"
+                          name="category"
+                          value={newItem.category}
                           onChange={handleInputChange}
                         >
-                          <option value="Breakfast">Breakfast</option>
-                          <option value="Lunch">Lunch</option>
-                          <option value="Snack">Snack</option>
-                          <option value="Dinner">Dinner</option>
+                          <option value="Vegetarian">Vegetarian</option>
+                          <option value="Non-vegetarian">Non-vegetarian</option>
+                          <option value="Egg">Egg</option>
                         </select>
                       </div>
+                     
                     </div>
                   </div>
                   <div className="modal-footer">

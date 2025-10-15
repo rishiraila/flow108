@@ -76,7 +76,7 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                 <div className="row g-3">
                   <div className="col-12">
                     <label htmlFor="mealType" className="form-label">
-                      <i className="bi bi-clock me-1"></i>Meal Type <span className="text-danger">*</span>
+                      <i className="bi bi-clock me-1"></i>Category <span className="text-danger">*</span>
                     </label>
                     <input
                       type="text"

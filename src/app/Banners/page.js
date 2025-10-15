@@ -429,7 +429,7 @@ export default function BannersPage() {
                     color: "#6c757d",
                   }}
                 >
-                  <div style={{ display: "flex", gap: "12px" }}>
+                  {/* <div style={{ display: "flex", gap: "12px" }}>
                     <span>
                       <i className="bi bi-heart-fill text-danger"></i>{" "}
                       {banner.likes || 0} Likes
@@ -437,10 +437,10 @@ export default function BannersPage() {
                     <span>
                       <small>{formatDate(banner.createdAt)}</small>
                     </span>
-                  </div>
+                  </div> */}
 
                   <div className="d-flex justify-content-end gap-2">
-                    <button
+                    {/* <button
                       className="btn btn-outline-success btn-sm"
                       onClick={() => {
                         setAssigningBanner(banner);
@@ -448,7 +448,7 @@ export default function BannersPage() {
                       }}
                     >
                       Assign
-                    </button>
+                    </button> */}
                     <button
                       className="btn btn-outline-primary btn-sm"
                       onClick={() => {
@@ -484,8 +484,8 @@ export default function BannersPage() {
               <h5 className="mb-3">Add Banner</h5>
               <input className="form-control mb-2" placeholder="Title" value={newBanner.title}
                 onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })} />
-              <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={newBanner.description}
-                onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })} />
+              {/* <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={newBanner.description}
+                onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })} /> */}
               <input type="file" className="form-control mb-3" accept="image/*"
                 onChange={(e) => handleImageUpload(e, 'add')} />
               <div className="d-flex justify-content-end gap-2">
@@ -503,8 +503,24 @@ export default function BannersPage() {
               <h5 className="mb-3">Edit Banner</h5>
               <input className="form-control mb-2" placeholder="Title" value={editBanner.title}
                 onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value })} />
-              <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={editBanner.description}
-                onChange={(e) => setEditBanner({ ...editBanner, description: e.target.value })} />
+              {/* <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={editBanner.description}
+                onChange={(e) => setEditBanner({ ...editBanner, description: e.target.value })} /> */}
+              {editingBanner && editingBanner.imageUrl && (
+                <div className="mb-3">
+                  <label className="form-label">Current Image:</label>
+                  <img
+                    src={editingBanner.imageUrl}
+                    alt="Current Banner"
+                    style={{
+                      width: '100%',
+                      maxHeight: '200px',
+                      objectFit: 'cover',
+                      borderRadius: '8px',
+                      border: '1px solid #dee2e6'
+                    }}
+                  />
+                </div>
+              )}
               <input type="file" className="form-control mb-3" accept="image/*"
                 onChange={(e) => handleImageUpload(e, 'edit')} />
               <div className="d-flex justify-content-end gap-2">
