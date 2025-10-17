@@ -12,13 +12,13 @@ export default function Terms() {
           lineHeight: '1.7',
         }}
       >
-        <h1 className="mb-4">Terms & Conditions</h1>
+        <h1 className="mb-4">Terms &amp; Conditions</h1>
         <p><strong>Last updated on May 21st, 2025</strong></p>
 
         <p>
-          Welcome to <strong>Flow108</strong>! These Terms and Conditions ("Terms") govern your access to and use of our
+          Welcome to <strong>Flow108</strong>! These Terms and Conditions (&quot;Terms&quot;) govern your access to and use of our
           mobile application, website, and related health and wellness services operated by
-          <strong> Flow108 Health Technologies Pvt. Ltd.</strong> ("we," "us," or "our").
+          <strong> Flow108 Health Technologies Pvt. Ltd.</strong> (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;).
           By accessing or using Flow108, you agree to be bound by these Terms. Please read them carefully before using our services.
         </p>
 
@@ -106,9 +106,9 @@ export default function Terms() {
             fontSize: '0.9rem',
           }}
         >
-          Disclaimer: The above content is created at Flow108 Health Technologies Pvt. Ltd.’s sole discretion.
+          Disclaimer: The above content is created at Flow108 Health Technologies Pvt. Ltd.&apos;s sole discretion.
           Razorpay or any third-party service provider shall not be responsible for any claims or liabilities
-          arising from the merchant’s non-adherence to these terms.
+          arising from the merchant&apos;s non-adherence to these terms.
         </p>
       </div>
     </div>
