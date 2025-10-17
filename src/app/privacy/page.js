@@ -9,31 +9,31 @@ export default function Privacy() {
 
         <h4>1. Introduction</h4>
         <p>
-          Flow108 ("we," "us," or "our") values your trust and is committed to protecting your privacy. 
+          Flow108 (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) values your trust and is committed to protecting your privacy. 
           This Privacy Policy explains how we collect, use, disclose, and protect your information 
-          when you use our health and wellness application ("App"), website, and related services.
+          when you use our health and wellness application (&quot;App&quot;), website, and related services.
         </p>
 
         <h4>2. Information We Collect</h4>
-        <p><strong>• Personal Information:</strong></p>
+        <p><strong>&bull; Personal Information:</strong></p>
         <p>
           We may collect personal details such as your name, email address, phone number, gender, age, and profile photo 
           when you register or use our services.
         </p>
 
-        <p><strong>• Health and Activity Data:</strong></p>
+        <p><strong>&bull; Health and Activity Data:</strong></p>
         <p>
           Flow108 may collect information related to your diet, exercise, menstrual cycle, sleep, or other health metrics 
           that you voluntarily provide or track within the app. This data helps us offer personalized insights and recommendations.
         </p>
 
-        <p><strong>• Device and Usage Information:</strong></p>
+        <p><strong>&bull; Device and Usage Information:</strong></p>
         <p>
           We automatically collect certain information when you access the app or website, including your device type, 
           operating system, IP address, app usage patterns, and pages viewed.
         </p>
 
-        <p><strong>• Cookies and Tracking Technologies:</strong></p>
+        <p><strong>&bull; Cookies and Tracking Technologies:</strong></p>
         <p>
           We use cookies and similar tracking tools to improve user experience, analyze trends, and ensure smooth app functionality.
         </p>
@@ -73,7 +73,7 @@ export default function Privacy() {
           or resolve disputes. You can request deletion of your account and data at any time.
         </p>
 
-        <h4>8. Children’s Privacy</h4>
+        <h4>8. Children&apos;s Privacy</h4>
         <p>
           Flow108 is not intended for individuals under the age of 13. We do not knowingly collect personal information from children. 
           If we become aware that we have inadvertently collected such information, we will delete it promptly.
