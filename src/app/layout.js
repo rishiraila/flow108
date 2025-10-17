@@ -32,8 +32,8 @@ const geistMono = Geist_Mono({
 export default function RootLayout({ children }) {
   const pathname = usePathname();
 
-  // ✅ Check if the current route is an auth page
-  const isAuthPage = ["/adminlogin", "/Signup", "/Forgot"].includes(
+  // ✅ Check if the current route is an auth page or footer page
+  const isAuthPage = ["/adminlogin", "/Signup", "/Forgot", "/privacy", "/shipping-delivery", "/terms", "/contact", "/cancellation-refund"].includes(
     pathname?.toLowerCase()||""
   );
 
