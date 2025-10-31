@@ -153,6 +153,7 @@ export default function PushNotificationPage() {
       const payload = {
         Title: formData.Title,
         Message: formData.Message,
+        Image: formData.Image,
         ScheduledTime: scheduledTime,
         TargetUserIds: formData.TargetUserIds,
         SendToAll: formData.SendToAll,

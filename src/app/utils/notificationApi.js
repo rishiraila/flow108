@@ -65,6 +65,11 @@ export const createNotification = async (notificationData) => {
     formData.append('SendToAll', notificationData.SendToAll.toString());
     formData.append('SendNow', notificationData.SendNow.toString());
 
+    // Append the image file if present
+    if (notificationData.Image) {
+      formData.append('ImageFile', notificationData.Image);
+    }
+
     // Append each TargetUserId
     if (notificationData.TargetUserIds && Array.isArray(notificationData.TargetUserIds)) {
       notificationData.TargetUserIds.forEach(id => {
