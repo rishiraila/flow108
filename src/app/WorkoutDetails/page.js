@@ -4,7 +4,40 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
 import { removeWorkoutFromPlan, fetchAllWorkoutUserAssignments, fetchUserProfile, updateWorkout } from "../utils/api";
-import { getImageUrl } from "../utils/imageUtils";
+import { getImageUrl, isVideoFile } from "../utils/imageUtils";
+
+// MediaDisplay component to handle both images and videos
+const MediaDisplay = ({ src, alt, className, style, onError }) => {
+  const isVideo = isVideoFile(src);
+
+  if (isVideo) {
+    return (
+      <video
+        src={getImageUrl(src)}
+        className={className}
+        style={style}
+        controls
+        onError={onError}
+        muted
+      >
+        Your browser does not support the video tag.
+      </video>
+    );
+  }
+
+  return (
+    <img
+      src={getImageUrl(src)}
+      className={className}
+      alt={alt}
+      style={style}
+      onError={(e) => {
+        e.target.src = getImageUrl('');
+        if (onError) onError(e);
+      }}
+    />
+  );
+};
 
 // Main content component that uses useSearchParams
 function WorkoutDetailsContent() {
@@ -518,12 +551,16 @@ function WorkoutDetailsContent() {
                             {workout.Time} &bull; {workout.Format}
                           </small>
                           {workout.Image && (
-                            <img
-                              src={getImageUrl(workout.Image)}
+                            <MediaDisplay
+                              src={workout.Image}
+                              alt={workout.WorkoutName}
                               className="img-fluid rounded mb-2"
                               style={{
                                 maxHeight: "150px",
                                 objectFit: "cover",
+                              }}
+                              onError={(e) => {
+                                e.target.src = getImageUrl('');
                               }}
                             />
                           )}

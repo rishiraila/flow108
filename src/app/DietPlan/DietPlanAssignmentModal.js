@@ -99,6 +99,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
       for (const userId of selectedUsers) {
         await assignPlanToUser(userId);
       }
+      alert("Diet plan assigned successfully!");
       setAssignSuccess(true);
       onAssignmentSuccess();
       setTimeout(() => {
@@ -119,6 +120,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
     try {
       const { dietAssignmentApi } = await import("../utils/apiClient");
       await dietAssignmentApi.assignAllToPlan(planId);
+      alert("Diet plan assigned successfully!");
       setAssignSuccess(true);
       onAssignmentSuccess();
       setTimeout(() => {

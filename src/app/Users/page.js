@@ -403,7 +403,7 @@ export default function Page() {
                       >
                         Status{getSortArrow("IsApproved")}
                       </th> */}
-                      {view === "userList" && <th>Actions</th>}
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -441,46 +441,44 @@ export default function Page() {
                             </span>
                           )}
                         </td> */}
-                        {view === "userList" && (
-                          <td>
-                            <a href={`/UserDetails?id=${user.Id}`}>
-                              <button className="btn btn-sm btn-outline-success me-1">
-                                <i className="bi bi-bar-chart-fill"></i>
-                              </button>
-                            </a>
-
-                            <button
-                              className="btn btn-sm btn-outline-primary me-1"
-                              onClick={() => {
-                                setNewUser({
-                                  OID: "1",
-                                  Email: user.Email,
-                                  Name: user.Name,
-                                  GivenName: user.GivenName,
-                                  FamilyName: user.FamilyName,
-                                  // ProfilePictureUrl: user.ProfilePictureUrl,
-                                  IsEmailVerified: user.IsEmailVerified,
-                                  IsApproved: user.IsApproved,
-                                });
-                                setIsEditing(true);
-                                setEditUserId(user.Id);
-                                const modalEl =
-                                  document.getElementById("addUserModal");
-                                const modal = new bootstrap.Modal(modalEl);
-                                modal.show();
-                              }}
-                            >
-                              <i className="bi bi-pencil"></i>
+                        <td>
+                          <a href={`/UserDetails?id=${user.Id}`}>
+                            <button className="btn btn-sm btn-outline-success me-1">
+                              <i className="bi bi-bar-chart-fill"></i>
                             </button>
+                          </a>
 
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDeleteUser(user.Email)}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </td>
-                        )}
+                          <button
+                            className="btn btn-sm btn-outline-primary me-1"
+                            onClick={() => {
+                              setNewUser({
+                                OID: "1",
+                                Email: user.Email,
+                                Name: user.Name,
+                                GivenName: user.GivenName,
+                                FamilyName: user.FamilyName,
+                                // ProfilePictureUrl: user.ProfilePictureUrl,
+                                IsEmailVerified: user.IsEmailVerified,
+                                IsApproved: user.IsApproved,
+                              });
+                              setIsEditing(true);
+                              setEditUserId(user.Id);
+                              const modalEl =
+                                document.getElementById("addUserModal");
+                              const modal = new bootstrap.Modal(modalEl);
+                              modal.show();
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </button>
+
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDeleteUser(user.Email)}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

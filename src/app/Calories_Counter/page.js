@@ -79,6 +79,7 @@ export default function CaloriesCounter() {
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [modalSuccessMessage, setModalSuccessMessage] = useState(null);
   const [isLoadingMeals, setIsLoadingMeals] = useState(false);
   const [mealsError, setMealsError] = useState(null);
   const [newItem, setNewItem] = useState({
@@ -375,16 +376,20 @@ export default function CaloriesCounter() {
         }
 
         setSuccessMessage('Food item added successfully!');
-        setShowModal(false);
-        setNewItem({
-          name: '',
-          quantity: '',
-          calories: '',
-          carbs: '',
-          protein: '',
-          fats: '',
-          category: 'Vegetarian'
-        });
+
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setShowModal(false);
+          setNewItem({
+            name: '',
+            quantity: '',
+            calories: '',
+            carbs: '',
+            protein: '',
+            fats: '',
+            category: 'Vegetarian'
+          });
+        }, 2000);
       } catch (error) {
         console.error("Failed to add meal via API:", error);
         alert("Failed to add meal. Please try again.");
@@ -510,9 +515,9 @@ export default function CaloriesCounter() {
               <i className="bi bi-calculator me-2"></i>
               Calories Counter
             </h2>
-            <div className="badge bg-primary fs-6 px-3 py-2">
+            {/* <div className="badge bg-primary fs-6 px-3 py-2">
               Daily Progress: {Math.round((dailyTotals.calories / dailyGoals.calories) * 100)}%
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

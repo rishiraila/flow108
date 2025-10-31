@@ -85,16 +85,21 @@ export default function Sidebar() {
     >
       <div className="app-brand demo">
         <Link href="/" className="app-brand-link">
-          <span className="app-brand-logo demo mt-2">
+          <span className="app-brand-logo demo mt-2 mb-4">
             <img
-              src="/assets/img/branding/flow108_logo_recolored.png"
-              alt="Logo"
+              src="/flowlogo.svg"
+              alt="Flow Logo"
               width="70"
-              height="70"
+              height="50"
             />
           </span>
-          <span className="app-brand-text demo menu-text fw-semibold ms-2 ">
-            Flow 108
+          <span className="app-brand-logo demo mb-3 ">
+             <img
+              src="/flowname.svg"
+              alt="Flow Logo"
+              width="90"
+              height="80"
+            />
           </span>
         </Link>
         <a href="#" className="layout-menu-toggle menu-link text-large ms-auto" onClick={(e) => e.preventDefault()}>

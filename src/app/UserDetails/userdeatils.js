@@ -163,7 +163,7 @@ export default function UserDetailsClient() {
 
   // Filtered and sorted period data
   const filteredPeriodData = useMemo(() => {
-    let data = periodData;
+    let data = Array.isArray(periodData) ? periodData : [];
 
     if (periodSearchTerm) {
       const lowerSearch = periodSearchTerm.toLowerCase();
@@ -208,7 +208,7 @@ export default function UserDetailsClient() {
 
   // Filtered and sorted weight data
   const filteredWeightData = useMemo(() => {
-    let data = weightData;
+    let data = Array.isArray(weightData) ? weightData : [];
 
     if (weightSearchTerm) {
       const lowerSearch = weightSearchTerm.toLowerCase();
@@ -276,21 +276,21 @@ export default function UserDetailsClient() {
   );
 
   useEffect(() => {
-    const workoutEntries = workouts.map(workout => ({
+    const workoutEntries = (Array.isArray(workouts) ? workouts : []).map(workout => ({
       Date: workout.LoggedDate,
       Entries: [{
         Title: `Workout: ${workout.ActivityName}`,
         Description: `Category: ${workout.ActivityCategory}, Duration: ${workout.DurationInMinutes} minutes`
       }]
     }));
-    const dietEntries = dietLogs.map(diet => ({
+    const dietEntries = (Array.isArray(dietLogs) ? dietLogs : []).map(diet => ({
       Date: diet.LogDate,
       Entries: [{
         Title: `Diet: ${diet.MealItem?.FoodItem || diet.MealName}`,
         Description: `Meal: ${diet.MealName}, Quantity: ${diet.Quantity}, Calories: ${diet.TotalCalories}`
       }]
     }));
-    setCombinedActivityData([...activityData, ...workoutEntries, ...dietEntries]);
+    setCombinedActivityData([...(Array.isArray(activityData) ? activityData : []), ...workoutEntries, ...dietEntries]);
   }, [activityData, workouts, dietLogs]);
 
   const activityByDate = combinedActivityData.reduce((acc, item) => {

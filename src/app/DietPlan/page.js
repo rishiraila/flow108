@@ -45,6 +45,7 @@ export default function Page() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedPlanForAssignment, setSelectedPlanForAssignment] =
     useState(null);
+  const [modalMode, setModalMode] = useState('assign');
   const [stats, setStats] = useState({
     totalPlans: 0,
     totalMeals: 0,
@@ -376,8 +377,9 @@ export default function Page() {
     setAddMealError(null);
     setAddMealSuccess(false);
   };
-  const openAssignModal = async (plan) => {
+  const openAssignModal = async (plan, mode = 'assign') => {
     setSelectedPlanForAssignment(plan);
+    setModalMode(mode);
     setShowAssignModal(true);
   };
 
@@ -522,8 +524,7 @@ export default function Page() {
       plan.Description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Helper function to get meal types from plan data
-// Helper function to get unique meal types from plan data
+  // Helper function to get unique meal types from plan data
 const getMealTypes = (meals) => {
   if (!meals || !Array.isArray(meals)) return [];
 

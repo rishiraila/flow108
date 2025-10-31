@@ -31,7 +31,7 @@ export default function Navbar() {
 
         <ul className="navbar-nav flex-row align-items-center ms-auto">
           {/* Language Dropdown */}
-          <li className="nav-item dropdown">
+          {/* <li className="nav-item dropdown">
             <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-translate-2 ri-22px"></i>
             </a>
@@ -44,10 +44,10 @@ export default function Navbar() {
                 </li>
               ))}
             </ul>
-          </li>
+          </li> */}
 
           {/* Style Switcher */}
-          <li className="nav-item dropdown me-1 me-xl-0">
+          {/* <li className="nav-item dropdown me-1 me-xl-0">
             <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-contrast-drop-line ri-22px"></i>
             </a>
@@ -63,10 +63,10 @@ export default function Navbar() {
                 </li>
               ))}
             </ul>
-          </li>
+          </li> */}
 
           {/* Notifications (simplified) */}
-          <li className="nav-item dropdown me-4 me-xl-1">
+          {/* <li className="nav-item dropdown me-4 me-xl-1">
             <a className="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="#" data-bs-toggle="dropdown" onClick={(e) => e.preventDefault()}>
               <i className="ri-notification-2-line ri-22px"></i>
               <span className="position-absolute top-0 start-50 translate-middle-y badge badge-dot bg-danger mt-2 border"></span>
@@ -79,7 +79,7 @@ export default function Navbar() {
               </li>
               <li className="dropdown-item">You have new notifications</li>
             </ul>
-          </li>
+          </li> */}
 
           {/* User Menu */}
           <li className="nav-item dropdown">
@@ -98,15 +98,15 @@ export default function Navbar() {
                       </div>
                     </div>
                     <div className="flex-grow-1">
-                      <span className="fw-medium d-block small">John Doe</span>
+                      {/* <span className="fw-medium d-block small">John Doe</span> */}
                       <small className="text-muted">Admin</small>
                     </div>
                   </div>
                 </a>
               </li>
               <li><div className="dropdown-divider"></div></li>
-              <li><Link className="dropdown-item" href="#"><i className="ri-user-3-line ri-22px me-3"></i>My Profile</Link></li>
-              <li><Link className="dropdown-item" href="/Settings"><i className="ri-settings-4-line ri-22px me-3"></i>Settings</Link></li>
+              {/* <li><Link className="dropdown-item" href="#"><i className="ri-user-3-line ri-22px me-3"></i>My Profile</Link></li>
+              <li><Link className="dropdown-item" href="/Settings"><i className="ri-settings-4-line ri-22px me-3"></i>Settings</Link></li> */}
               <li><div className="d-grid px-4 pt-2 pb-1"><a className="btn btn-sm btn-danger d-flex" href="#"><small className="align-middle" onClick={()=>{localStorage.clear(); router.replace('/AdminLogin')}}>Logout</small></a></div></li>
             </ul>
           </li>

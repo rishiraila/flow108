@@ -29,6 +29,7 @@ export default function PushNotificationPage() {
   const [formData, setFormData] = useState({
     Title: '',
     Message: '',
+    Image: null,
     ScheduledTime: '',
     TargetUserIds: [],
     SendToAll: false,
@@ -116,7 +117,7 @@ export default function PushNotificationPage() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked, options } = e.target;
+    const { name, value, type, checked, options, files } = e.target;
     if (type === 'checkbox') {
       setFormData(prev => ({
         ...prev,
@@ -127,6 +128,11 @@ export default function PushNotificationPage() {
       setFormData(prev => ({
         ...prev,
         [name]: selected
+      }));
+    } else if (type === 'file') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: files[0] || null
       }));
     } else {
       setFormData(prev => ({
@@ -159,6 +165,7 @@ export default function PushNotificationPage() {
       setFormData({
         Title: '',
         Message: '',
+        Image: null,
         ScheduledTime: '',
         TargetUserIds: [],
         SendToAll: false,
@@ -339,10 +346,7 @@ export default function PushNotificationPage() {
                       className="form-control"
                       id="Image"
                       name="Image"
-                      rows="3"
-                      placeholder="Upload image URL here"
-                      required
-                      value={formData.Message}
+                      accept="image/*"
                       onChange={handleInputChange}
                     />
                   </div>
