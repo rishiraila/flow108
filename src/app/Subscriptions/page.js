@@ -334,7 +334,7 @@ export default function Page() {
                       <div className="card-body pt-12">
                         <div className="mt-3 mb-5 text-center">
                           <Image
-                            src="/assets/img/illustrations/union.svg"
+                            src="/Union.svg"
                             alt="Basic Image"
                             width={100} // required
                             height={100} // required
