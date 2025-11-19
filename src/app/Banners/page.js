@@ -13,8 +13,8 @@ export default function BannersPage() {
   const [showAssignBannerModal, setShowAssignBannerModal] = useState(false);
   const [assigningBanner, setAssigningBanner] = useState(null);
   const [editingBanner, setEditingBanner] = useState(null);
-  const [newBanner, setNewBanner] = useState({ title: '', description: '', imageFile: null });
-  const [editBanner, setEditBanner] = useState({ title: '', description: '', imageFile: null });
+  const [newBanner, setNewBanner] = useState({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
+  const [editBanner, setEditBanner] = useState({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('date_desc');
 
@@ -30,9 +30,11 @@ export default function BannersPage() {
       // Transform API data to match component structure
       const transformedBanners = bannerData.map((banner, index) => ({
         id: banner.Id || index + 1,
-        title: banner.Name,
-        description: banner.Description || '',
+        name: banner.Name,
+        title: banner.Title,
+        description: banner.Content || '',
         imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+        redirectUrl: banner.RedirectUrl || '',
         createdAt: banner.CreatedAt || new Date().toISOString(),
         likes: banner.LikeCount || 0,
       }));
@@ -47,18 +49,18 @@ export default function BannersPage() {
   };
 
   const handleAddBanner = async () => {
-    if (!newBanner.title || !newBanner.imageFile) {
-      alert('Please provide a title and select an image file.');
+    if (!newBanner.name || !newBanner.title || !newBanner.content || !newBanner.redirectUrl || !newBanner.imageFile) {
+      alert('Please provide all required fields: name, title, content, redirect URL, and select an image file.');
       return;
     }
 
     try {
-      const result = await addBanner(newBanner.title, newBanner.imageFile);
+      const result = await addBanner(newBanner.name, newBanner.title, newBanner.content, newBanner.redirectUrl, newBanner.imageFile);
       if (result.status) {
         // Reload banners after successful addition
         await loadBanners();
         setShowAddBannerModal(false);
-        setNewBanner({ title: '', description: '', imageFile: null });
+        setNewBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
       } else {
         alert('Failed to add banner: ' + (result.message || 'Unknown error'));
       }
@@ -69,19 +71,14 @@ export default function BannersPage() {
   };
 
   const handleEditBanner = async () => {
-    if (!editBanner.title) {
-      alert('Please provide a title.');
-      return;
-    }
-
     try {
-      const result = await updateBanner(editingBanner.id, editBanner.title, editBanner.imageFile);
+      const result = await updateBanner(editingBanner.id, editBanner.name, editBanner.title, editBanner.content, editBanner.redirectUrl, editBanner.imageFile);
       if (result.status) {
         // Reload banners after successful update
         await loadBanners();
         setShowEditBannerModal(false);
         setEditingBanner(null);
-        setEditBanner({ title: '', description: '', imageFile: null });
+        setEditBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
       } else {
         alert('Failed to update banner: ' + (result.message || 'Unknown error'));
       }
@@ -130,6 +127,7 @@ export default function BannersPage() {
 
   const filteredBanners = useMemo(() => {
     let filtered = banners.filter(banner =>
+      (banner.name && banner.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (banner.title && banner.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (banner.description && banner.description.toLowerCase().includes(searchQuery.toLowerCase()))
     );
@@ -370,6 +368,18 @@ export default function BannersPage() {
                   >
                     {banner.title}
                   </h6>
+                  {banner.name && (
+                    <p
+                      style={{
+                        margin: "0 0 4px",
+                        fontSize: "14px",
+                        color: "#666",
+                        fontWeight: "500",
+                      }}
+                    >
+                      Name: {banner.name}
+                    </p>
+                  )}
                   {banner.description && (
                     <p
                       style={{
@@ -381,6 +391,18 @@ export default function BannersPage() {
                       {banner.description}
                     </p>
                   )}
+                  {/* {banner.redirectUrl && (
+                    <p
+                      style={{
+                        margin: "0 0 6px",
+                        fontSize: "12px",
+                        color: "#007bff",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      URL: {banner.redirectUrl}
+                    </p>
+                  )} */}
                   {banner.imageUrl ? (
                     <div style={{ position: "relative" }}>
                       <img
@@ -454,8 +476,10 @@ export default function BannersPage() {
                       onClick={() => {
                         setEditingBanner(banner);
                         setEditBanner({
+                          name: banner.name,
                           title: banner.title,
-                          description: banner.description,
+                          content: banner.description,
+                          redirectUrl: banner.redirectUrl,
                           imageFile: null,
                         });
                         setShowEditBannerModal(true);
@@ -482,10 +506,14 @@ export default function BannersPage() {
           <div className="modal-backdrop">
             <div className="modal-content-custom">
               <h5 className="mb-3">Add Banner</h5>
+              <input className="form-control mb-2" placeholder="Name" value={newBanner.name}
+                onChange={(e) => setNewBanner({ ...newBanner, name: e.target.value })} />
               <input className="form-control mb-2" placeholder="Title" value={newBanner.title}
                 onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })} />
-              {/* <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={newBanner.description}
-                onChange={(e) => setNewBanner({ ...newBanner, description: e.target.value })} /> */}
+              <textarea className="form-control mb-2" placeholder="Content" rows="3" value={newBanner.content}
+                onChange={(e) => setNewBanner({ ...newBanner, content: e.target.value })} />
+              <input className="form-control mb-2" placeholder="Redirect URL" value={newBanner.redirectUrl}
+                onChange={(e) => setNewBanner({ ...newBanner, redirectUrl: e.target.value })} />
               <input type="file" className="form-control mb-3" accept="image/*"
                 onChange={(e) => handleImageUpload(e, 'add')} />
               <div className="d-flex justify-content-end gap-2">
@@ -501,10 +529,14 @@ export default function BannersPage() {
           <div className="modal-backdrop">
             <div className="modal-content-custom">
               <h5 className="mb-3">Edit Banner</h5>
+              <input className="form-control mb-2" placeholder="Name" value={editBanner.name}
+                onChange={(e) => setEditBanner({ ...editBanner, name: e.target.value })} />
               <input className="form-control mb-2" placeholder="Title" value={editBanner.title}
                 onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value })} />
-              {/* <textarea className="form-control mb-2" placeholder="Description (optional)" rows="2" value={editBanner.description}
-                onChange={(e) => setEditBanner({ ...editBanner, description: e.target.value })} /> */}
+              <textarea className="form-control mb-2" placeholder="Content" rows="3" value={editBanner.content}
+                onChange={(e) => setEditBanner({ ...editBanner, content: e.target.value })} />
+              <input className="form-control mb-2" placeholder="Redirect URL" value={editBanner.redirectUrl}
+                onChange={(e) => setEditBanner({ ...editBanner, redirectUrl: e.target.value })} />
               {editingBanner && editingBanner.imageUrl && (
                 <div className="mb-3">
                   <label className="form-label">Current Image:</label>
@@ -527,7 +559,7 @@ export default function BannersPage() {
                 <button className="btn btn-secondary" onClick={() => {
                   setShowEditBannerModal(false);
                   setEditingBanner(null);
-                  setEditBanner({ title: '', description: '', imageFile: null });
+                  setEditBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
                 }}>Cancel</button>
                 <button className="btn btn-success" onClick={handleEditBanner}>Update</button>
               </div>

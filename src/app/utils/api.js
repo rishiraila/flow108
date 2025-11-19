@@ -940,10 +940,13 @@ export const fetchBanners = async () => {
 };
 
 // Add new banner
-export const addBanner = async (name, imageFile) => {
+export const addBanner = async (name, title, content, redirectUrl, imageFile) => {
   try {
     const formData = new FormData();
     formData.append('Name', name);
+    formData.append('Title', title);
+    formData.append('Content', content);
+    formData.append('RedirectUrl', redirectUrl);
     formData.append('imageFile', imageFile);
 
     const response = await fetchWithTimeout(
@@ -961,10 +964,13 @@ export const addBanner = async (name, imageFile) => {
 };
 
 // Update banner
-export const updateBanner = async (id, name, imageFile = null) => {
+export const updateBanner = async (id, name, title, content, redirectUrl, imageFile = null) => {
   try {
     const formData = new FormData();
     formData.append('Name', name);
+    formData.append('Title', title);
+    formData.append('Content', content);
+    formData.append('RedirectUrl', redirectUrl);
     if (imageFile) {
       formData.append('imageFile', imageFile);
     }
@@ -972,7 +978,7 @@ export const updateBanner = async (id, name, imageFile = null) => {
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/admin/banners/${id}`,
       {
-        method: "PUT",
+        method: "PATCH",
         body: formData,
       }
     );

@@ -31,7 +31,7 @@ const createTestimonial = async (formData) => {
 
 const updateTestimonial = async (id, formData) => {
   const response = await fetch(`${API_BASE_URL}/admin/testimonials/${id}`, {
-    method: "PUT",
+    method: "PATCH",
     headers: {
       accept: "*/*",
     },
