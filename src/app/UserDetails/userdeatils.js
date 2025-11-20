@@ -9,6 +9,18 @@ export default function UserDetailsClient() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("id");
 
+  const calculateAge = (dobString) => {
+    if (!dobString) return 'N/A';
+    const dob = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   const [weightData, setWeightData] = useState([]);
   const [periodData, setPeriodData] = useState([]);
   const [profileData, setProfileData] = useState(null);
@@ -508,11 +520,9 @@ export default function UserDetailsClient() {
                 <p className="mb-0 text-muted">{profileData.Email}</p>
               </div>
               <div className="col-md-4 mb-2">
-                <strong>Date of Birth:</strong>
+                <strong>Age:</strong>
                 <p className="mb-0 text-muted">
-                  {new Date(profileData.Stage1?.DateOfBirth).toLocaleDateString(
-                    "en-GB"
-                  )}
+                  {profileData.Stage1?.Age}
                 </p>
               </div>
               <div className="col-md-4 mb-2">

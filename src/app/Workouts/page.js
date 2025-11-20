@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchAllWorkouts, addWorkout, updateWorkout, deleteWorkout } from "../utils/api";
-import { getImageUrl, isVideoFile, processWorkoutImages } from "../utils/imageUtils";
+import { getImageUrl, isVideoFile, isAudioFile, processWorkoutImages } from "../utils/imageUtils";
 
-// MediaDisplay component to handle both images and videos
+// MediaDisplay component to handle images, videos, and audio
 const MediaDisplay = ({ src, alt, className, style, onError }) => {
   const isVideo = isVideoFile(src);
+  const isAudio = isAudioFile(src);
 
   if (isVideo) {
     return (
@@ -20,6 +21,24 @@ const MediaDisplay = ({ src, alt, className, style, onError }) => {
       >
         Your browser does not support the video tag.
       </video>
+    );
+  }
+
+  if (isAudio) {
+    return (
+      <div className={className} style={style}>
+        <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light rounded">
+          <i className="bi bi-music-note fs-1 text-muted mb-2"></i>
+          <audio
+            src={getImageUrl(src)}
+            controls
+            onError={onError}
+            className="w-100"
+          >
+            Your browser does not support the audio tag.
+          </audio>
+        </div>
+      </div>
     );
   }
 
@@ -380,7 +399,7 @@ export default function WorkoutsPage() {
                   </div>
 
                   <div className="mb-3">
-                    <label className="form-label">Workout Image/Videos</label>
+                    <label className="form-label">Workout Image/Video/Audio</label>
                     <div className="card">
                       <div className="card-body text-center">
                         <div className="mb-2">
@@ -390,18 +409,19 @@ export default function WorkoutsPage() {
                           type="file"
                           className="form-control"
                           name="Image"
-                          accept="image/*,video/*"
+                          accept="image/*,video/*,audio/*"
                           onChange={(e) => {
                             const file = e.target.files[0];
                             if (file) {
                               const isImage = file.type.startsWith('image/');
                               const isVideo = file.type.startsWith('video/');
+                              const isAudio = file.type.startsWith('audio/');
                               if (isImage && file.size > 1024 * 1024) {
                                 setAddFileError('Image size must be below 1MB');
                                 return;
                               }
-                              if (isVideo && file.size > 10 * 1024 * 1024) {
-                                setAddFileError('Video size must be below 10MB');
+                              if ((isVideo || isAudio) && file.size > 10 * 1024 * 1024) {
+                                setAddFileError('Video/Audio size must be below 10MB');
                                 return;
                               }
                               setAddFileError('');
@@ -413,7 +433,7 @@ export default function WorkoutsPage() {
                           }}
                         />
                         <div className="form-text mt-2">
-                          Upload an image (max 1MB) or video (max 10MB with 1280x720 pixels) for this workout.
+                          Upload an image (max 1MB), video (max 10MB), or audio (max 10MB) for this workout.
                         </div>
                       </div>
                     </div>

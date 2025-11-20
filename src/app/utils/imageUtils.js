@@ -78,6 +78,20 @@ export const isVideoFile = (url) => {
 };
 
 /**
+ * Checks if a given URL or filename represents an audio file
+ * @param {string} url - The URL or filename to check
+ * @returns {boolean} - True if it's an audio file
+ */
+export const isAudioFile = (url) => {
+  if (!url || typeof url !== 'string') return false;
+
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.aac', '.flac', '.m4a', '.wma'];
+  const lowerUrl = url.toLowerCase();
+
+  return audioExtensions.some(ext => lowerUrl.includes(ext));
+};
+
+/**
  * Processes workout data to ensure image URLs are properly formatted
  * @param {Object|Array} data - Workout data (single object or array)
  * @returns {Object|Array} - Processed data with formatted image URLs

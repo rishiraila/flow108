@@ -548,7 +548,7 @@ function WorkoutDetailsContent() {
                       ) : (
                         <>
                           <small className="text-muted">
-                            {workout.Time} &bull; {workout.Format}
+                            {workout.Time || workout.Format}
                           </small>
                           {workout.Image && (
                             <MediaDisplay
@@ -563,6 +563,15 @@ function WorkoutDetailsContent() {
                                 e.target.src = getImageUrl('');
                               }}
                             />
+                          )}
+                          {workout.Audio && (
+                            <audio
+                              controls
+                              className="w-100 mb-2"
+                            >
+                              <source src={getImageUrl(workout.Audio)} type="audio/mpeg" />
+                              Your browser does not support the audio element.
+                            </audio>
                           )}
                         </>
                       )}
