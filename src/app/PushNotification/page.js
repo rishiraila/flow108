@@ -1,7 +1,8 @@
 'use client';
 import React, { useEffect, useState, useMemo } from 'react';
 import { createNotification, listNotifications, editNotification, deleteNotification } from '../utils/notificationApi';
-import { fetchAllUsers } from '../utils/api';
+import { fetchAllUsers, fetchWorkoutPlans } from '../utils/api';
+import { dietPlanApi } from '../utils/apiClient';
 import { useAlert } from '../utils/alertcontxt';
 import { useConfirm } from '../utils/confirmContext';
 
@@ -10,6 +11,8 @@ export default function PushNotificationPage() {
   const { showConfirm } = useConfirm();
   const [notifications, setNotifications] = useState([]);
   const [users, setUsers] = useState({});
+  const [dietPlans, setDietPlans] = useState([]);
+  const [workoutPlans, setWorkoutPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiLoading, setApiLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
@@ -33,7 +36,9 @@ export default function PushNotificationPage() {
     ScheduledTime: '',
     TargetUserIds: [],
     SendToAll: false,
-    SendNow: false
+    SendNow: false,
+    DietPlanId: '',
+    WorkoutPlanId: ''
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,10 +69,12 @@ export default function PushNotificationPage() {
     return filtered; // Show all filtered notifications in scroll view
   }, [notifications, searchTerm, sortBy]);
 
-  // Fetch notifications and users on load
+  // Fetch notifications, users, diet plans, and workout plans on load
   useEffect(() => {
     fetchNotifications();
     fetchUsers();
+    fetchDietPlans();
+    fetchWorkoutPlansFunc();
   }, []);
 
   // Calculate stats when notifications change
@@ -116,6 +123,24 @@ export default function PushNotificationPage() {
     }
   };
 
+  const fetchDietPlans = async () => {
+    try {
+      const plans = await dietPlanApi.getAll();
+      setDietPlans(plans);
+    } catch (error) {
+      console.error('Error fetching diet plans:', error);
+    }
+  };
+
+  const fetchWorkoutPlansFunc = async () => {
+    try {
+      const plans = await fetchWorkoutPlans();
+      setWorkoutPlans(plans);
+    } catch (error) {
+      console.error('Error fetching workout plans:', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked, options, files } = e.target;
     if (type === 'checkbox') {
@@ -157,7 +182,9 @@ export default function PushNotificationPage() {
         ScheduledTime: scheduledTime,
         TargetUserIds: formData.TargetUserIds,
         SendToAll: formData.SendToAll,
-        SendNow: formData.SendNow
+        SendNow: formData.SendNow,
+        DietPlanId: formData.DietPlanId || '',
+        WorkoutPlanId: formData.WorkoutPlanId || ''
       };
 
       await createNotification(payload);
@@ -170,7 +197,9 @@ export default function PushNotificationPage() {
         ScheduledTime: '',
         TargetUserIds: [],
         SendToAll: false,
-        SendNow: false
+        SendNow: false,
+        DietPlanId: '',
+        WorkoutPlanId: ''
       });
 
       // Refresh notifications
@@ -339,6 +368,36 @@ export default function PushNotificationPage() {
                       value={formData.Message}
                       onChange={handleInputChange}
                     />
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="DietPlanId" className="form-label">Diet Plan</label>
+                    <select
+                      className="form-select"
+                      id="DietPlanId"
+                      name="DietPlanId"
+                      value={formData.DietPlanId}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select a diet plan</option>
+                      {dietPlans.map(plan => (
+                        <option key={plan.Id} value={plan.Id}>{plan.Name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mb-3">
+                    <label htmlFor="WorkoutPlanId" className="form-label">Workout Plan</label>
+                    <select
+                      className="form-select"
+                      id="WorkoutPlanId"
+                      name="WorkoutPlanId"
+                      value={formData.WorkoutPlanId}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">Select a workout plan</option>
+                      {workoutPlans.map(plan => (
+                        <option key={plan.Id} value={plan.Id}>{plan.Name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="mb-3">
                     <label htmlFor="Image" className="form-label">Image (Optional)</label>
