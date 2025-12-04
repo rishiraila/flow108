@@ -7,7 +7,7 @@ import EditMealModal from "../EditMealModal";
 import { useAlert } from "../../utils/alertcontxt";
 import { useConfirm } from "../../utils/confirmContext";
 import { dietPlanApi } from "../../utils/apiClient";
-import { fetchAllMeals } from "../../utils/api";
+import { fetchAllMeals, recommendMealToDietPlan } from "../../utils/api";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -20,6 +20,7 @@ export default function DietPlanDetails() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [editingRecommendationId, setEditingRecommendationId] = useState(null);
 
   // Assigned Users table controls
   const [userSearch, setUserSearch] = useState("");
@@ -43,6 +44,8 @@ export default function DietPlanDetails() {
   const [mealSortKey, setMealSortKey] = useState("mealType");
   const [mealSortOrder, setMealSortOrder] = useState("asc");
   const [mealPage, setMealPage] = useState(1);
+  const [mealSearchTerm, setMealSearchTerm] = useState("");
+
   const mealsPerPage = 5;
 
   // Edit Meal Modal state
@@ -57,18 +60,52 @@ export default function DietPlanDetails() {
   const [allMealPage, setAllMealPage] = useState(1);
   const allMealsPerPage = 5;
 
+  // Recommended Meals Modal state
+  const [showRecommendMealModal, setShowRecommendMealModal] = useState(false);
+  const [recommendedMeals, setRecommendedMeals] = useState([]);
+  const [recommendMealLoading, setRecommendMealLoading] = useState(false);
+  const [dropdownMeals, setDropdownMeals] = useState([]);
+  const [dropdownMealsLoading, setDropdownMealsLoading] = useState(false);
+  const [recSearch, setRecSearch] = useState("");
+  const [recSortKey, setRecSortKey] = useState("FoodItem");
+  const [recSortOrder, setRecSortOrder] = useState("asc");
+  const [recPage, setRecPage] = useState(1);
+  const recPerPage = 6;
+
+  const [recommendMealForm, setRecommendMealForm] = useState({
+    MealItemId: "",
+    MealType: "",
+    QuantityText: "",
+    DietPlanId: planId,
+    Category: "",
+  });
+  const [submittingRecommendation, setSubmittingRecommendation] =
+    useState(false);
+
   // Flatten meals for display
-  const flattenedItems = meals.flatMap(meal =>
-    (meal.FoodItems || []).map(item => ({ ...item, mealType: meal.MealType }))
+  const flattenedItems = meals.flatMap((meal) =>
+    (meal.FoodItems || []).map((item) => ({ ...item, mealType: meal.MealType }))
   );
 
   // Calculate nutrition totals
   const totalMeals = meals.length;
   const totalFoodItems = flattenedItems.length;
-  const totalCalories = flattenedItems.reduce((sum, item) => sum + (item.calories || 0), 0);
-  const totalCarbs = flattenedItems.reduce((sum, item) => sum + (item.carbs || 0), 0);
-  const totalProtein = flattenedItems.reduce((sum, item) => sum + (item.protein || 0), 0);
-  const totalFats = flattenedItems.reduce((sum, item) => sum + (item.fats || 0), 0);
+  const totalCalories = flattenedItems.reduce(
+    (sum, item) => sum + (item.calories || 0),
+    0
+  );
+  const totalCarbs = flattenedItems.reduce(
+    (sum, item) => sum + (item.carbs || 0),
+    0
+  );
+  const totalProtein = flattenedItems.reduce(
+    (sum, item) => sum + (item.protein || 0),
+    0
+  );
+  const totalFats = flattenedItems.reduce(
+    (sum, item) => sum + (item.fats || 0),
+    0
+  );
 
   // ====== All Meals Pagination ======
   const filteredAllMeals = allMeals.filter((meal) =>
@@ -90,19 +127,21 @@ export default function DietPlanDetails() {
 
   // ====== Meals Pagination ======
   const filteredMeals = flattenedItems.filter((item) =>
-    `${item.mealType} ${item.name}`.toLowerCase().includes(mealSearch.toLowerCase())
+    `${item.mealType} ${item.name}`
+      .toLowerCase()
+      .includes(mealSearch.toLowerCase())
   );
 
   const sortedMeals = [...filteredMeals].sort((a, b) => {
     let valA, valB;
-    if (mealSortKey === 'mealType') {
+    if (mealSortKey === "mealType") {
       valA = a.mealType;
       valB = b.mealType;
     } else {
       valA = a[mealSortKey];
       valB = b[mealSortKey];
     }
-    if (typeof valA === 'string') {
+    if (typeof valA === "string") {
       valA = valA.toLowerCase();
       valB = valB.toLowerCase();
     }
@@ -128,9 +167,17 @@ export default function DietPlanDetails() {
   useEffect(() => {
     if (planId) {
       fetchDietPlanDetails();
+      fetchRecommendedMeals();
       fetchAllMealsData();
     }
   }, [planId]);
+
+  // Fetch dropdown meals when modal opens
+  useEffect(() => {
+    if (showRecommendMealModal) {
+      fetchDropdownMeals();
+    }
+  }, [showRecommendMealModal]);
   // ====== Assigned Users ======
   const filteredUsers = assignedUsers.filter((u) =>
     `${u.Name} ${u.Email}`.toLowerCase().includes(userSearch.toLowerCase())
@@ -176,6 +223,7 @@ export default function DietPlanDetails() {
             setAssignedUsers(
               planWithUsers ? planWithUsers.AssignedUsers || [] : []
             );
+            await fetchRecommendedMeals();
           }
         } catch (err) {
           console.error("Failed to fetch assigned users:", err);
@@ -196,9 +244,9 @@ export default function DietPlanDetails() {
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${userId}`,
         {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'accept': '*/*',
+            accept: "*/*",
           },
         }
       );
@@ -219,8 +267,8 @@ export default function DietPlanDetails() {
   const fetchAllMealsData = async () => {
     try {
       const data = await fetchAllMeals();
-      if (data && (data.Status === true || data.Status === undefined) && data.Data) {
-        setAllMeals(data.Data);
+      if (Array.isArray(data)) {
+        setAllMeals(data);
       } else {
         console.error("Failed to fetch all meals", data);
         setAllMeals([]);
@@ -230,6 +278,115 @@ export default function DietPlanDetails() {
       setAllMeals([]);
     }
   };
+
+  const fetchRecommendedMeals = async () => {
+    try {
+      setRecommendMealLoading(true);
+
+      // Use the endpoint you shared (no query params)
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/admin/recommendations`
+      );
+      if (!res.ok) throw new Error("Failed to fetch recommended meals");
+      const payload = await res.json();
+
+      // API returns { status: true, message: "...", data: [...] }
+      const arr = payload?.data || payload?.Data || [];
+      if (!Array.isArray(arr)) {
+        setRecommendedMeals([]);
+        return;
+      }
+
+      // Keep only items with DietPlanId === planId
+      const filtered = arr.filter(
+        (it) => String(it.DietPlanId || "") === String(planId)
+      );
+
+      setRecommendedMeals(filtered);
+    } catch (err) {
+      console.error("Error fetching recommended meals:", err);
+      setRecommendedMeals([]);
+    } finally {
+      setRecommendMealLoading(false);
+    }
+  };
+  // Open modal in EDIT mode with pre-filled data
+  const handleEditRecommendationClick = (rec) => {
+    setEditingRecommendationId(rec.Id); // which recommendation we are editing
+
+    setRecommendMealForm({
+      MealItemId: rec.MealItemId || "",
+      MealType: rec.MealType || "",
+      QuantityText: rec.Quantity || "",
+      DietPlanId: rec.DietPlanId || planId,
+      Category: rec.Category || "",
+    });
+
+    // 🆕 show current meal text in the search box
+    const label = `${rec.FoodItem || ""}${
+      rec.Quantity ? ` (${rec.Quantity})` : ""
+    }`;
+    setMealSearchTerm(label.trim());
+
+    setShowRecommendMealModal(true);
+  };
+
+  // Delete a recommendation
+  // Delete a recommendation
+  const handleDeleteRecommendation = async (id) => {
+    // ✅ Native browser confirmation
+    const confirmed =
+      typeof window !== "undefined"
+        ? window.confirm("Are you sure you want to delete this recommendation?")
+        : false;
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/GlobalUsers/${id}`,
+        {
+          method: "DELETE",
+          headers: { accept: "*/*" },
+        }
+      );
+
+      const data = await res.json().catch(() => ({}));
+
+      if (data.status === true || data.Status === true) {
+        showAlert("Recommendation deleted successfully.", "success");
+        fetchRecommendedMeals(); // refresh list
+      } else {
+        showAlert(data.message || "Failed to delete recommendation.", "error");
+      }
+    } catch (err) {
+      console.error("Error deleting recommendation:", err);
+      showAlert("Error deleting recommendation.", "error");
+    }
+  };
+
+  const fetchDropdownMeals = async () => {
+    try {
+      setDropdownMealsLoading(true);
+      const data = await fetchAllMeals();
+      if (Array.isArray(data)) {
+        setDropdownMeals(data);
+      } else {
+        console.error("Failed to fetch dropdown meals", data);
+        setDropdownMeals([]);
+      }
+    } catch (err) {
+      console.error("Error fetching dropdown meals:", err);
+      setDropdownMeals([]);
+    } finally {
+      setDropdownMealsLoading(false);
+    }
+  };
+  const filteredDropdownMeals = dropdownMeals.filter((meal) =>
+    `${meal.FoodItem} ${meal.Quantity}`
+      .toLowerCase()
+      .includes(mealSearchTerm.toLowerCase())
+  );
 
   const handleAddToPlan = (meal) => {
     // Placeholder action for adding meal to plan
@@ -273,7 +430,201 @@ export default function DietPlanDetails() {
     }
   };
 
+  const handleSubmitRecommendation = async (e) => {
+    e.preventDefault();
 
+    const isEditing = !!editingRecommendationId;
+
+    // Validation:
+    // MealItemId is required only when ADDING; for edit we keep existing item
+    if (!isEditing && !recommendMealForm.MealItemId)
+      return showAlert("Please select a meal", "error");
+    if (!recommendMealForm.MealType)
+      return showAlert("Please select meal type", "error");
+    if (
+      !recommendMealForm.QuantityText ||
+      !recommendMealForm.QuantityText.trim()
+    )
+      return showAlert("Please enter quantity", "error");
+
+    try {
+      setSubmittingRecommendation(true);
+
+      const fd = new FormData();
+
+      if (!isEditing) {
+        // ✅ ADD MODE (POST /meal)
+        fd.append("MealItemId", recommendMealForm.MealItemId);
+        fd.append("MealType", recommendMealForm.MealType);
+        fd.append("QuantityText", recommendMealForm.QuantityText);
+        fd.append("DietPlanId", recommendMealForm.DietPlanId);
+
+        const res = await fetch(
+          `https://flow108.coinagesoft.com/api/admin/recommendations/meal`,
+          {
+            method: "POST",
+            body: fd,
+          }
+        );
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => null);
+          throw new Error(text || "Failed to add recommendation");
+        }
+
+        const result = await res.json();
+        const dataArray = result.data || result.Data || [];
+
+        if (result.status === true || result.Status === true) {
+          showAlert("Recommendation added successfully!", "success");
+
+          if (Array.isArray(dataArray) && dataArray.length > 0) {
+            setRecommendedMeals((prev) => {
+              const existingIds = new Set(
+                prev.map((r) => r.Id || r.id || r.mealId)
+              );
+              const merged = [...prev];
+              dataArray.forEach((item) => {
+                const id = item.Id || item.id || item.mealId;
+                if (!existingIds.has(id)) merged.push(item);
+              });
+              return merged;
+            });
+          } else {
+            await fetchRecommendedMeals();
+          }
+
+          setRecommendMealForm({
+            MealItemId: "",
+            MealType: "",
+            QuantityText: "",
+            DietPlanId: planId,
+            Category: "",
+          });
+          setShowRecommendMealModal(false);
+        } else {
+          showAlert(result.message || "Failed to add recommendation.", "error");
+        }
+      } else {
+        // ✅ EDIT MODE (PATCH /api/admin/recommendations/{id})
+        fd.append("MealType", recommendMealForm.MealType);
+        fd.append("QuantityText", recommendMealForm.QuantityText);
+        if (recommendMealForm.Category) {
+          fd.append("Category", recommendMealForm.Category);
+        }
+        fd.append("DietPlanId", recommendMealForm.DietPlanId);
+
+        const res = await fetch(
+          `https://flow108.coinagesoft.com/api/admin/recommendations/${editingRecommendationId}`,
+          {
+            method: "PATCH",
+            body: fd,
+          }
+        );
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => null);
+          throw new Error(text || "Failed to update recommendation");
+        }
+
+        const result = await res.json();
+        const updated = result.data || result.Data;
+
+        if (result.status === true || result.Status === true) {
+          showAlert("Recommendation updated successfully!", "success");
+
+          if (updated) {
+            setRecommendedMeals((prev) =>
+              prev.map((r) =>
+                (r.Id || r.id) === updated.Id ? { ...r, ...updated } : r
+              )
+            );
+          } else {
+            await fetchRecommendedMeals();
+          }
+
+          setEditingRecommendationId(null);
+          setShowRecommendMealModal(false);
+        } else {
+          showAlert(
+            result.message || "Failed to update recommendation.",
+            "error"
+          );
+        }
+      }
+
+      // refresh plan-related info if needed
+      fetchDietPlanDetails();
+    } catch (err) {
+      console.error("Error submitting recommendation:", err);
+      showAlert("Error submitting recommendation.", "error");
+    } finally {
+      setSubmittingRecommendation(false);
+    }
+  };
+  // 🔹 Unique meal types for this plan (from dietPlan.Meals)
+  const dietMealTypesSet = new Set(
+    (meals || []).map((m) => m.Name).filter(Boolean)
+  );
+
+  // Ensure current selected MealType (when editing) is also in the list
+  if (
+    recommendMealForm.MealType &&
+    !dietMealTypesSet.has(recommendMealForm.MealType)
+  ) {
+    dietMealTypesSet.add(recommendMealForm.MealType);
+  }
+
+  const dietMealTypes = Array.from(dietMealTypesSet);
+
+  // 🔹 Filter, sort, and paginate Recommended Meals
+  const filteredRecommendedMeals = recommendedMeals.filter((r) => {
+    const text = `${r.FoodItem ?? r.foodItem ?? ""} ${
+      r.MealType ?? r.mealType ?? ""
+    } ${r.Category ?? r.category ?? ""} ${r.Quantity ?? r.quantity ?? ""}`
+      .toLowerCase()
+      .trim();
+
+    return text.includes(recSearch.toLowerCase());
+  });
+
+  const sortedRecommendedMeals = [...filteredRecommendedMeals].sort((a, b) => {
+    let valA = "";
+    let valB = "";
+
+    switch (recSortKey) {
+      case "FoodItem":
+        valA = (a.FoodItem ?? a.foodItem ?? "").toString().toLowerCase();
+        valB = (b.FoodItem ?? b.foodItem ?? "").toString().toLowerCase();
+        break;
+      case "MealType":
+        valA = (a.MealType ?? a.mealType ?? "").toString().toLowerCase();
+        valB = (b.MealType ?? b.mealType ?? "").toString().toLowerCase();
+        break;
+      case "Category":
+        valA = (a.Category ?? a.category ?? "").toString().toLowerCase();
+        valB = (b.Category ?? b.category ?? "").toString().toLowerCase();
+        break;
+      case "Quantity":
+        valA = (a.Quantity ?? a.quantity ?? "").toString().toLowerCase();
+        valB = (b.Quantity ?? b.quantity ?? "").toString().toLowerCase();
+        break;
+      default:
+        break;
+    }
+
+    if (valA < valB) return recSortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return recSortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  const totalRecPages =
+    Math.ceil(sortedRecommendedMeals.length / recPerPage) || 1;
+
+  const paginatedRecommendedMeals = sortedRecommendedMeals.slice(
+    (recPage - 1) * recPerPage,
+    recPage * recPerPage
+  );
 
   if (loading) {
     return (
@@ -342,7 +693,11 @@ export default function DietPlanDetails() {
                 >
                   {deleteLoading ? (
                     <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
                       Deleting...
                     </>
                   ) : (
@@ -391,7 +746,11 @@ export default function DietPlanDetails() {
                       <ul className="list-unstyled">
                         {meals.map((meal, index) => (
                           <li key={index} className="mb-2">
-                            <strong>{meal.Name}:</strong> {meal.RecommendedCalories} cal, {meal.RecommendedProtein}g protein, {meal.RecommendedCarbs}g carbs, {meal.RecommendedFats}g fats
+                            <strong>{meal.Name}:</strong>{" "}
+                            {meal.RecommendedCalories} cal,{" "}
+                            {meal.RecommendedProtein}g protein,{" "}
+                            {meal.RecommendedCarbs}g carbs,{" "}
+                            {meal.RecommendedFats}g fats
                           </li>
                         ))}
                       </ul>
@@ -406,10 +765,13 @@ export default function DietPlanDetails() {
             <div className="card mb-4">
               <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Assigned Users</h5>
-                <button className="btn btn-primary btn-sm" onClick={() => {
-                  setAssignmentModalMode('assign');
-                  setShowDietPlanAssignmentModal(true);
-                }}>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => {
+                    setAssignmentModalMode("assign");
+                    setShowDietPlanAssignmentModal(true);
+                  }}
+                >
                   Assign Users
                 </button>
               </div>
@@ -525,11 +887,200 @@ export default function DietPlanDetails() {
               </div>
             </div>
 
-            {/* Meals Section */}
-           
+            {/* Recommended Meals Section */}
+            {/* Recommended Meals Section (MAIN - shows recommendations for this plan) */}
+            <div className="card mb-4">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Recommended Meals</h5>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      // ➜ reset to ADD mode
+                      setEditingRecommendationId(null);
+                      setRecommendMealForm({
+                        MealItemId: "",
+                        MealType: "",
+                        QuantityText: "",
+                        DietPlanId: planId,
+                        Category: "",
+                      });
+                      setMealSearchTerm("");
+                      setShowRecommendMealModal(true);
+                    }}
+                  >
+                    <i className="bi bi-plus-circle me-1"></i>
+                    Add Recommended Meal
+                  </button>
 
-            {/* All Meals Section */}
-           
+                  {/* <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search recommended..."
+                    value={allMealSearch}
+                    onChange={(e) => {
+                      setRecSearch(e.target.value);
+                      setRecPage(1);
+                    }}
+                    style={{ width: "200px" }}
+                  /> */}
+                </div>
+              </div>
+
+              <div className="card-body">
+                {recommendMealLoading ? (
+                  <div className="text-center">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                ) : recommendedMeals.length === 0 ? (
+                  <p>No recommended meals for this plan.</p>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-striped table-hover">
+                      <thead>
+                        <tr>
+                          <th
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setRecSortKey("FoodItem");
+                              setRecSortOrder((prev) =>
+                                recSortKey === "FoodItem" && prev === "asc"
+                                  ? "desc"
+                                  : "asc"
+                              );
+                            }}
+                          >
+                            Food Item{" "}
+                            {recSortKey === "FoodItem"
+                              ? recSortOrder === "asc"
+                                ? "↑"
+                                : "↓"
+                              : ""}
+                          </th>
+
+                          <th
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setRecSortKey("MealType");
+                              setRecSortOrder((prev) =>
+                                recSortKey === "MealType" && prev === "asc"
+                                  ? "desc"
+                                  : "asc"
+                              );
+                            }}
+                          >
+                            Meal Type{" "}
+                            {recSortKey === "MealType"
+                              ? recSortOrder === "asc"
+                                ? "↑"
+                                : "↓"
+                              : ""}
+                          </th>
+
+                          <th
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setRecSortKey("Category");
+                              setRecSortOrder((prev) =>
+                                recSortKey === "Category" && prev === "asc"
+                                  ? "desc"
+                                  : "asc"
+                              );
+                            }}
+                          >
+                            Category{" "}
+                            {recSortKey === "Category"
+                              ? recSortOrder === "asc"
+                                ? "↑"
+                                : "↓"
+                              : ""}
+                          </th>
+
+                          <th
+                            style={{ cursor: "pointer" }}
+                            onClick={() => {
+                              setRecSortKey("Quantity");
+                              setRecSortOrder((prev) =>
+                                recSortKey === "Quantity" && prev === "asc"
+                                  ? "desc"
+                                  : "asc"
+                              );
+                            }}
+                          >
+                            Quantity{" "}
+                            {recSortKey === "Quantity"
+                              ? recSortOrder === "asc"
+                                ? "↑"
+                                : "↓"
+                              : ""}
+                          </th>
+
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {paginatedRecommendedMeals.map((r, i) => (
+                          <tr
+                            key={
+                              r.Id ??
+                              r.id ??
+                              `${r.MealItemId ?? r.mealItemId ?? i}-${i}`
+                            }
+                          >
+                            <td>{r.FoodItem ?? r.foodItem ?? "—"}</td>
+                            <td>{r.MealType ?? r.mealType ?? "—"}</td>
+                            <td>{r.Category ?? r.category ?? "—"}</td>
+                            <td>{r.Quantity ?? r.quantity ?? "—"}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-warning me-2"
+                                type="button"
+                                onClick={() => handleEditRecommendationClick(r)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-sm btn-danger"
+                                type="button"
+                                onClick={() => handleDeleteRecommendation(r.Id)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="d-flex justify-content-between align-items-center mt-3">
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={() => setRecPage((p) => Math.max(p - 1, 1))}
+                        disabled={recPage === 1}
+                      >
+                        Prev
+                      </button>
+
+                      <span>
+                        Page {recPage} of {totalRecPages}
+                      </span>
+
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={() =>
+                          setRecPage((p) => (p < totalRecPages ? p + 1 : p))
+                        }
+                        disabled={recPage >= totalRecPages}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -557,6 +1108,236 @@ export default function DietPlanDetails() {
             meal={editingMeal}
             onSave={handleSaveMeal}
           />
+        )}
+
+        {/* Recommended Meals Modal */}
+        {/* Recommended Meals Modal (FORM ONLY) */}
+        {showRecommendMealModal && (
+          <div
+            className="modal fade show d-block"
+            tabIndex="-1"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    {editingRecommendationId
+                      ? "Edit Recommended Meal"
+                      : "Add Recommended Meal"}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => {
+                      setShowRecommendMealModal(false);
+                      setEditingRecommendationId(null);
+                      setMealSearchTerm(""); // 🆕
+                    }}
+                  />
+                </div>
+
+                <div className="modal-body">
+                  <form onSubmit={handleSubmitRecommendation}>
+                    <div className="row">
+                      {/* Meal (only really needed for ADD; we still show it for EDIT but not required) */}
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="MealItemId" className="form-label">
+                          Meal
+                        </label>
+
+                        {dropdownMealsLoading ? (
+                          <div className="text-center">
+                            <div
+                              className="spinner-border spinner-border-sm text-primary"
+                              role="status"
+                            >
+                              <span className="visually-hidden">
+                                Loading meals...
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* 🔎 Search box for meals */}
+                            <input
+                              type="text"
+                              className="form-control mb-2"
+                              placeholder="Search meal..."
+                              value={mealSearchTerm}
+                              disabled={!!editingRecommendationId} // 🔒 mute in EDIT mode
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setMealSearchTerm(value);
+
+                                // 🧹 If user clears the box in ADD mode, clear selected meal so dropdown shows again
+                                if (
+                                  !editingRecommendationId &&
+                                  value.trim() === ""
+                                ) {
+                                  setRecommendMealForm((prev) => ({
+                                    ...prev,
+                                    MealItemId: "",
+                                  }));
+                                }
+                              }}
+                            />
+
+                            {/* 🔻 Dropdown shows only until a meal is selected */}
+                            {!editingRecommendationId &&
+                              !recommendMealForm.MealItemId && (
+                                <select
+                                  className="form-select"
+                                  id="MealItemId"
+                                  size={5}
+                                  value={recommendMealForm.MealItemId}
+                                  onChange={(e) => {
+                                    const mealId = e.target.value;
+
+                                    // save selected meal id
+                                    setRecommendMealForm((prev) => ({
+                                      ...prev,
+                                      MealItemId: mealId,
+                                    }));
+
+                                    // find selected meal & show in search box
+                                    const selected = dropdownMeals.find(
+                                      (m) => m.Id === mealId
+                                    );
+                                    if (selected) {
+                                      setMealSearchTerm(
+                                        `${selected.FoodItem} (${selected.Quantity})`
+                                      );
+                                    }
+                                  }}
+                                  required
+                                >
+                                  <option value="">Select a meal</option>
+                                  {filteredDropdownMeals.map((meal) => (
+                                    <option key={meal.Id} value={meal.Id}>
+                                      {meal.FoodItem} ({meal.Quantity})
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                          </>
+                        )}
+                      </div>
+
+                      <div className="col-md-6 mb-3">
+                        <label htmlFor="MealType" className="form-label">
+                          Meal Type
+                        </label>
+                        <select
+                          className="form-select"
+                          id="MealType"
+                          value={recommendMealForm.MealType}
+                          onChange={(e) =>
+                            setRecommendMealForm({
+                              ...recommendMealForm,
+                              MealType: e.target.value,
+                            })
+                          }
+                          required
+                        >
+                          <option value="">Select meal type</option>
+
+                          {dietMealTypes.length === 0 ? (
+                            <option value="" disabled>
+                              No meal types defined in this plan
+                            </option>
+                          ) : (
+                            dietMealTypes.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="row">
+                      {editingRecommendationId && (
+                        <div className="col-md-6 mb-3">
+                          <label htmlFor="Category" className="form-label">
+                            Category
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="Category"
+                            // readOnly
+                            disabled
+                            value={recommendMealForm.Category}
+                            onChange={(e) =>
+                              setRecommendMealForm({
+                                ...recommendMealForm,
+                                Category: e.target.value,
+                              })
+                            }
+                            placeholder="e.g. Vegetarian"
+                          />
+                        </div>
+                      )}
+
+                      <div
+                        className={
+                          editingRecommendationId
+                            ? "col-md-6 mb-3"
+                            : "col-md-12 mb-3"
+                        }
+                      >
+                        <label htmlFor="QuantityText" className="form-label">
+                          Quantity
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="QuantityText"
+                          value={recommendMealForm.QuantityText}
+                          onChange={(e) =>
+                            setRecommendMealForm({
+                              ...recommendMealForm,
+                              QuantityText: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="d-flex justify-content-end gap-2">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => {
+                          setShowRecommendMealModal(false);
+                          setEditingRecommendationId(null);
+                          setMealSearchTerm("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={submittingRecommendation}
+                      >
+                        {submittingRecommendation
+                          ? editingRecommendationId
+                            ? "Updating..."
+                            : "Adding..."
+                          : editingRecommendationId
+                          ? "Update Recommendation"
+                          : "Add Recommendation"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

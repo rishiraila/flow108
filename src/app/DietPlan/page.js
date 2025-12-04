@@ -60,6 +60,8 @@ export default function Page() {
     useState(null);
   const [modalMode, setModalMode] = useState("assign");
 
+  const [showAddModal, setShowAddModal] = useState(false);
+
   const [stats, setStats] = useState({
     totalPlans: 0,
     totalMeals: 0,
@@ -630,6 +632,33 @@ export default function Page() {
   return (
     <div className="content-wrapper">
       <div className="container-xxl flex-grow-1 container-p-y">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h4>Diet Plan Management</h4>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setFormData({
+                Name: "",
+                Description: "",
+                Meals: [
+                  {
+                    Name: "",
+                    RecommendedCalories: 0,
+                    RecommendedProtein: 0,
+                    RecommendedCarbs: 0,
+                    RecommendedFats: 0,
+                  },
+                ],
+              });
+              setError(null);
+              setSuccess(false);
+              setShowAddModal(true);
+            }}
+          >
+            <i className="bi bi-plus-circle me-2"></i>
+            Add Plan
+          </button>
+        </div>
         <div className="row mb-6 g-6">
           {statsLoading
             ? Array.from({ length: 4 }).map((_, index) => (
@@ -708,7 +737,7 @@ export default function Page() {
               ))}
 
           {/* Diet Plans List */}
-          <div className="col-md-6">
+          <div className="col-md-12">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">Diet Plans</h5>
@@ -763,7 +792,22 @@ export default function Page() {
                       <button
                         className="btn btn-primary"
                         onClick={() => {
-                          document.getElementById("Name")?.focus();
+                          setFormData({
+                            Name: "",
+                            Description: "",
+                            Meals: [
+                              {
+                                Name: "",
+                                RecommendedCalories: 0,
+                                RecommendedProtein: 0,
+                                RecommendedCarbs: 0,
+                                RecommendedFats: 0,
+                              },
+                            ],
+                          });
+                          setError(null);
+                          setSuccess(false);
+                          setShowAddModal(true);
                         }}
                       >
                         <i className="bi bi-plus-circle me-2"></i>
@@ -776,95 +820,92 @@ export default function Page() {
                 <div className="row">
                   {!apiLoading &&
                     filteredPlans.map((plan) => (
-                      <div className="card h-100 my-2" key={plan.Id}>
-                        <div className="card-body row widget-separator">
-                          <div className="col-sm-5 border-end">
-                            <h6 className="mb-2">
-                              {plan.Name || "Unnamed Plan"}
-                            </h6>
-                            <p className="mb-2">
-                              {plan.Description || "No description available"}
-                            </p>
-                            <div className="mb-2">
-                              <strong>Meals:</strong>
-                              <ul className="list-unstyled small">
-                                {plan.Meals?.map((meal, idx) => (
-                                  <li key={idx}>
-                                    {meal.Name}: {meal.RecommendedCalories} cal
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                      <div className="col-12 col-sm-6 mb-3" key={plan.Id}>
+                        <div className="card h-100 my-2">
+                          <div className="card-body row widget-separator">
+                            <div className="col-sm-5 border-end">
+                              <h6 className="mb-2">
+                                {plan.Name || "Unnamed Plan"}
+                              </h6>
+                              <p className="mb-2">
+                                {plan.Description || "No description available"}
+                              </p>
+                              <div className="mb-2">
+                                <strong>Meals:</strong>
+                                <ul className="list-unstyled small">
+                                  {plan.Meals?.map((meal, idx) => (
+                                    <li key={idx}>
+                                      {meal.Name}: {meal.RecommendedCalories} cal
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
 
-                            {getMealTypes(plan.Meals).map((mealType) => (
-                              <span
-                                key={mealType}
-                                className="badge bg-label-primary rounded-pill me-2 mb-2"
-                              >
-                                {mealType}
-                              </span>
-                            ))}
+                              {getMealTypes(plan.Meals).map((mealType) => (
+                                <span
+                                  key={mealType}
+                                  className="badge bg-label-primary rounded-pill me-2 mb-2"
+                                >
+                                  {mealType}
+                                </span>
+                              ))}
 
-                            <p className="my-2 d-flex align-items-center gap-2">
-                              <Link
-                                href={`/DietPlan/${plan.Id}`}
-                                className="btn btn-sm btn-outline-primary"
-                              >
-                                View Plan
-                              </Link>
-                            </p>
-                            <hr className="d-sm-none" />
-                          </div>
-                          <div className="col-sm-7 g-2 text-nowrap d-flex flex-column justify-content-between px-6 gap-3">
-                            <div className="d-flex flex-column gap-2">
-                              <div className="d-flex align-items-center">
-                                <i className="bi bi-bowl-fill me-2 text-primary"></i>
-                                <span className="fw-medium">
-                                  Total Meals: {plan.Meals?.length || 0}
-                                </span>
-                              </div>
-                              <div className="d-flex align-items-center">
-                                <i className="bi bi-fire me-2 text-danger"></i>
-                                <span className="fw-medium">
-                                  Total Calories: {plan.TotalCalories || 0}
-                                </span>
-                              </div>
-                              <div className="d-flex align-items-center">
-                                <i className="bi bi-people me-2 text-info"></i>
-                                <span className="fw-medium">
-                                  Assigned Users: {plan.userCount || 0}
-                                </span>
-                              </div>
+                              <p className="my-2 d-flex align-items-center gap-2">
+                                <Link
+                                  href={`/DietPlan/${plan.Id}`}
+                                  className="btn btn-sm btn-outline-primary"
+                                >
+                                  View Plan
+                                </Link>
+                              </p>
+                              <hr className="d-sm-none" />
                             </div>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-evenly",
-                              }}
-                            >
-                              <button
-                                className="btn btn-outline-primary btn-small"
-                                onClick={() => openAssignModal(plan)}
-                              >
-                                <i
-                                  className="bi bi-person-check"
-                                  style={{ fontSize: 20 }}
-                                ></i>
-                              </button>
-                              <button
-                                className="btn btn-outline-primary"
-                                onClick={() => handleEditPlan(plan)}
-                              >
-                                <i className="bi bi-pencil-fill"></i>
-                              </button>
-                              <button
-                                className="btn btn-outline-danger delete-btn"
-                                title="Delete"
-                                onClick={() => handleDeletePlan(plan.Id)}
-                                disabled={deleteLoading}
-                              >
-                                <i className="bi bi-trash-fill"></i>
-                              </button>
+                            <div className="col-sm-7 g-2 text-nowrap d-flex flex-column justify-content-between px-6 gap-3">
+                              <div className="d-flex flex-column gap-2">
+                                <div className="d-flex align-items-center">
+                                  <i className="bi bi-bowl-fill me-2 text-primary"></i>
+                                  <span className="fw-medium">
+                                    Total Meals: {plan.Meals?.length || 0}
+                                  </span>
+                                </div>
+                                <div className="d-flex align-items-center">
+                                  <i className="bi bi-fire me-2 text-danger"></i>
+                                  <span className="fw-medium">
+                                    Total Calories: {plan.TotalCalories || 0}
+                                  </span>
+                                </div>
+                                <div className="d-flex align-items-center">
+                                  <i className="bi bi-people me-2 text-info"></i>
+                                  <span className="fw-medium">
+                                    Assigned Users: {plan.userCount || 0}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="d-flex flex-column flex-lg-row justify-content-center gap-2">
+                                <button
+                                  className="btn btn-outline-primary btn-small"
+                                  onClick={() => openAssignModal(plan)}
+                                >
+                                  <i
+                                    className="bi bi-person-check"
+                                    style={{ fontSize: 20 }}
+                                  ></i>
+                                </button>
+                                <button
+                                  className="btn btn-outline-primary"
+                                  onClick={() => handleEditPlan(plan)}
+                                >
+                                  <i className="bi bi-pencil-fill"></i>
+                                </button>
+                                <button
+                                  className="btn btn-outline-danger delete-btn"
+                                  title="Delete"
+                                  onClick={() => handleDeletePlan(plan.Id)}
+                                  disabled={deleteLoading}
+                                >
+                                  <i className="bi bi-trash-fill"></i>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -875,185 +916,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Add New Diet Plan Form */}
-          <div className="col-md-6">
-            <div className="card">
-              <div className="card-header">
-                <h5 className="mb-0">Add New Diet Plan</h5>
-              </div>
-              <div className="card-body" style={{ fontSize: "14px" }}>
-                {success && (
-                  <div className="alert alert-success" role="alert">
-                    Diet plan created successfully!
-                  </div>
-                )}
-                {error && (
-                  <div className="alert alert-danger" role="alert">
-                    {error}
-                  </div>
-                )}
-                <form onSubmit={handleSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="Name" className="form-label">
-                      Plan Name
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="Name"
-                      placeholder="Enter plan name"
-                      required
-                      value={formData.Name}
-                      onChange={handleInputChange}
-                    />
-                  </div>
 
-                  <div className="mb-3">
-                    <label htmlFor="Description" className="form-label">
-                      Description
-                    </label>
-                    <textarea
-                      className="form-control"
-                      id="Description"
-                      rows="3"
-                      placeholder="Add a brief description"
-                      required
-                      value={formData.Description}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Meals</label>
-                    {formData.Meals.map((meal, index) => (
-                      <div key={index} className="mb-3 border rounded p-3">
-                        <div className="row g-2 mb-2">
-                          <div className="col-md-4">
-                            <label className="form-label">Meal Name</label>
-                            <select
-                              className="form-select"
-                              value={meal.Name}
-                              onChange={(e) =>
-                                handleMealChange(index, "Name", e.target.value)
-                              }
-                              required
-                            >
-                              <option value="">Select meal</option>
-                              <option value="Breakfast">Breakfast</option>
-                              <option value="Lunch">Lunch</option>
-                              <option value="Snack">Snack</option>
-                              <option value="Dinner">Dinner</option>
-                            </select>
-                          </div>
-                          <div className="col-md-2">
-                            <label className="form-label">Calories</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="0"
-                              min="0"
-                              value={meal.RecommendedCalories}
-                              onChange={(e) =>
-                                handleMealChange(
-                                  index,
-                                  "RecommendedCalories",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="col-md-2 d-flex align-items-end">
-                            <label className="form-label">&nbsp;</label>
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm w-100"
-                              onClick={() => removeMeal(index)}
-                              disabled={formData.Meals.length === 1}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                        </div>
-                        <div className="row g-2">
-                          <div className="col-md-3">
-                            <label className="form-label">Protein (g)</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="0"
-                              min="0"
-                              value={meal.RecommendedProtein}
-                              onChange={(e) =>
-                                handleMealChange(
-                                  index,
-                                  "RecommendedProtein",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="col-md-3">
-                            <label className="form-label">Carbs (g)</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="0"
-                              min="0"
-                              value={meal.RecommendedCarbs}
-                              onChange={(e) =>
-                                handleMealChange(
-                                  index,
-                                  "RecommendedCarbs",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                          <div className="col-md-3">
-                            <label className="form-label">Fats (g)</label>
-                            <input
-                              type="number"
-                              className="form-control"
-                              placeholder="0"
-                              min="0"
-                              value={meal.RecommendedFats}
-                              onChange={(e) =>
-                                handleMealChange(
-                                  index,
-                                  "RecommendedFats",
-                                  e.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm mt-2"
-                      onClick={addMeal}
-                    >
-                      <i className="bi bi-plus-circle me-1"></i>
-                      Add Meal
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={loading}
-                  >
-                    {loading ? "Creating..." : "Create Plan"}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
 
           {/* Add Meal Modal */}
           {showAddMealModal && (
@@ -1417,6 +1280,200 @@ export default function Page() {
                           {editLoading ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Modal */}
+          {showAddModal && (
+            <div
+              className="modal fade show d-block"
+              tabIndex="-1"
+              role="dialog"
+              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+            >
+              <div className="modal-dialog" role="document">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h5 className="modal-title">Add New Diet Plan</h5>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={() => setShowAddModal(false)}
+                    ></button>
+                  </div>
+                  <div className="modal-body" style={{ fontSize: "14px" }}>
+                    {success && (
+                      <div className="alert alert-success" role="alert">
+                        Diet plan created successfully!
+                      </div>
+                    )}
+                    {error && (
+                      <div className="alert alert-danger" role="alert">
+                        {error}
+                      </div>
+                    )}
+                    <form onSubmit={handleSubmit}>
+                      <div className="mb-3">
+                        <label htmlFor="Name" className="form-label">
+                          Plan Name
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="Name"
+                          placeholder="Enter plan name"
+                          required
+                          value={formData.Name}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="mb-3">
+                        <label htmlFor="Description" className="form-label">
+                          Description
+                        </label>
+                        <textarea
+                          className="form-control"
+                          id="Description"
+                          rows="3"
+                          placeholder="Add a brief description"
+                          required
+                          value={formData.Description}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+
+                      <div className="mb-3">
+                        <label className="form-label">Meals</label>
+                        {formData.Meals.map((meal, index) => (
+                          <div key={index} className="mb-3 border rounded p-3">
+                            <div className="row g-2 mb-2">
+                              <div className="col-md-4">
+                                <label className="form-label">Meal Name</label>
+                                <select
+                                  className="form-select"
+                                  value={meal.Name}
+                                  onChange={(e) =>
+                                    handleMealChange(index, "Name", e.target.value)
+                                  }
+                                  required
+                                >
+                                  <option value="">Select meal</option>
+                                  <option value="Breakfast">Breakfast</option>
+                                  <option value="Lunch">Lunch</option>
+                                  <option value="Snack">Snack</option>
+                                  <option value="Dinner">Dinner</option>
+                                </select>
+                              </div>
+                              <div className="col-md-2">
+                                <label className="form-label">Calories</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedCalories}
+                                  onChange={(e) =>
+                                    handleMealChange(
+                                      index,
+                                      "RecommendedCalories",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-2 d-flex align-items-end">
+                                <label className="form-label">&nbsp;</label>
+                                <button
+                                  type="button"
+                                  className="btn btn-outline-danger btn-sm w-100"
+                                  onClick={() => removeMeal(index)}
+                                  disabled={formData.Meals.length === 1}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            <div className="row g-2">
+                              <div className="col-md-3">
+                                <label className="form-label">Protein (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedProtein}
+                                  onChange={(e) =>
+                                    handleMealChange(
+                                      index,
+                                      "RecommendedProtein",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-3">
+                                <label className="form-label">Carbs (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedCarbs}
+                                  onChange={(e) =>
+                                    handleMealChange(
+                                      index,
+                                      "RecommendedCarbs",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                              <div className="col-md-3">
+                                <label className="form-label">Fats (g)</label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="0"
+                                  min="0"
+                                  value={meal.RecommendedFats}
+                                  onChange={(e) =>
+                                    handleMealChange(
+                                      index,
+                                      "RecommendedFats",
+                                      e.target.value
+                                    )
+                                  }
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary btn-sm mt-2"
+                          onClick={addMeal}
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Add Meal
+                        </button>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={loading}
+                      >
+                        {loading ? "Creating..." : "Create Plan"}
+                      </button>
                     </form>
                   </div>
                 </div>

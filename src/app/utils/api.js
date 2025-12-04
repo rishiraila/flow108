@@ -1062,3 +1062,26 @@ export const getUserBanners = async (userId) => {
   }
 };
 
+// Recommend meal to diet plan
+export const recommendMealToDietPlan = async (mealId, mealType, quantity, dietPlanId) => {
+  try {
+    const formData = new FormData();
+    formData.append('MealItemId', mealId);
+    formData.append('MealType', mealType);
+    formData.append('QuantityText', quantity);
+    formData.append('DietPlanId', dietPlanId);
+
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/recommendations/meal`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error("Error recommending meal to diet plan:", error);
+    throw new Error(`Failed to recommend meal: ${error.message}`);
+  }
+};
+
