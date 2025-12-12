@@ -231,7 +231,7 @@ const SortableWorkoutItem = ({
                       maxHeight: "150px",
                       objectFit: "cover",
                       display: "block",
-                      margin: "0 auto", // <-- centers horizontally
+                      margin: "0 auto", // <-- centers horizontaly
                     }}
                   />
                 </div>
