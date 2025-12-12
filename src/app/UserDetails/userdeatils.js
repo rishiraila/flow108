@@ -531,7 +531,7 @@ export default function UserDetailsClient() {
 
             <hr />
 
-            {/* Stage 1 Details */}
+            {/* Stage 1 Detail */}
             <div className="mb-4">
               <h6 className="text-primary fw-bold">Stage 1: Basic Information</h6>
               <div className="row mb-3">
