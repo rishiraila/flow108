@@ -514,78 +514,114 @@ export default function UserDetailsClient() {
             </h5>
           </div>
           <div className="card-body">
-            <div className="row mb-3">
-              <div className="col-md-4 mb-2">
-                <strong>Email:</strong>
-                <p className="mb-0 text-muted">{profileData.Email}</p>
+            {/* User Identification */}
+            {/* <div className="mb-4">
+              <h6 className="text-primary fw-bold">User Identification</h6>
+              <div className="row mb-3">
+                <div className="col-md-6 mb-2">
+                  <strong>Name:</strong>
+                  <p className="mb-0 text-muted">{profileData.GivenName || 'N/A'}</p>
+                </div>
+                <div className="col-md-6 mb-2">
+                  <strong>Email:</strong>
+                  <p className="mb-0 text-muted">{profileData.Email || 'N/A'}</p>
+                </div>
               </div>
-              <div className="col-md-4 mb-2">
-                <strong>Age:</strong>
-                <p className="mb-0 text-muted">
-                  {profileData.Stage1?.Age}
-                </p>
+            </div> */}
+
+            <hr />
+
+            {/* Stage 1 Details */}
+            <div className="mb-4">
+              <h6 className="text-primary fw-bold">Stage 1: Basic Information</h6>
+              <div className="row mb-3">
+                <div className="col-md-3 mb-2">
+                  <strong>Email:</strong>
+                  <p className="mb-0 text-muted">{profileData.Email || 'N/A'}</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Age:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.Age || 'N/A'}</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Height:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.HeightCm || 'N/A'} cm</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Weight:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.WeightKg || 'N/A'} kg</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Activity Level:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.ActivityLevel || 'N/A'}</p>
+                </div>
+                 <div className="col-md-6 mb-2">
+                  <strong>Calculated Calories:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.CalculatedCalories || 'N/A'}</p>
+                </div>
               </div>
-              <div className="col-md-4 mb-2">
-                <strong>Height:</strong>
-                <p className="mb-0 text-muted">
-                  {profileData.Stage1?.HeightCm} cm
-                </p>
+              {/* <div className="row mb-3">
+                <div className="col-md-6 mb-2">
+                  <strong>Calculated Calories:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage1?.CalculatedCalories || 'N/A'}</p>
+                </div>
+              </div> */}
+            </div>
+
+            <hr />
+
+            {/* Stage 2 Details */}
+            <div className="mb-4">
+              <h6 className="text-primary fw-bold">Stage 2: Period Information</h6>
+              <div className="row mb-3">
+                <div className="col-md-3 mb-2">
+                  <strong>Last Period Date:</strong>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage2?.LastPeriodDate ? new Date(profileData.Stage2.LastPeriodDate).toLocaleDateString("en-GB") : 'N/A'}
+                  </p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Period Duration:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage2?.PeriodDurationDays || 'N/A'} days</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Cycle Duration:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage2?.CycleDurationDays || 'N/A'} days</p>
+                </div>
+                <div className="col-md-3 mb-2">
+                  <strong>Target Weight:</strong>
+                  <p className="mb-0 text-muted">{profileData.Stage2?.TargetWeight || 'N/A'} kg</p>
+                </div>
+              </div>
+              <div className="row mb-3">
+                <div className="col-md-6 mb-2">
+                  <strong>Severity:</strong>
+                  <ul className="mb-0 list-unstyled">
+                    {profileData.Stage2?.Severity?.length > 0 ? profileData.Stage2.Severity.map((s, i) => (
+                      <li key={i} className="mb-1">
+                        <span className="badge bg-danger">{s}</span>
+                      </li>
+                    )) : <li className="text-muted">N/A</li>}
+                  </ul>
+                </div>
               </div>
             </div>
 
             <hr />
 
-            <div className="row mb-3">
-              <div className="col-md-4 mb-2">
-                <strong>Initial Weight:</strong>
-                <p className="mb-0 text-muted">
-                  {profileData.Stage1?.WeightKg} kg
-                </p>
-              </div>
-              <div className="col-md-4 mb-2">
-                <strong>Last Period Date:</strong>
-                <p className="mb-0 text-muted">
-                  {new Date(
-                    profileData.Stage2?.LastPeriodDate
-                  ).toLocaleDateString("en-GB")}
-                </p>
-              </div>
-              <div className="col-md-4 mb-2">
-                <strong>Cycle Duration:</strong>
-                <p className="mb-0 text-muted">
-                  {profileData.Stage2?.CycleDurationDays} days
-                </p>
-              </div>
-            </div>
-
-            <hr />
-
-            <div className="row mb-3">
-              <div className="col-md-4 mb-2">
-                <strong>Period Length:</strong>
-                <p className="mb-0 text-muted">
-                  {profileData.Stage2?.PeriodDurationDays} days
-                </p>
-              </div>
-              <div className="col-md-4 mb-2">
-                <strong>Severity:</strong>
-                <ul className="mb-0 list-unstyled">
-                  {profileData.Stage2?.Severity?.map((s, i) => (
-                    <li key={i} className="mb-1">
-                      <span className="badge bg-danger">{s}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="col-md-4 mb-2">
-                <strong>Goals:</strong>
-                <div>
-                  {profileData.Stage3?.Goal?.map((goal, i) => (
-                    <span key={i} className="">
-                      <li key={i}>{goal}</li>
-                    </span>
-                  ))}
+            {/* Stage 3 Details */}
+            <div className="mb-4">
+              <h6 className="text-primary fw-bold">Stage 3: Goals</h6>
+              <div className="row mb-3">
+                <div className="col-md-12 mb-2">
+                  <strong>Goals:</strong>
+                  <div>
+                    {profileData.Stage3?.Goal?.length > 0 ? profileData.Stage3.Goal.map((goal, i) => (
+                      <span key={i} className="me-2 mb-1 d-inline-block">
+                        <span className="badge bg-success">{goal}</span>
+                      </span>
+                    )) : <span className="text-muted">N/A</span>}
+                  </div>
                 </div>
               </div>
             </div>

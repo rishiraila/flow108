@@ -69,7 +69,8 @@ export default function WorkoutsPage() {
     Title: "",
     Time: "",
     Format: "",
-    Image: ""
+    Image: "",
+    RestSeconds: 30
   });
 
   // Styled alert states
@@ -153,7 +154,8 @@ export default function WorkoutsPage() {
           Title: "",
           Time: "",
           Format: "",
-          Image: ""
+          Image: "",
+          RestSeconds: 30
         });
         
         // Force a complete refresh by resetting state and re-fetching
@@ -399,6 +401,20 @@ export default function WorkoutsPage() {
                   </div>
 
                   <div className="mb-3">
+                    <label className="form-label">Rest Seconds</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      name="RestSeconds"
+                      value={newWorkout.RestSeconds}
+                      onChange={handleInputChange}
+                      placeholder="30"
+                      min="0"
+                    />
+                    <div className="form-text">Enter the rest time in seconds between exercises</div>
+                  </div>
+
+                  <div className="mb-3">
                     <label className="form-label">Workout Image/Video/Audio</label>
                     <div className="card">
                       <div className="card-body text-center">
@@ -521,6 +537,20 @@ export default function WorkoutsPage() {
                   </div>
 
                   <div className="mb-3">
+                    <label className="form-label">Rest Seconds</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      name="RestSeconds"
+                      value={editingWorkout?.RestSeconds || 30}
+                      onChange={handleEditInputChange}
+                      placeholder="30"
+                      min="0"
+                    />
+                    <div className="form-text">Enter the rest time in seconds between exercises</div>
+                  </div>
+
+                  <div className="mb-3">
                     <label className="form-label">Workout Image/Video</label>
                     <div className="card">
                       <div className="card-body text-center">
@@ -623,6 +653,10 @@ export default function WorkoutsPage() {
                       <span className="badge bg-label-info ms-2">
                         {selectedWorkout.Format}
                       </span>
+                    </div>
+
+                    <div className="mb-3">
+                      <strong>Rest Seconds:</strong> {selectedWorkout.RestSeconds}
                     </div>
                   </div>
                 </div>

@@ -3,8 +3,29 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
-import { removeWorkoutFromPlan, fetchAllWorkoutUserAssignments, fetchUserProfile, updateWorkout } from "../utils/api";
+import {
+  removeWorkoutFromPlan,
+  fetchAllWorkoutUserAssignments,
+  fetchUserProfile,
+  updateWorkout,
+} from "../utils/api";
 import { getImageUrl, isVideoFile } from "../utils/imageUtils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // MediaDisplay component to handle both images and videos
 const MediaDisplay = ({ src, alt, className, style, onError }) => {
@@ -32,10 +53,201 @@ const MediaDisplay = ({ src, alt, className, style, onError }) => {
       alt={alt}
       style={style}
       onError={(e) => {
-        e.target.src = getImageUrl('');
+        e.target.src = getImageUrl("");
         if (onError) onError(e);
       }}
     />
+  );
+};
+
+// SortableWorkoutItem component for drag-and-drop functionality
+const SortableWorkoutItem = ({
+  workout,
+  index,
+  editIndex,
+  setEditIndex,
+  handleWorkoutChange,
+  handleSaveWorkout,
+  handleDeleteWorkout,
+  removeWorkoutFromPlan,
+  workoutPlan,
+  setEditableWorkouts,
+  editableWorkouts,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: workout.WorkoutId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="col-md-4 mb-4">
+      <div className="card h-100">
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-start">
+            <div className="d-flex align-items-center">
+              <div
+                {...attributes}
+                {...listeners}
+                className="me-2"
+                style={{ cursor: "grab", fontSize: "1.2rem" }}
+              >
+                <i className="ri-draggable"></i>
+              </div>
+
+              <div>
+                <h6 className="card-title mb-1">
+                  #{index + 1} – {workout.WorkoutName}
+                </h6>
+
+                {/* Time just below workout name, only in view mode */}
+                {editIndex !== index && (
+                  <small className="text-muted d-block">
+                    {workout.Time || workout.Format}
+                  </small>
+                )}
+              </div>
+            </div>
+
+            <div className="dropdown">
+              <button
+                className="btn btn-sm btn-icon dropdown-toggle hide-arrow"
+                data-bs-toggle="dropdown"
+              >
+                <i className="ri-more-2-fill"></i>
+              </button>
+              <ul className="dropdown-menu">
+                <li>
+                  <button
+                    className="dropdown-item"
+                    onClick={() => setEditIndex(index)}
+                  >
+                    ✏️ Edit
+                  </button>
+                </li>
+
+                <li>
+                  <button
+                    className="dropdown-item text-danger"
+                    onClick={async () => {
+                      if (
+                        window.confirm(
+                          "Are you sure you want to remove this workout from the plan?"
+                        )
+                      ) {
+                        try {
+                          await removeWorkoutFromPlan(
+                            workoutPlan.PlanId,
+                            workout.WorkoutId
+                          );
+                          alert("Workout removed from plan successfully");
+                          // Update UI after removal
+                          setEditableWorkouts((prev) =>
+                            prev.filter(
+                              (w) => w.WorkoutId !== workout.WorkoutId
+                            )
+                          );
+                        } catch (error) {
+                          alert(
+                            "Failed to remove workout from plan: " +
+                              error.message
+                          );
+                        }
+                      }
+                    }}
+                  >
+                    🛑 Remove from Plan
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {editIndex === index ? (
+            <>
+              <input
+                type="text"
+                className="form-control mb-2"
+                placeholder="Workout Name"
+                value={workout.WorkoutName}
+                onChange={(e) =>
+                  handleWorkoutChange(index, "WorkoutName", e.target.value)
+                }
+              />
+              <input
+                type="text"
+                className="form-control mb-2"
+                placeholder="Time (e.g., 30 mins)"
+                value={workout.Time}
+                onChange={(e) =>
+                  handleWorkoutChange(index, "Time", e.target.value)
+                }
+              />
+              <input
+                type="text"
+                className="form-control mb-2"
+                placeholder="Format"
+                value={workout.Format}
+                onChange={(e) =>
+                  handleWorkoutChange(index, "Format", e.target.value)
+                }
+              />
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-success btn-sm"
+                  onClick={() => handleSaveWorkout(workout)}
+                >
+                  Save
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setEditIndex(null)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* <small className="text-muted">
+                {workout.Time || workout.Format}
+              </small> */}
+              {workout.Image && (
+                <div className="text-center">
+                  <MediaDisplay
+                    src={workout.Image}
+                    alt={workout.WorkoutName}
+                    className="img-fluid rounded"
+                    style={{
+                      maxHeight: "150px",
+                      objectFit: "cover",
+                      display: "block",
+                      margin: "0 auto", // <-- centers horizontally
+                    }}
+                  />
+                </div>
+              )}
+
+              {workout.Audio && (
+                <audio controls className="w-100 mb-2">
+                  <source src={getImageUrl(workout.Audio)} type="audio/mpeg" />
+                  Your browser does not support the audio element.
+                </audio>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -69,6 +281,41 @@ function WorkoutDetailsContent() {
   const searchParams = useSearchParams();
   const workoutId = searchParams.get("workoutId");
 
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Function to handle drag end
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    // Safety check
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = editableWorkouts.findIndex(
+      (workout) => workout.WorkoutId === active.id
+    );
+    const newIndex = editableWorkouts.findIndex(
+      (workout) => workout.WorkoutId === over.id
+    );
+
+    const newWorkouts = arrayMove(editableWorkouts, oldIndex, newIndex);
+    setEditableWorkouts(newWorkouts);
+
+    // 🔽 Save the new order to backend
+    try {
+      await saveWorkoutOrder(newWorkouts);
+      console.log("Workout order saved successfully");
+    } catch (err) {
+      console.error("Failed to save workout order:", err);
+      alert("Failed to save workout order: " + err.message);
+    }
+  };
+
   useEffect(() => {
     if (workoutId) {
       fetchWorkoutDetails();
@@ -92,7 +339,17 @@ function WorkoutDetailsContent() {
       const data = await response.json();
 
       setWorkoutPlan(data.data);
-      setEditableWorkouts(data.data.Workouts || []);
+
+      const workouts = data.data.Workouts || [];
+
+      // 🔽 Sort by Order so UI matches backend sequence
+      const sorted = [...workouts].sort((a, b) => {
+        const aOrder = a.Order ?? 0;
+        const bOrder = b.Order ?? 0;
+        return aOrder - bOrder;
+      });
+
+      setEditableWorkouts(sorted);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -135,9 +392,34 @@ function WorkoutDetailsContent() {
       alert("Error updating workout: " + err.message);
     }
   };
+  // Save the order/sequence of workouts to backend
+  const saveWorkoutOrder = async (workoutsInNewOrder) => {
+    // Build payload: each workout gets an Order number (1, 2, 3, ...)
+    const payload = workoutsInNewOrder.map((w, index) => ({
+      WorkoutId: w.WorkoutId,
+      Order: index + 1, // << important: backend expects "Order"
+    }));
+
+    const response = await fetch(
+      `https://flow108.coinagesoft.com/api/admin/workout-plans/${workoutId}/assign-workout`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          accept: "*/*",
+        },
+        body: JSON.stringify({ Workouts: payload }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to save workout sequence");
+    }
+  };
 
   const handleDeleteWorkout = async (workoutId) => {
-    if (!window.confirm("Are you sure you want to delete this workout?")) return;
+    if (!window.confirm("Are you sure you want to delete this workout?"))
+      return;
 
     try {
       const response = await fetch(
@@ -155,7 +437,9 @@ function WorkoutDetailsContent() {
       const result = await response.json();
       alert(result.message || "Workout deleted successfully");
 
-      const updatedWorkouts = editableWorkouts.filter((workout) => workout.WorkoutId !== workoutId);
+      const updatedWorkouts = editableWorkouts.filter(
+        (workout) => workout.WorkoutId !== workoutId
+      );
       setEditableWorkouts(updatedWorkouts);
 
       fetchWorkoutDetails();
@@ -251,12 +535,12 @@ function WorkoutDetailsContent() {
     try {
       setUsersLoading(true);
       const assignments = await fetchAllWorkoutUserAssignments();
-      
+
       // Filter assignments for this specific workout plan
       const planAssignments = assignments.filter(
-        assignment => assignment.WorkoutPlanId === workoutId
+        (assignment) => assignment.WorkoutPlanId === workoutId
       );
-      
+
       // Fetch user profiles for each assignment
       const usersWithProfiles = await Promise.all(
         planAssignments.map(async (assignment) => {
@@ -265,19 +549,23 @@ function WorkoutDetailsContent() {
             return {
               ...assignment,
               userName: profile.name,
-              userAvatar: profile.avatar
+              userAvatar: profile.avatar,
             };
           } catch (error) {
-            console.error(`Error fetching profile for user ${assignment.UserId}:`, error);
+            console.error(
+              `Error fetching profile for user ${assignment.UserId}:`,
+              error
+            );
             return {
               ...assignment,
               userName: "Unknown User",
-              userAvatar: "https://ui-avatars.com/api/?name=Unknown&background=random"
+              userAvatar:
+                "https://ui-avatars.com/api/?name=Unknown&background=random",
             };
           }
         })
       );
-      
+
       setAssignedUsers(usersWithProfiles);
     } catch (error) {
       console.error("Error fetching assigned users:", error);
@@ -295,7 +583,12 @@ function WorkoutDetailsContent() {
 
   // Function to unassign user from workout plan
   const handleUnassignUser = async (userId, planId) => {
-    if (!window.confirm("Are you sure you want to unassign this user from the workout plan?")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to unassign this user from the workout plan?"
+      )
+    )
+      return;
 
     try {
       const response = await fetch(
@@ -314,7 +607,9 @@ function WorkoutDetailsContent() {
       alert(result.message || "User unassigned successfully");
 
       // Remove the user from the assignedUsers state to update UI immediately
-      setAssignedUsers((prevUsers) => prevUsers.filter(user => user.UserId !== userId));
+      setAssignedUsers((prevUsers) =>
+        prevUsers.filter((user) => user.UserId !== userId)
+      );
 
       // Refresh the assigned users list from server to ensure consistency
       await fetchAssignedUsers();
@@ -341,7 +636,12 @@ function WorkoutDetailsContent() {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to unassign ${selectedUsers.length} user(s) from the workout plan?`)) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to unassign ${selectedUsers.length} user(s) from the workout plan?`
+      )
+    )
+      return;
 
     setUnassignLoading(true);
     try {
@@ -364,7 +664,9 @@ function WorkoutDetailsContent() {
       alert(`${selectedUsers.length} user(s) unassigned successfully`);
 
       // Remove the users from the assignedUsers state to update UI immediately
-      setAssignedUsers((prevUsers) => prevUsers.filter(user => !selectedUsers.includes(user.UserId)));
+      setAssignedUsers((prevUsers) =>
+        prevUsers.filter((user) => !selectedUsers.includes(user.UserId))
+      );
 
       // Clear selection
       setSelectedUsers([]);
@@ -399,7 +701,9 @@ function WorkoutDetailsContent() {
   if (!workoutPlan) {
     return (
       <div className="container-xxl flex-grow-1 container-p-y">
-        <div className="alert alert-warning">No workout plan details found.</div>
+        <div className="alert alert-warning">
+          No workout plan details found.
+        </div>
       </div>
     );
   }
@@ -436,150 +740,38 @@ function WorkoutDetailsContent() {
               >
                 <i className="ri-link me-1"></i> Assign Existing Workout
               </button>
-             
             </div>
           </div>
           <div className="card-body">
-            <div className="row">
-              {editableWorkouts.map((workout, index) => (
-                <div className="col-md-4 mb-4" key={workout.WorkoutId}>
-                  <div className="card h-100">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start">
-                        <h6 className="card-title mb-1">{workout.WorkoutName}</h6>
-                        <div className="dropdown">
-                          <button
-                            className="btn btn-sm btn-icon dropdown-toggle hide-arrow"
-                            data-bs-toggle="dropdown"
-                          >
-                            <i className="ri-more-2-fill"></i>
-                          </button>
-                          <ul className="dropdown-menu">
-                            <li>
-                              <button
-                                className="dropdown-item"
-                                onClick={() => setEditIndex(index)}
-                              >
-                                ✏️ Edit
-                              </button>
-                            </li>
-                            
-                            <li>
-                              <button
-                                className="dropdown-item text-danger"
-                                onClick={async () => {
-                                  if (
-                                    window.confirm(
-                                      "Are you sure you want to remove this workout from the plan?"
-                                    )
-                                  ) {
-                                    try {
-                                      await removeWorkoutFromPlan(workoutPlan.PlanId, workout.WorkoutId);
-                                      alert("Workout removed from plan successfully");
-                                      // Update UI after removal
-                                      setEditableWorkouts((prev) =>
-                                        prev.filter((w) => w.WorkoutId !== workout.WorkoutId)
-                                      );
-                                    } catch (error) {
-                                      alert("Failed to remove workout from plan: " + error.message);
-                                    }
-                                  }
-                                }}
-                              >
-                                🛑 Remove from Plan
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-
-                      {editIndex === index ? (
-                        <>
-                          <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="Workout Name"
-                            value={workout.WorkoutName}
-                            onChange={(e) =>
-                              handleWorkoutChange(index, "WorkoutName", e.target.value)
-                            }
-                          />
-                          <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="Time (e.g., 30 mins)"
-                            value={workout.Time}
-                            onChange={(e) =>
-                              handleWorkoutChange(
-                                index,
-                                "Time",
-                                e.target.value
-                              )
-                            }
-                          />
-                          <input
-                            type="text"
-                            className="form-control mb-2"
-                            placeholder="Format"
-                            value={workout.Format}
-                            onChange={(e) =>
-                              handleWorkoutChange(
-                                index,
-                                "Format",
-                                e.target.value
-                              )
-                            }
-                          />
-                          <div className="d-flex gap-2">
-                            <button
-                              className="btn btn-success btn-sm"
-                              onClick={() => handleSaveWorkout(workout)}
-                            >
-                              Save
-                            </button>
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => setEditIndex(null)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <small className="text-muted">
-                            {workout.Time || workout.Format}
-                          </small>
-                          {workout.Image && (
-                            <MediaDisplay
-                              src={workout.Image}
-                              alt={workout.WorkoutName}
-                              className="img-fluid rounded mb-2"
-                              style={{
-                                maxHeight: "150px",
-                                objectFit: "cover",
-                              }}
-                              onError={(e) => {
-                                e.target.src = getImageUrl('');
-                              }}
-                            />
-                          )}
-                          {workout.Audio && (
-                            <audio
-                              controls
-                              className="w-100 mb-2"
-                            >
-                              <source src={getImageUrl(workout.Audio)} type="audio/mpeg" />
-                              Your browser does not support the audio element.
-                            </audio>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={editableWorkouts.map((workout) => workout.WorkoutId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="row">
+                  {editableWorkouts.map((workout, index) => (
+                    <SortableWorkoutItem
+                      key={workout.WorkoutId}
+                      workout={workout}
+                      index={index}
+                      editIndex={editIndex}
+                      setEditIndex={setEditIndex}
+                      handleWorkoutChange={handleWorkoutChange}
+                      handleSaveWorkout={handleSaveWorkout}
+                      handleDeleteWorkout={handleDeleteWorkout}
+                      removeWorkoutFromPlan={removeWorkoutFromPlan}
+                      workoutPlan={workoutPlan}
+                      setEditableWorkouts={setEditableWorkouts}
+                      editableWorkouts={editableWorkouts}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
         </div>
 
@@ -609,7 +801,10 @@ function WorkoutDetailsContent() {
                   placeholder="Workout Name"
                   value={newWorkout.WorkoutName}
                   onChange={(e) =>
-                    setNewWorkout({ ...newWorkout, WorkoutName: e.target.value })
+                    setNewWorkout({
+                      ...newWorkout,
+                      WorkoutName: e.target.value,
+                    })
                   }
                 />
                 <div className="row">
@@ -668,10 +863,7 @@ function WorkoutDetailsContent() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button
-                  className="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
+                <button className="btn btn-secondary" data-bs-dismiss="modal">
                   Cancel
                 </button>
                 <button
@@ -702,15 +894,22 @@ function WorkoutDetailsContent() {
           planId={workoutId}
           workouts={allWorkouts}
           onWorkoutAssigned={handleWorkoutAssigned}
+          existingPlanWorkouts={editableWorkouts}
         />
 
         {/* Assigned Users Modal */}
         {showUsersModal && (
-          <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1">
+          <div
+            className="modal fade show"
+            style={{ display: "block" }}
+            tabIndex="-1"
+          >
             <div className="modal-dialog modal-lg">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">Users Assigned to {workoutPlan.PlanName}</h5>
+                  <h5 className="modal-title">
+                    Users Assigned to {workoutPlan.PlanName}
+                  </h5>
                   <button
                     type="button"
                     className="btn-close"
@@ -721,15 +920,23 @@ function WorkoutDetailsContent() {
                 <div className="modal-body">
                   {usersLoading ? (
                     <div className="text-center">
-                      <div className="spinner-border text-primary" role="status">
+                      <div
+                        className="spinner-border text-primary"
+                        role="status"
+                      >
                         <span className="visually-hidden">Loading...</span>
                       </div>
                       <p className="mt-2">Loading assigned users...</p>
                     </div>
                   ) : assignedUsers.length === 0 ? (
                     <div className="text-center text-muted">
-                      <i className="ri-user-unfollow-line" style={{ fontSize: '3rem' }}></i>
-                      <p className="mt-2">No users assigned to this workout plan yet.</p>
+                      <i
+                        className="ri-user-unfollow-line"
+                        style={{ fontSize: "3rem" }}
+                      ></i>
+                      <p className="mt-2">
+                        No users assigned to this workout plan yet.
+                      </p>
                     </div>
                   ) : (
                     <div className="table-responsive">
@@ -739,10 +946,16 @@ function WorkoutDetailsContent() {
                             <th>
                               <input
                                 type="checkbox"
-                                checked={selectedUsers.length === assignedUsers.length && assignedUsers.length > 0}
+                                checked={
+                                  selectedUsers.length ===
+                                    assignedUsers.length &&
+                                  assignedUsers.length > 0
+                                }
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedUsers(assignedUsers.map((u) => u.UserId));
+                                    setSelectedUsers(
+                                      assignedUsers.map((u) => u.UserId)
+                                    );
                                   } else {
                                     setSelectedUsers([]);
                                   }
@@ -762,7 +975,9 @@ function WorkoutDetailsContent() {
                                 <input
                                   type="checkbox"
                                   checked={selectedUsers.includes(user.UserId)}
-                                  onChange={() => toggleUserSelection(user.UserId)}
+                                  onChange={() =>
+                                    toggleUserSelection(user.UserId)
+                                  }
                                 />
                               </td>
                               <td>
@@ -771,29 +986,46 @@ function WorkoutDetailsContent() {
                                     src={getImageUrl(user.userAvatar)}
                                     alt={user.userName}
                                     className="rounded-circle me-2"
-                                    style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+                                    style={{
+                                      width: "32px",
+                                      height: "32px",
+                                      objectFit: "cover",
+                                    }}
                                   />
                                   <div>
-                                    <div className="fw-semibold">{user.userName}</div>
-                                    <small className="text-muted">Email: {user.userEmail || user.UserId}</small>
+                                    <div className="fw-semibold">
+                                      {user.userName}
+                                    </div>
+                                    <small className="text-muted">
+                                      Email: {user.userEmail || user.UserId}
+                                    </small>
                                   </div>
                                 </div>
                               </td>
                               <td>
-                                {new Date(user.AssignedDate).toLocaleDateString()}
+                                {new Date(
+                                  user.AssignedDate
+                                ).toLocaleDateString()}
                               </td>
                               <td>
-                                <span className={`badge bg-${
-                                  user.Status === 'Active' ? 'success' :
-                                  user.Status === 'Completed' ? 'primary' : 'secondary'
-                                }`}>
-                                  {user.Status || 'Active'}
+                                <span
+                                  className={`badge bg-${
+                                    user.Status === "Active"
+                                      ? "success"
+                                      : user.Status === "Completed"
+                                      ? "primary"
+                                      : "secondary"
+                                  }`}
+                                >
+                                  {user.Status || "Active"}
                                 </span>
                               </td>
                               <td>
                                 <button
                                   className="btn btn-sm btn-danger"
-                                  onClick={() => handleUnassignUser(user.UserId, workoutId)}
+                                  onClick={() =>
+                                    handleUnassignUser(user.UserId, workoutId)
+                                  }
                                 >
                                   Unassign
                                 </button>
@@ -814,7 +1046,11 @@ function WorkoutDetailsContent() {
                     >
                       {unassignLoading ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
                           Unassigning...
                         </>
                       ) : (
@@ -839,9 +1075,7 @@ function WorkoutDetailsContent() {
         )}
 
         {/* Modal backdrop */}
-        {showUsersModal && (
-          <div className="modal-backdrop fade show"></div>
-        )}
+        {showUsersModal && <div className="modal-backdrop fade show"></div>}
       </div>
     </div>
   );
@@ -850,13 +1084,15 @@ function WorkoutDetailsContent() {
 // Main page component with Suspense boundary
 export default function WorkoutDetailsPage() {
   return (
-    <Suspense fallback={
-      <div className="container-xxl flex-grow-1 container-p-y text-center">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
+    <Suspense
+      fallback={
+        <div className="container-xxl flex-grow-1 container-p-y text-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <WorkoutDetailsContent />
     </Suspense>
   );
