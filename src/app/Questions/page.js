@@ -100,7 +100,7 @@ export default function QuestionsPage() {
   const [newQuestion, setNewQuestion] = useState({
     Content: "",
     IsAnonymous: false,
-    Visibility: 0,
+    Visibility: 1,
     ViewCount: 0,
     LikeCount: 0,
     UserId: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
@@ -531,12 +531,12 @@ export default function QuestionsPage() {
                           <div className="mt-2">
                             <span
                               className={`badge ${
-                                question.Visibility === 0
+                                question.Visibility === "Public"
                                   ? "bg-success"
                                   : "bg-secondary"
                               }`}
                             >
-                              {question.Visibility === 0 ? "Public" : "Private"}
+                              {question.Visibility}
                             </span>
                             {/* <span
                               className={`badge ms-2 ${
@@ -819,8 +819,8 @@ export default function QuestionsPage() {
                           })
                         }
                       >
-                        <option value={0}>Public</option>
-                        <option value={1}>Private</option>
+                        <option value={1}>Public</option>
+                        <option value={0}>Private</option>
                       </select>
                     </div>
 

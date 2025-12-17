@@ -401,7 +401,10 @@ export default function UserDetailsClient() {
   const fetchProfileData = async (uid) => {
     try {
       const res = await fetch(
-        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users"
+        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users",
+        {
+          cache: 'no-cache'
+        }
       );
       const allUsers = await res.json();
       const profile = allUsers.find((user) => user.UserId === uid);
@@ -501,7 +504,21 @@ export default function UserDetailsClient() {
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const approxCycleDuration = 28;
+  const approxCycleDuration = 8;
+
+  // Check if periods are consecutive
+  const isConsecutivePeriods = useMemo(() => {
+    if (!periodData || periodData.length < 2) return false;
+    const sorted = [...periodData].sort((a, b) => new Date(a.StartDate) - new Date(b.StartDate));
+    for (let i = 1; i < sorted.length; i++) {
+      const prevDate = new Date(sorted[i - 1].StartDate);
+      const currDate = new Date(sorted[i].StartDate);
+      const diffTime = Math.abs(currDate - prevDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays !== 1) return false;
+    }
+    return true;
+  }, [periodData]);
 
   return (
     <div className="container-xxl flex-grow-1 container-p-y">
@@ -843,9 +860,9 @@ export default function UserDetailsClient() {
             <tbody>
               {paginatedData.map((item, index) => {
                 const daysSinceStart = calculateDuration(item.StartDate);
-                const currentCycles = Math.floor(
-                  daysSinceStart / approxCycleDuration
-                );
+                const currentCycles = isConsecutivePeriods
+                  ? 1
+                  : Math.floor(daysSinceStart / approxCycleDuration);
                 const currentCycleDuration =
                   daysSinceStart % approxCycleDuration;
                 const formattedDate = new Date(
@@ -1206,7 +1223,7 @@ export default function UserDetailsClient() {
       {/* <!-- workout insight table --> */}
       <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4 className="mb-0 fw-bold text-dark">User Workout Table</h4>
+          <h4 className="mb-0 fw-bold text-dark">Assigned workouts</h4>
         </div>
 
         <div className="table-responsive">

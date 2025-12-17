@@ -199,17 +199,26 @@ export const dietPlanApi = {
     return handleApiResponse(response);
   },
   
- delete: async (planId) => {
-  console.log("🧹 Deleting plan:", planId);
-  const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
-    method: 'DELETE'
-  });
-  console.log("🧹 Delete raw response:", response);
-  if (response === null || response === undefined) {
-    return { Status: true, Message: 'Diet plan deleted successfully' };
+  delete: async (planId) => {
+    console.log("🧹 Deleting plan:", planId);
+    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
+      method: 'DELETE'
+    });
+    console.log("🧹 Delete raw response:", response);
+
+    // For delete operations, the API returns the response directly (not wrapped in Data)
+    if (response && typeof response === 'object' && response.Status !== undefined) {
+      return response; // Return the response as-is since it has Status and Message
+    }
+
+    // Fallback for unexpected responses
+    if (response === null || response === undefined) {
+      return { Status: true, Message: 'Diet plan deleted successfully' };
+    }
+
+    // Try handleApiResponse as last resort
+    return handleApiResponse(response);
   }
-  return handleApiResponse(response);
-}
 
 };
 

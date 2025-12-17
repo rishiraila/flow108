@@ -135,7 +135,6 @@ export default function Page() {
     const method = isEditing ? "PATCH" : "POST";
     const body = isEditing
       ? {
-          OID: "1",
           Email: newUser.Email,
           Name: newUser.Name,
           GivenName: newUser.GivenName,
@@ -164,7 +163,9 @@ export default function Page() {
         body: JSON.stringify(body),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.Status === true) {
         alert(
           isEditing ? "User updated successfully." : "User added successfully."
         );
@@ -185,8 +186,7 @@ export default function Page() {
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
       } else {
-        const err = await res.json();
-        alert(err.message || "Failed to save user.");
+        alert(data.Message || "Failed to save user.");
       }
     } catch (err) {
       console.error("Submit error:", err);
@@ -376,9 +376,7 @@ export default function Page() {
                 <table className="table table-bordered table-striped">
                   <thead className="table-primary">
                     <tr>
-                      <th>
-                        <input type="checkbox" />
-                      </th>
+                      <th>Sr No</th>
                       <th
                         onClick={() => handleSort("Name")}
                         style={{ cursor: "pointer" }}
@@ -409,9 +407,7 @@ export default function Page() {
                   <tbody>
                     {currentUsers.map((user, index) => (
                       <tr key={index}>
-                        <td>
-                          <input type="checkbox" />
-                        </td>
+                        <td>{indexOfFirstUser + index + 1}</td>
                         <td>{user.Name}</td>
                         <td>{user.Email}</td>
                         {/* <td>{user.Plan || "Flow Plan"}</td> */}
@@ -442,11 +438,13 @@ export default function Page() {
                           )}
                         </td> */}
                         <td>
-                          <a href={`/UserDetails?id=${user.Id}`}>
-                            <button className="btn btn-sm btn-outline-success me-1">
-                              <i className="bi bi-bar-chart-fill"></i>
-                            </button>
-                          </a>
+                          {view !== "requestApproval" && (
+                            <a href={`/UserDetails?id=${user.Id}`}>
+                              <button className="btn btn-sm btn-outline-success me-1">
+                                <i className="bi bi-bar-chart-fill"></i>
+                              </button>
+                            </a>
+                          )}
 
                           <button
                             className="btn btn-sm btn-outline-primary me-1"

@@ -14,6 +14,7 @@ export default function ExercisePage() {
   const { showConfirm } = useConfirm();
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [assignWorkoutId, setAssignWorkoutId] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -40,11 +41,15 @@ export default function ExercisePage() {
     Intensity: "None"
   });
 
-  // Filter workout plans based on search
+  // Filter workout plans based on search and category
   const filteredPlans = workoutPlans.filter(
-    (plan) =>
-      plan.Name?.toLowerCase().includes(search.toLowerCase()) ||
-      plan.Description?.toLowerCase().includes(search.toLowerCase())
+    (plan) => {
+      const matchesSearch =
+        plan.Name?.toLowerCase().includes(search.toLowerCase()) ||
+        plan.Description?.toLowerCase().includes(search.toLowerCase());
+      const matchesCategory = categoryFilter === "" || plan.Category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    }
   );
 
   const itemsPerPage = 10;
@@ -334,15 +339,27 @@ export default function ExercisePage() {
               <div className="row">
                 <div className="col-md-8 mb-4 mb-xl-0">
                   <h4>Workout Plans</h4>
-                  <div className="input-group mb-3" style={{ maxWidth: '300px' }}>
-                    <span className="input-group-text"><i className="ri-search-line"></i></span>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Search workout plans..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
+                  <div className="d-flex gap-3 mb-3" style={{ maxWidth: '600px' }}>
+                    <div className="input-group" style={{ maxWidth: '300px' }}>
+                      <span className="input-group-text"><i className="ri-search-line"></i></span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Search workout plans..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="form-select"
+                      style={{ maxWidth: '200px' }}
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                    >
+                      <option value="">All Categories</option>
+                      <option value="Mind">Mind</option>
+                      <option value="Body">Body</option>
+                    </select>
                   </div>
                   <ul className="list-group">
                     {paginatedWorkoutPlans.map((workout) => (

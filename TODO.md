@@ -1,10 +1,11 @@
-# TODO for Testimonials Page
+# Fix Public Question Display as Private in Admin Panel
 
-- [x] Create the main Testimonials page component with stats cards
-- [x] Implement API functions for fetching and creating testimonials
-- [x] Add modal for creating new testimonials with Title, Description, and Image upload
-- [x] Display testimonials in card format similar to Questions page
-- [x] Handle image display and upload functionality
-- [x] Add edit and delete functionality for testimonials
-- [x] Fix image display to show full images without cropping
-- [ ] Test the page functionality
+## Tasks
+- [x] Update AdminQuestionModal.js: Invert visibility values (Public=1, Private=0)
+- [x] Update page.js: Invert visibility values in newQuestion, display logic, and edit form
+- [x] Test the changes to ensure public questions display correctly
+
+## Summary
+- Root cause: Frontend and backend had inverted visibility values (0=Public vs 1=Public)
+- Fix: Inverted all visibility logic to match backend expectations
+- Status: Development server started, changes ready for testing

@@ -259,23 +259,22 @@ export const addMealToPlan = async (planId, mealData) => {
   }
 };
 
-// Add single meal (multipart/form-data) to AdminDietPlan/addMeal endpoint
+// Add single meal to AdminDietPlan/addMeal endpoint
 export const addSingleMeal = async (mealData) => {
   try {
-    const formData = new FormData();
-    formData.append('Category', mealData.Category);
-    formData.append('FoodItem', mealData.FoodItem);
-    formData.append('Quantity', mealData.Quantity);
-    formData.append('Calories', mealData.Calories.toString());
-    formData.append('Carbs', mealData.Carbs.toString());
-    formData.append('Protein', mealData.Protein.toString());
-    formData.append('Fats', mealData.Fats.toString());
-
     const response = await fetchWithTimeout(
       `${API_BASE_URL}/AdminDietPlan/addMeal`,
       {
         method: "POST",
-        body: formData,
+        body: JSON.stringify({
+          Category: mealData.Category,
+          FoodItem: mealData.FoodItem,
+          Quantity: mealData.Quantity,
+          Calories: mealData.Calories,
+          Carbs: mealData.Carbs,
+          Protein: mealData.Protein,
+          Fats: mealData.Fats
+        }),
       }
     );
     return await handleApiResponse(response);

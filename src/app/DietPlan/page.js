@@ -5,6 +5,7 @@ import { fetchUserCount, fetchForumPosts, fetchQuestions } from "../utils/api";
 import DietPlanAssignmentModal from "./DietPlanAssignmentModal";
 import { useAlert } from "../utils/alertcontxt";
 import { useConfirm } from "../utils/confirmContext";
+import { dietPlanApi } from "../utils/apiClient";
 
 export default function Page() {
   const { showAlert } = useAlert();
@@ -443,46 +444,54 @@ export default function Page() {
     setShowAssignModal(true);
   };
 
-  // 🔴 UPDATED TO USE DIRECT DELETE API
   const handleDeletePlan = async (planId) => {
-    const confirmed = await showConfirm(
-      "Are you sure you want to delete this diet plan? This action cannot be undone."
-    );
+    console.log("🗑️ handleDeletePlan called with planId:", planId);
 
-    if (!confirmed) return;
+    // Use Promise to handle the confirm dialog
+    const confirmed = await new Promise((resolve) => {
+      showConfirm(
+        "Are you sure you want to delete this diet plan? This action cannot be undone.",
+        () => resolve(true), // onConfirm
+        () => resolve(false) // onCancel
+      );
+    });
+
+    console.log("🗑️ Confirmation result:", confirmed);
+
+    if (!confirmed) {
+      console.log("🗑️ User cancelled deletion");
+      return;
+    }
 
     try {
+      console.log("🗑️ Starting delete process...");
       setDeleteLoading(true);
       setDeleteError(null);
 
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/dietplan/${planId}`,
-        {
-          method: "DELETE",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
+      console.log("🗑️ Calling dietPlanApi.delete...");
+      const result = await dietPlanApi.delete(planId);
+      console.log("🗑️ API result:", result);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.Status) {
+      if (result && result.Status === true) {
+        console.log("🗑️ Delete successful, updating UI...");
+        // Optimistically update UI
         setDietPlans((prevPlans) =>
           prevPlans.filter((plan) => plan.Id !== planId)
         );
-        setDeleteSuccess(result.Message || "Diet plan deleted successfully.");
-        setTimeout(() => setDeleteSuccess(false), 3000);
+        console.log("🗑️ Showing success alert...");
+        showAlert("Diet plan deleted successfully.", "success");
+        // Refresh the list to ensure consistency
+        console.log("🗑️ Refreshing diet plans list...");
+        fetchDietPlans();
       } else {
-        setDeleteError(result.Message || "Failed to delete diet plan.");
+        console.log("🗑️ Delete failed, result:", result);
+        setDeleteError(result?.Message || "Failed to delete diet plan.");
       }
     } catch (err) {
+      console.error("🗑️ Error deleting diet plan:", err);
       setDeleteError(err.message || "Failed to delete diet plan");
     } finally {
+      console.log("🗑️ Setting loading to false");
       setDeleteLoading(false);
     }
   };
@@ -1074,8 +1083,13 @@ export default function Page() {
           {/* Assign Modal */}
           {showAssignModal && selectedPlanForAssignment && (
             <DietPlanAssignmentModal
-              plan={selectedPlanForAssignment}
-              closeModal={() => setShowAssignModal(false)}
+              isOpen={showAssignModal}
+              onClose={() => setShowAssignModal(false)}
+              planId={selectedPlanForAssignment.Id}
+              onAssignmentSuccess={() => {
+                fetchDietPlans();
+                setShowAssignModal(false);
+              }}
               mode={modalMode}
             />
           )}
