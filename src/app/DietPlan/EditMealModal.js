@@ -84,8 +84,10 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       id="mealType"
                       value={mealType}
                       onChange={(e) => setMealType(e.target.value)}
+                      placeholder="e.g., Vegetarian"
                       required
                     />
+                    <small className="form-text text-muted">Enter the food category</small>
                   </div>
                   <div className="col-12">
                     <label htmlFor="foodItem" className="form-label">
@@ -97,8 +99,10 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       id="foodItem"
                       value={foodItem}
                       onChange={(e) => setFoodItem(e.target.value)}
+                      placeholder="e.g., Chicken Breast, Apple, Rice"
                       required
                     />
+                    <small className="form-text text-muted">Enter the name of the food item</small>
                   </div>
                   <div className="col-12">
                     <label htmlFor="quantity" className="form-label">
@@ -110,8 +114,10 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       id="quantity"
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="e.g., 100 gm"
                       required
                     />
+                    <small className="form-text text-muted">Enter quantity with unit (e.g., 100 gm)</small>
                   </div>
                   <div className="col-md-6">
                     <label htmlFor="calories" className="form-label">
@@ -124,7 +130,9 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       value={calories}
                       onChange={(e) => setCalories(e.target.value)}
                       min="0"
+                      placeholder="e.g., 250"
                     />
+                    <small className="form-text text-muted">Enter calories per serving</small>
                   </div>
                   <div className="col-md-6">
                     <label htmlFor="carbs" className="form-label">
@@ -137,7 +145,9 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       value={carbs}
                       onChange={(e) => setCarbs(e.target.value)}
                       min="0"
+                      placeholder="e.g., 30"
                     />
+                    <small className="form-text text-muted">Enter carbohydrates in grams</small>
                   </div>
                   <div className="col-md-6">
                     <label htmlFor="protein" className="form-label">
@@ -150,7 +160,9 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       value={protein}
                       onChange={(e) => setProtein(e.target.value)}
                       min="0"
+                      placeholder="e.g., 25"
                     />
+                    <small className="form-text text-muted">Enter protein in grams</small>
                   </div>
                   <div className="col-md-6">
                     <label htmlFor="fats" className="form-label">
@@ -163,7 +175,9 @@ export default function EditMealModal({ isOpen, onClose, meal, onSave }) {
                       value={fats}
                       onChange={(e) => setFats(e.target.value)}
                       min="0"
+                      placeholder="e.g., 10"
                     />
+                    <small className="form-text text-muted">Enter fats in grams</small>
                   </div>
                 </div>
               </div>

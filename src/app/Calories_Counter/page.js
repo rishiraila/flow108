@@ -1,6 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import { importMealsFromExcel, fetchAllMeals, addSingleMeal, updateMeal, deleteMealFromPlan } from "../utils/api";
+import {
+  importMealsFromExcel,
+  fetchAllMeals,
+  addSingleMeal,
+  updateMeal,
+  deleteMealFromPlan,
+} from "../utils/api";
 import EditMealModal from "../DietPlan/EditMealModal";
 
 // Dummy data for meal calculations
@@ -10,28 +16,40 @@ const dummyMeals = [
     name: "Breakfast",
     time: "08:00 AM",
     items: [
-      { name: "Oatmeal with Berries", calories: 320, protein: 12, carbs: 45, fats: 8 },
+      {
+        name: "Oatmeal with Berries",
+        calories: 320,
+        protein: 12,
+        carbs: 45,
+        fats: 8,
+      },
       { name: "Greek Yogurt", calories: 150, protein: 15, carbs: 8, fats: 6 },
-      { name: "Banana", calories: 105, protein: 1, carbs: 27, fats: 0 }
+      { name: "Banana", calories: 105, protein: 1, carbs: 27, fats: 0 },
     ],
     totalCalories: 575,
     totalProtein: 28,
     totalCarbs: 80,
-    totalFats: 14
+    totalFats: 14,
   },
   {
     id: 2,
     name: "Lunch",
     time: "12:30 PM",
     items: [
-      { name: "Grilled Chicken Salad", calories: 420, protein: 35, carbs: 15, fats: 22 },
+      {
+        name: "Grilled Chicken Salad",
+        calories: 420,
+        protein: 35,
+        carbs: 15,
+        fats: 22,
+      },
       { name: "Quinoa", calories: 222, protein: 8, carbs: 39, fats: 4 },
-      { name: "Avocado", calories: 234, protein: 3, carbs: 12, fats: 21 }
+      { name: "Avocado", calories: 234, protein: 3, carbs: 12, fats: 21 },
     ],
     totalCalories: 876,
     totalProtein: 46,
     totalCarbs: 66,
-    totalFats: 47
+    totalFats: 47,
   },
   {
     id: 3,
@@ -39,12 +57,12 @@ const dummyMeals = [
     time: "03:00 PM",
     items: [
       { name: "Apple", calories: 95, protein: 0, carbs: 25, fats: 0 },
-      { name: "Almonds (20g)", calories: 116, protein: 4, carbs: 4, fats: 10 }
+      { name: "Almonds (20g)", calories: 116, protein: 4, carbs: 4, fats: 10 },
     ],
     totalCalories: 211,
     totalProtein: 4,
     totalCarbs: 29,
-    totalFats: 10
+    totalFats: 10,
   },
   {
     id: 4,
@@ -53,20 +71,20 @@ const dummyMeals = [
     items: [
       { name: "Salmon Fillet", calories: 412, protein: 39, carbs: 0, fats: 25 },
       { name: "Sweet Potato", calories: 112, protein: 2, carbs: 26, fats: 0 },
-      { name: "Broccoli", calories: 55, protein: 4, carbs: 11, fats: 1 }
+      { name: "Broccoli", calories: 55, protein: 4, carbs: 11, fats: 1 },
     ],
     totalCalories: 579,
     totalProtein: 45,
     totalCarbs: 37,
-    totalFats: 26
-  }
+    totalFats: 26,
+  },
 ];
 
 const dailyGoals = {
   calories: 2500,
   protein: 150,
   carbs: 250,
-  fats: 80
+  fats: 80,
 };
 
 export default function CaloriesCounter() {
@@ -74,7 +92,7 @@ export default function CaloriesCounter() {
   const [dragActive, setDragActive] = useState(false);
   const [meals, setMeals] = useState(dummyMeals);
   const [uploadStatus, setUploadStatus] = useState(null);
-  const [activeTab, setActiveTab] = useState('upload');
+  const [activeTab, setActiveTab] = useState("upload");
   const [showModal, setShowModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState(null);
@@ -83,13 +101,13 @@ export default function CaloriesCounter() {
   const [isLoadingMeals, setIsLoadingMeals] = useState(false);
   const [mealsError, setMealsError] = useState(null);
   const [newItem, setNewItem] = useState({
-    name: '',
-    quantity: '',
-    calories: '',
-    carbs: '',
-    protein: '',
-    fats: '',
-    category: 'Vegetarian'
+    name: "",
+    quantity: "",
+    calories: "",
+    carbs: "",
+    protein: "",
+    fats: "",
+    category: "Vegetarian",
   });
 
   // Edit meal states
@@ -97,12 +115,13 @@ export default function CaloriesCounter() {
   const [editingMeal, setEditingMeal] = useState(null);
 
   // Pagination, searching, sorting states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMeal, setSelectedMeal] = useState('');
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState('asc');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMeal, setSelectedMeal] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  // const category = normalizeCategory(meal.Category);
 
   // Fetch meals from API on component mount
   useEffect(() => {
@@ -114,8 +133,8 @@ export default function CaloriesCounter() {
         const transformedMeals = transformMealsData(apiMeals);
         setMeals(transformedMeals);
       } catch (error) {
-        console.error('Error loading meals:', error);
-        setMealsError('Failed to load meals from server. Using sample data.');
+        console.error("Error loading meals:", error);
+        setMealsError("Failed to load meals from server. Using sample data.");
         // Keep dummy data as fallback
       } finally {
         setIsLoadingMeals(false);
@@ -124,53 +143,66 @@ export default function CaloriesCounter() {
 
     loadMeals();
   }, []);
-
+  const normalizeCategory = (cat) => {
+  if (!cat) return 'Vegetarian';
+  return cat.trim().toLowerCase() === 'non-vegetarian'
+    ? 'Non-vegetarian'
+    : cat;
+};
   // Transform API data to match component structure
   const transformMealsData = (apiMeals) => {
     // Ensure apiMeals is an array
     if (!Array.isArray(apiMeals)) {
-      console.error('apiMeals is not an array:', apiMeals);
+      console.error("apiMeals is not an array:", apiMeals);
       return [];
     }
 
     // Group meals by Category
     const groupedMeals = {};
 
-    apiMeals.forEach(meal => {
-      const validCategories = ['Vegetarian', 'Non- vegetarian', 'Egg'];
-      const category = validCategories.includes(meal.Category) ? meal.Category : 'Vegetarian'; // Use Category from API response only if valid, else default to 'Vegetarian'
+    apiMeals.forEach((meal) => {
+     const category = normalizeCategory(meal.Category);
+// Use Category from API response only if valid, else default to 'Vegetarian'
       if (!groupedMeals[category]) {
         groupedMeals[category] = {
-          id: category.toLowerCase().replace(/\s+/g, '-'),
+          id: category.toLowerCase().replace(/\s+/g, "-"),
           name: category,
           time: getMealTime(category),
-          items: []
+          items: [],
         };
       }
 
       // Add item to the category
       groupedMeals[category].items.push({
         id: meal.Id,
-        name: meal.FoodItem || 'Unknown Item',
-        quantity: meal.Quantity || '1 serving',
+        name: meal.FoodItem || "Unknown Item",
+        quantity: meal.Quantity || "1 serving",
         calories: meal.Calories || 0,
         carbs: meal.Carbs || 0,
         protein: meal.Protein || 0,
         fats: meal.Fats || 0,
-        category: validCategories.includes(meal.Category) ? meal.Category : 'Vegetarian'
+       category: normalizeCategory(meal.Category),
+
       });
     });
 
     // Calculate totals for each category
-    Object.values(groupedMeals).forEach(meal => {
-      meal.totalCalories = meal.items.reduce((sum, item) => sum + item.calories, 0);
-      meal.totalProtein = meal.items.reduce((sum, item) => sum + item.protein, 0);
+    Object.values(groupedMeals).forEach((meal) => {
+      meal.totalCalories = meal.items.reduce(
+        (sum, item) => sum + item.calories,
+        0
+      );
+      meal.totalProtein = meal.items.reduce(
+        (sum, item) => sum + item.protein,
+        0
+      );
       meal.totalCarbs = meal.items.reduce((sum, item) => sum + item.carbs, 0);
       meal.totalFats = meal.items.reduce((sum, item) => sum + item.fats, 0);
     });
 
     // Convert to array and sort by category
-    const categoryOrder = ['Vegetarian', 'Non-vegetarian', 'Egg'];
+    const categoryOrder = ["Vegetarian", "Non-vegetarian", "Egg"];
+
     return Object.values(groupedMeals).sort((a, b) => {
       const aIndex = categoryOrder.indexOf(a.name);
       const bIndex = categoryOrder.indexOf(b.name);
@@ -180,24 +212,29 @@ export default function CaloriesCounter() {
 
   // Get default time for category (not applicable, return empty)
   const getMealTime = (category) => {
-    return '';
+    return "";
   };
 
   // Handle file upload
   const handleFileUpload = (file) => {
     if (file) {
-      const allowedTypes = ['image/svg+xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
-      const allowedExtensions = ['.svg', '.xlsx', '.xls'];
+      const allowedTypes = [
+        "image/svg+xml",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+      ];
+      const allowedExtensions = [".svg", ".xlsx", ".xls"];
 
-      const isValidType = allowedTypes.includes(file.type) ||
-        allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      const isValidType =
+        allowedTypes.includes(file.type) ||
+        allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext));
 
       if (isValidType) {
         setSelectedFile(file);
-        setUploadStatus('success');
+        setUploadStatus("success");
         setImportMessage(null);
       } else {
-        setUploadStatus('error');
+        setUploadStatus("error");
       }
     }
   };
@@ -213,8 +250,11 @@ export default function CaloriesCounter() {
       const result = await importMealsFromExcel(selectedFile);
 
       // Parse the success message from API response
-      const successMessage = result.Message || 'Meals imported successfully';
-      setImportMessage({ type: 'success', text: `${successMessage} from ${selectedFile.name}` });
+      const successMessage = result.Message || "Meals imported successfully";
+      setImportMessage({
+        type: "success",
+        text: `${successMessage} from ${selectedFile.name}`,
+      });
 
       // Refresh meals data after successful import
       try {
@@ -222,13 +262,16 @@ export default function CaloriesCounter() {
         const transformedMeals = transformMealsData(apiMeals);
         setMeals(transformedMeals);
       } catch (refreshError) {
-        console.error('Error refreshing meals after import:', refreshError);
+        console.error("Error refreshing meals after import:", refreshError);
         // Don't show error for refresh failure, just log it
       }
 
-      setActiveTab('calculator');
+      setActiveTab("calculator");
     } catch (error) {
-      setImportMessage({ type: 'error', text: error.message || 'Failed to import data. Please try again.' });
+      setImportMessage({
+        type: "error",
+        text: error.message || "Failed to import data. Please try again.",
+      });
     } finally {
       setIsImporting(false);
     }
@@ -265,12 +308,15 @@ export default function CaloriesCounter() {
 
   // Calculate daily totals from meals
   const calculateDailyTotals = () => {
-    return meals.reduce((totals, meal) => ({
-      calories: totals.calories + meal.totalCalories,
-      protein: totals.protein + meal.totalProtein,
-      carbs: totals.carbs + meal.totalCarbs,
-      fats: totals.fats + meal.totalFats
-    }), { calories: 0, protein: 0, carbs: 0, fats: 0 });
+    return meals.reduce(
+      (totals, meal) => ({
+        calories: totals.calories + meal.totalCalories,
+        protein: totals.protein + meal.totalProtein,
+        carbs: totals.carbs + meal.totalCarbs,
+        fats: totals.fats + meal.totalFats,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    );
   };
 
   const dailyTotals = calculateDailyTotals();
@@ -281,36 +327,45 @@ export default function CaloriesCounter() {
   };
 
   // Flatten meals data for table display
-  const allItems = meals.flatMap(meal =>
-    meal.items.map(item => ({
+  const allItems = meals.flatMap((meal) =>
+    meal.items.map((item) => ({
       ...item,
       mealName: meal.name,
       mealTime: meal.time,
-      mealId: meal.id
+      mealId: meal.id,
     }))
   );
 
   // Calculate food item statistics
   const totalFoodItems = allItems.length;
-  const vegTotal = allItems.filter(item => item.category === 'Vegetarian').length;
-  const eggTotal = allItems.filter(item => item.category === 'Egg').length;
-  const nonVegTotal = allItems.filter(item => item.category === 'Non- vegetarian').length;
+  const vegTotal = allItems.filter(
+    (item) => item.category === "Vegetarian"
+  ).length;
+  const eggTotal = allItems.filter((item) => item.category === "Egg").length;
+  const nonVegTotal = allItems.filter(
+    (item) => item.category === "Non-vegetarian"
+  ).length;
 
-  // Filter items
-  const filteredItems = allItems.filter(item =>
-    (selectedMeal === '' || item.mealName.toLowerCase() === selectedMeal.toLowerCase()) &&
-    (item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.mealName.toLowerCase().includes(searchTerm.toLowerCase()))
+  // Filter 
+
+
+  const filteredItems = allItems.filter(
+    (item) =>
+      (selectedMeal === "" ||
+        item.mealName.toLowerCase() === selectedMeal.toLowerCase()) &&
+      (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.mealName.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Sort items
   const sortedItems = [...filteredItems].sort((a, b) => {
     let aVal = a[sortBy];
     let bVal = b[sortBy];
-    if (typeof aVal === 'string') {
+    if (typeof aVal === "string") {
       aVal = aVal.toLowerCase();
       bVal = bVal.toLowerCase();
     }
-    if (sortOrder === 'asc') {
+    if (sortOrder === "asc") {
       return aVal > bVal ? 1 : -1;
     } else {
       return aVal < bVal ? 1 : -1;
@@ -321,15 +376,43 @@ export default function CaloriesCounter() {
   const totalItems = sortedItems.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = sortedItems.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedItems = sortedItems.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  // Generate pagination numbers
+  const getPaginationNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    const halfVisible = Math.floor(maxVisiblePages / 2);
+
+    let startPage = Math.max(1, currentPage - halfVisible);
+    let endPage = Math.min(totalPages, currentPage + halfVisible);
+
+    // Adjust if we're near the beginning or end
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      if (startPage === 1) {
+        endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      } else if (endPage === totalPages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  };
 
   // Handle sort
   const handleSort = (column) => {
     if (sortBy === column) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortBy(column);
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
     setCurrentPage(1);
   };
@@ -350,7 +433,7 @@ export default function CaloriesCounter() {
         calories: parseInt(newItem.calories),
         carbs: parseInt(newItem.carbs) || 0,
         protein: parseInt(newItem.protein) || 0,
-        fats: parseInt(newItem.fats) || 0
+        fats: parseInt(newItem.fats) || 0,
       };
 
       // Call API to add single meal
@@ -362,7 +445,7 @@ export default function CaloriesCounter() {
           Carbs: item.carbs,
           Protein: item.protein,
           Fats: item.fats,
-          Category: newItem.category
+          Category: newItem.category,
         });
 
         // Refresh meals from server to get the new item with ID
@@ -371,23 +454,23 @@ export default function CaloriesCounter() {
           const transformedMeals = transformMealsData(apiMeals);
           setMeals(transformedMeals);
         } catch (refreshError) {
-          console.error('Error refreshing meals after add:', refreshError);
+          console.error("Error refreshing meals after add:", refreshError);
           // Don't show error for refresh failure, just log it
         }
 
-        setSuccessMessage('Food item added successfully!');
+        setSuccessMessage("Food item added successfully!");
 
         // Close modal after 2 seconds
         setTimeout(() => {
           setShowModal(false);
           setNewItem({
-            name: '',
-            quantity: '',
-            calories: '',
-            carbs: '',
-            protein: '',
-            fats: '',
-            category: 'Vegetarian'
+            name: "",
+            quantity: "",
+            calories: "",
+            carbs: "",
+            protein: "",
+            fats: "",
+            category: "Vegetarian",
           });
         }, 2000);
       } catch (error) {
@@ -401,13 +484,13 @@ export default function CaloriesCounter() {
   const handleCloseModal = () => {
     setShowModal(false);
     setNewItem({
-      name: '',
-      quantity: '',
-      calories: '',
-      carbs: '',
-      protein: '',
-      fats: '',
-      category: 'Vegetarian'
+      name: "",
+      quantity: "",
+      calories: "",
+      carbs: "",
+      protein: "",
+      fats: "",
+      category: "Vegetarian",
     });
   };
 
@@ -422,7 +505,7 @@ export default function CaloriesCounter() {
       Calories: item.calories,
       Carbs: item.carbs,
       Protein: item.protein,
-      Fats: item.fats
+      Fats: item.fats,
     };
     setEditingMeal(mealForEdit);
     setShowEditMealModal(true);
@@ -434,23 +517,23 @@ export default function CaloriesCounter() {
       try {
         await deleteMealFromPlan(item.id);
         // Update local state
-        const updatedMeals = meals.map(meal => {
+        const updatedMeals = meals.map((meal) => {
           if (meal.name === item.mealName) {
             return {
               ...meal,
-              items: meal.items.filter(i => i.id !== item.id),
+              items: meal.items.filter((i) => i.id !== item.id),
               totalCalories: meal.totalCalories - item.calories,
               totalCarbs: meal.totalCarbs - item.carbs,
               totalProtein: meal.totalProtein - item.protein,
-              totalFats: meal.totalFats - item.fats
+              totalFats: meal.totalFats - item.fats,
             };
           }
           return meal;
         });
         setMeals(updatedMeals);
       } catch (error) {
-        console.error('Error deleting meal:', error);
-        alert('Failed to delete meal');
+        console.error("Error deleting meal:", error);
+        alert("Failed to delete meal");
       }
     }
   };
@@ -468,20 +551,44 @@ export default function CaloriesCounter() {
         carbs: updatedMeal.Carbs,
         protein: updatedMeal.Protein,
         fats: updatedMeal.Fats,
-        mealName: updatedMeal.MealType
+        mealName: updatedMeal.MealType,
       };
 
-      const updatedMeals = meals.map(meal => {
+      const updatedMeals = meals.map((meal) => {
         if (meal.name === editingMeal.mealName) {
           return {
             ...meal,
-            items: meal.items.map(item =>
+            items: meal.items.map((item) =>
               item.id === updatedItem.id ? updatedItem : item
             ),
-            totalCalories: meal.items.reduce((sum, item) => sum + (item.id === updatedItem.id ? updatedItem.calories : item.calories), 0),
-            totalProtein: meal.items.reduce((sum, item) => sum + (item.id === updatedItem.id ? updatedItem.protein : item.protein), 0),
-            totalCarbs: meal.items.reduce((sum, item) => sum + (item.id === updatedItem.id ? updatedItem.carbs : item.carbs), 0),
-            totalFats: meal.items.reduce((sum, item) => sum + (item.id === updatedItem.id ? updatedItem.fats : item.fats), 0)
+            totalCalories: meal.items.reduce(
+              (sum, item) =>
+                sum +
+                (item.id === updatedItem.id
+                  ? updatedItem.calories
+                  : item.calories),
+              0
+            ),
+            totalProtein: meal.items.reduce(
+              (sum, item) =>
+                sum +
+                (item.id === updatedItem.id
+                  ? updatedItem.protein
+                  : item.protein),
+              0
+            ),
+            totalCarbs: meal.items.reduce(
+              (sum, item) =>
+                sum +
+                (item.id === updatedItem.id ? updatedItem.carbs : item.carbs),
+              0
+            ),
+            totalFats: meal.items.reduce(
+              (sum, item) =>
+                sum +
+                (item.id === updatedItem.id ? updatedItem.fats : item.fats),
+              0
+            ),
           };
         }
         return meal;
@@ -495,14 +602,14 @@ export default function CaloriesCounter() {
         const apiMeals = await fetchAllMeals();
         const transformedMeals = transformMealsData(apiMeals);
         setMeals(transformedMeals);
-        alert('Meal updated successfully');
+        alert("Meal updated successfully");
       } catch (error) {
-        console.error('Error refreshing meals after update:', error);
-        alert('Meal updated but failed to refresh data');
+        console.error("Error refreshing meals after update:", error);
+        alert("Meal updated but failed to refresh data");
       }
     } catch (error) {
-      console.error('Error updating meal:', error);
-      alert('Failed to update meal');
+      console.error("Error updating meal:", error);
+      alert("Failed to update meal");
     }
   };
 
@@ -528,8 +635,8 @@ export default function CaloriesCounter() {
           <ul className="nav nav-tabs" role="tablist">
             <li className="nav-item" role="presentation">
               <button
-                className={`nav-link ${activeTab === 'upload' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upload')}
+                className={`nav-link ${activeTab === "upload" ? "active" : ""}`}
+                onClick={() => setActiveTab("upload")}
                 type="button"
               >
                 <i className="bi bi-cloud-upload me-2"></i>
@@ -538,8 +645,10 @@ export default function CaloriesCounter() {
             </li>
             <li className="nav-item" role="presentation">
               <button
-                className={`nav-link ${activeTab === 'calculator' ? 'active' : ''}`}
-                onClick={() => setActiveTab('calculator')}
+                className={`nav-link ${
+                  activeTab === "calculator" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("calculator")}
                 type="button"
               >
                 <i className="bi bi-calculator me-2"></i>
@@ -551,7 +660,7 @@ export default function CaloriesCounter() {
       </div>
 
       {/* File Upload Tab */}
-      {activeTab === 'upload' && (
+      {activeTab === "upload" && (
         <div className="row">
           <div className="col-lg-8 mx-auto">
             <div className="card shadow-sm border-0">
@@ -567,13 +676,15 @@ export default function CaloriesCounter() {
                     <i className="bi bi-file-earmark-spreadsheet display-4 text-primary"></i>
                   </div>
                   <h6>Supported File Types</h6>
-                  <p className="text-muted">SVG files or Excel spreadsheets (.xlsx, .xls)</p>
+                  <p className="text-muted">
+                    SVG files or Excel spreadsheets (.xlsx, .xls)
+                  </p>
                 </div>
 
                 {/* File Upload Area */}
                 <div
                   className={`border-2 border-dashed rounded-3 p-4 text-center mb-3 ${
-                    dragActive ? 'border-primary bg-light' : 'border-secondary'
+                    dragActive ? "border-primary bg-light" : "border-secondary"
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -596,24 +707,25 @@ export default function CaloriesCounter() {
                         {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
 
-                      {uploadStatus === 'success' && (
+                      {uploadStatus === "success" && (
                         <div className="alert alert-success py-2 mb-3">
                           <i className="bi bi-check-circle me-2"></i>
                           File uploaded successfully!
                         </div>
                       )}
 
-                      {uploadStatus === 'processed' && (
+                      {uploadStatus === "processed" && (
                         <div className="alert alert-info py-2 mb-3">
                           <i className="bi bi-info-circle me-2"></i>
                           File processed and data extracted successfully!
                         </div>
                       )}
 
-                      {uploadStatus === 'error' && (
+                      {uploadStatus === "error" && (
                         <div className="alert alert-danger py-2 mb-3">
                           <i className="bi bi-exclamation-triangle me-2"></i>
-                          Invalid file type. Please upload SVG or Excel files only.
+                          Invalid file type. Please upload SVG or Excel files
+                          only.
                         </div>
                       )}
                     </div>
@@ -621,11 +733,15 @@ export default function CaloriesCounter() {
                     <div className="py-3">
                       <i className="bi bi-cloud-arrow-up display-4 text-muted mb-3"></i>
                       <h6 className="mb-2">Drag and drop your file here</h6>
-                      <p className="text-muted mb-3">or click to browse files</p>
+                      <p className="text-muted mb-3">
+                        or click to browse files
+                      </p>
                       <button
                         type="button"
                         className="btn btn-primary"
-                        onClick={() => document.getElementById('fileUpload').click()}
+                        onClick={() =>
+                          document.getElementById("fileUpload").click()
+                        }
                       >
                         <i className="bi bi-folder me-2"></i>
                         Choose File
@@ -635,23 +751,37 @@ export default function CaloriesCounter() {
                 </div>
 
                 {/* Upload Progress */}
-                {uploadStatus === 'success' && (
+                {uploadStatus === "success" && (
                   <div className="mb-3">
-                    <div className="progress" style={{ height: '6px' }}>
+                    <div className="progress" style={{ height: "6px" }}>
                       <div
                         className="progress-bar bg-success"
                         role="progressbar"
-                        style={{ width: '100%' }}
+                        style={{ width: "100%" }}
                       ></div>
                     </div>
-                    <small className="text-muted">File uploaded successfully!</small>
+                    <small className="text-muted">
+                      File uploaded successfully!
+                    </small>
                   </div>
                 )}
 
                 {/* Import Message */}
                 {importMessage && (
-                  <div className={`alert ${importMessage.type === 'success' ? 'alert-success' : 'alert-danger'} py-2 mb-3`}>
-                    <i className={`bi ${importMessage.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2`}></i>
+                  <div
+                    className={`alert ${
+                      importMessage.type === "success"
+                        ? "alert-success"
+                        : "alert-danger"
+                    } py-2 mb-3`}
+                  >
+                    <i
+                      className={`bi ${
+                        importMessage.type === "success"
+                          ? "bi-check-circle"
+                          : "bi-exclamation-triangle"
+                      } me-2`}
+                    ></i>
                     {importMessage.text}
                   </div>
                 )}
@@ -671,7 +801,7 @@ export default function CaloriesCounter() {
                     Reset
                   </button>
 
-                  {selectedFile && uploadStatus === 'success' && (
+                  {selectedFile && uploadStatus === "success" && (
                     <button
                       type="button"
                       className="btn btn-success"
@@ -680,7 +810,11 @@ export default function CaloriesCounter() {
                     >
                       {isImporting ? (
                         <>
-                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                          <span
+                            className="spinner-border spinner-border-sm me-2"
+                            role="status"
+                            aria-hidden="true"
+                          ></span>
                           Importing...
                         </>
                       ) : (
@@ -699,7 +833,7 @@ export default function CaloriesCounter() {
       )}
 
       {/* Meal Calculator Tab */}
-      {activeTab === 'calculator' && (
+      {activeTab === "calculator" && (
         <>
           {/* Loading/Error Messages */}
           {isLoadingMeals && (
@@ -776,8 +910,7 @@ export default function CaloriesCounter() {
                   <div className="d-flex align-items-center mb-2">
                     <div className="avatar me-4">
                       <span className="avatar-initial rounded-3 bg-label-warning">
-                      <i className="tf-icons ri-toast-line ri-24px"></i>
-
+                        <i className="tf-icons ri-toast-line ri-24px"></i>
                       </span>
                     </div>
                     <h4 className="mb-0">{eggTotal}</h4>
@@ -814,7 +947,7 @@ export default function CaloriesCounter() {
                     Nutrition Details
                   </h5>
                   <div className="d-flex gap-2">
-                    <div className="input-group" style={{ width: '250px' }}>
+                    <div className="input-group" style={{ width: "250px" }}>
                       <span className="input-group-text">
                         <i className="bi bi-search"></i>
                       </span>
@@ -851,33 +984,75 @@ export default function CaloriesCounter() {
                     <table className="table table-hover mb-0">
                       <thead className="table-light">
                         <tr>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('mealName')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("mealName")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-clock me-1"></i>
-                            Category {sortBy === 'mealName' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Category{" "}
+                            {sortBy === "mealName" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('name')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("name")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-egg me-1"></i>
-                            Food Item {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Food Item{" "}
+                            {sortBy === "name" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('quantity')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("quantity")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-speedometer me-1"></i>
-                            Quantity {sortBy === 'quantity' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Quantity{" "}
+                            {sortBy === "quantity" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('calories')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("calories")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-fire me-1"></i>
-                            Calories {sortBy === 'calories' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Calories{" "}
+                            {sortBy === "calories" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('carbs')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("carbs")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-bread-slice me-1"></i>
-                            Carbs (g) {sortBy === 'carbs' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Carbs (g){" "}
+                            {sortBy === "carbs" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('protein')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("protein")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-egg-fried me-1"></i>
-                            Protein (g) {sortBy === 'protein' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Protein (g){" "}
+                            {sortBy === "protein" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
-                          <th className="border-0 fw-semibold" onClick={() => handleSort('fats')} style={{cursor: 'pointer'}}>
+                          <th
+                            className="border-0 fw-semibold"
+                            onClick={() => handleSort("fats")}
+                            style={{ cursor: "pointer" }}
+                          >
                             <i className="bi bi-droplet me-1"></i>
-                            Fats (g) {sortBy === 'fats' && (sortOrder === 'asc' ? '↑' : '↓')}
+                            Fats (g){" "}
+                            {sortBy === "fats" &&
+                              (sortOrder === "asc" ? "↑" : "↓")}
                           </th>
                           <th className="border-0 fw-semibold">Actions</th>
                         </tr>
@@ -892,15 +1067,23 @@ export default function CaloriesCounter() {
                             </td>
                             <td>{item.name}</td>
                             <td>{item.quantity}</td>
-                            <td className="fw-bold text-primary">{item.calories}</td>
+                            <td className="fw-bold text-primary">
+                              {item.calories}
+                            </td>
                             <td>{item.carbs}</td>
                             <td>{item.protein}</td>
                             <td>{item.fats}</td>
                             <td>
-                              <button className="btn btn-sm btn-outline-primary me-1" onClick={() => handleEditItem(item)}>
+                              <button
+                                className="btn btn-sm btn-outline-primary me-1"
+                                onClick={() => handleEditItem(item)}
+                              >
                                 <i className="bi bi-pencil"></i>
                               </button>
-                              <button className="btn btn-sm btn-outline-danger" onClick={() => handleDeleteItem(item)}>
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeleteItem(item)}
+                              >
                                 <i className="bi bi-trash"></i>
                               </button>
                             </td>
@@ -938,11 +1121,14 @@ export default function CaloriesCounter() {
                     </div>
                     <div className="col-md-6 text-end">
                       <div className="btn-group btn-group-sm">
-                        <button className="btn btn-outline-primary">
+                        {/* <button className="btn btn-outline-primary">
                           <i className="bi bi-download me-1"></i>
                           Export
-                        </button>
-                        <button className="btn btn-outline-primary" onClick={() => setShowModal(true)}>
+                        </button> */}
+                        <button
+                          className="btn btn-outline-primary"
+                          onClick={() => setShowModal(true)}
+                        >
                           <i className="bi bi-plus-circle me-1"></i>
                           Add Item
                         </button>
@@ -954,7 +1140,11 @@ export default function CaloriesCounter() {
                       {totalPages > 1 && (
                         <nav aria-label="Table pagination">
                           <ul className="pagination pagination-sm mb-0 justify-content-center">
-                            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                            <li
+                              className={`page-item ${
+                                currentPage === 1 ? "disabled" : ""
+                              }`}
+                            >
                               <button
                                 className="page-link"
                                 onClick={() => setCurrentPage(currentPage - 1)}
@@ -963,8 +1153,13 @@ export default function CaloriesCounter() {
                                 Previous
                               </button>
                             </li>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                              <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                            {getPaginationNumbers().map((page) => (
+                              <li
+                                key={page}
+                                className={`page-item ${
+                                  currentPage === page ? "active" : ""
+                                }`}
+                              >
                                 <button
                                   className="page-link"
                                   onClick={() => setCurrentPage(page)}
@@ -973,7 +1168,11 @@ export default function CaloriesCounter() {
                                 </button>
                               </li>
                             ))}
-                            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                            <li
+                              className={`page-item ${
+                                currentPage === totalPages ? "disabled" : ""
+                              }`}
+                            >
                               <button
                                 className="page-link"
                                 onClick={() => setCurrentPage(currentPage + 1)}
@@ -1100,12 +1299,21 @@ export default function CaloriesCounter() {
       {showModal && (
         <>
           <div className="modal-backdrop fade show"></div>
-          <div className="modal fade show" style={{ display: 'block' }} tabIndex="-1" role="dialog">
+          <div
+            className="modal fade show"
+            style={{ display: "block" }}
+            tabIndex="-1"
+            role="dialog"
+          >
             <div className="modal-dialog" role="document">
               <div className="modal-content">
                 <div className="modal-header">
                   <h5 className="modal-title">Add New Food Item</h5>
-                  <button type="button" className="btn-close" onClick={handleCloseModal}></button>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={handleCloseModal}
+                  ></button>
                 </div>
                 <form onSubmit={handleSubmit}>
                   <div className="modal-body">
@@ -1121,8 +1329,12 @@ export default function CaloriesCounter() {
                           name="name"
                           value={newItem.name}
                           onChange={handleInputChange}
+                          placeholder="e.g., Chicken Breast, Apple, Rice"
                           required
                         />
+                        <small className="form-text text-muted">
+                          Enter the name of the food item
+                        </small>
                       </div>
                       <div className="col-md-6">
                         <label htmlFor="quantity" className="form-label">
@@ -1135,8 +1347,12 @@ export default function CaloriesCounter() {
                           name="quantity"
                           value={newItem.quantity}
                           onChange={handleInputChange}
+                          placeholder="e.g., 100 gm"
                           required
                         />
+                        <small className="form-text text-muted">
+                          Enter quantity with unit (e.g., 100 gm)
+                        </small>
                       </div>
                     </div>
                     <div className="row g-3 mt-2">
@@ -1151,8 +1367,12 @@ export default function CaloriesCounter() {
                           name="calories"
                           value={newItem.calories}
                           onChange={handleInputChange}
+                          placeholder="e.g., 250"
                           required
                         />
+                        <small className="form-text text-muted">
+                          Enter calories per serving
+                        </small>
                       </div>
                       <div className="col-md-6">
                         <label htmlFor="carbs" className="form-label">
@@ -1165,7 +1385,11 @@ export default function CaloriesCounter() {
                           name="carbs"
                           value={newItem.carbs}
                           onChange={handleInputChange}
+                          placeholder="e.g., 30"
                         />
+                        <small className="form-text text-muted">
+                          Enter carbohydrates in grams
+                        </small>
                       </div>
                     </div>
                     <div className="row g-3 mt-2">
@@ -1180,7 +1404,11 @@ export default function CaloriesCounter() {
                           name="protein"
                           value={newItem.protein}
                           onChange={handleInputChange}
+                          placeholder="e.g., 25"
                         />
+                        <small className="form-text text-muted">
+                          Enter protein in grams
+                        </small>
                       </div>
                       <div className="col-md-6">
                         <label htmlFor="fats" className="form-label">
@@ -1193,7 +1421,11 @@ export default function CaloriesCounter() {
                           name="fats"
                           value={newItem.fats}
                           onChange={handleInputChange}
+                          placeholder="e.g., 10"
                         />
+                        <small className="form-text text-muted">
+                          Enter fats in grams
+                        </small>
                       </div>
                     </div>
                     <div className="row g-3 mt-2">
@@ -1212,12 +1444,18 @@ export default function CaloriesCounter() {
                           <option value="Non-vegetarian">Non-vegetarian</option>
                           <option value="Egg">Egg</option>
                         </select>
+                        <small className="form-text text-muted">
+                          Select the food category
+                        </small>
                       </div>
-                     
                     </div>
                   </div>
                   <div className="modal-footer">
-                    <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleCloseModal}
+                    >
                       Cancel
                     </button>
                     <button type="submit" className="btn btn-primary">

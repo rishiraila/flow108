@@ -10,7 +10,7 @@ export default function UserDetailsClient() {
   const userId = searchParams.get("id");
 
   const calculateAge = (dobString) => {
-    if (!dobString) return 'N/A';
+    if (!dobString) return "N/A";
     const dob = new Date(dobString);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -31,30 +31,33 @@ export default function UserDetailsClient() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatedDate, setEstimatedDate] = useState(null);
+  const [periodCycles, setPeriodCycles] = useState([]);
+  // Period table pagination
+  const periodsPerPage = 5;
 
   // Period table states
-  const [periodSearchTerm, setPeriodSearchTerm] = useState('');
-  const [periodSortColumn, setPeriodSortColumn] = useState('');
-  const [periodSortDirection, setPeriodSortDirection] = useState('asc');
+  const [periodSearchTerm, setPeriodSearchTerm] = useState("");
+  const [periodSortColumn, setPeriodSortColumn] = useState("");
+  const [periodSortDirection, setPeriodSortDirection] = useState("asc");
 
   // Weight table states
-  const [weightSearchTerm, setWeightSearchTerm] = useState('');
-  const [weightSortColumn, setWeightSortColumn] = useState('');
-  const [weightSortDirection, setWeightSortDirection] = useState('asc');
+  const [weightSearchTerm, setWeightSearchTerm] = useState("");
+  const [weightSortColumn, setWeightSortColumn] = useState("");
+  const [weightSortDirection, setWeightSortDirection] = useState("asc");
 
   // Diet table states
   const [dietPage, setDietPage] = useState(1);
   const dietPerPage = 5;
-  const [dietSearchTerm, setDietSearchTerm] = useState('');
-  const [dietSortColumn, setDietSortColumn] = useState('');
-  const [dietSortDirection, setDietSortDirection] = useState('asc');
+  const [dietSearchTerm, setDietSearchTerm] = useState("");
+  const [dietSortColumn, setDietSortColumn] = useState("");
+  const [dietSortDirection, setDietSortDirection] = useState("asc");
 
   // Workout table states
   const [workoutPage, setWorkoutPage] = useState(1);
   const workoutPerPage = 5;
-  const [workoutSearchTerm, setWorkoutSearchTerm] = useState('');
-  const [workoutSortColumn, setWorkoutSortColumn] = useState('');
-  const [workoutSortDirection, setWorkoutSortDirection] = useState('asc');
+  const [workoutSearchTerm, setWorkoutSearchTerm] = useState("");
+  const [workoutSortColumn, setWorkoutSortColumn] = useState("");
+  const [workoutSortDirection, setWorkoutSortDirection] = useState("asc");
 
   // Activity table states
   const [activityPage, setActivityPage] = useState(1);
@@ -66,12 +69,13 @@ export default function UserDetailsClient() {
 
     if (dietSearchTerm) {
       const lowerSearch = dietSearchTerm.toLowerCase();
-      data = data.filter(log =>
-        (log.MealItem?.FoodItem || '').toLowerCase().includes(lowerSearch) ||
-        (log.MealName || '').toLowerCase().includes(lowerSearch) ||
-        (log.Quantity || '').toString().includes(lowerSearch) ||
-        (log.TotalCalories || '').toString().includes(lowerSearch) ||
-        log.LogDate.toLowerCase().includes(lowerSearch)
+      data = data.filter(
+        (log) =>
+          (log.MealItem?.FoodItem || "").toLowerCase().includes(lowerSearch) ||
+          (log.MealName || "").toLowerCase().includes(lowerSearch) ||
+          (log.Quantity || "").toString().includes(lowerSearch) ||
+          (log.TotalCalories || "").toString().includes(lowerSearch) ||
+          log.LogDate.toLowerCase().includes(lowerSearch)
       );
     }
 
@@ -79,32 +83,32 @@ export default function UserDetailsClient() {
       data = [...data].sort((a, b) => {
         let aVal, bVal;
         switch (dietSortColumn) {
-          case 'LogDate':
+          case "LogDate":
             aVal = new Date(a.LogDate);
             bVal = new Date(b.LogDate);
             break;
-          case 'FoodItem':
-            aVal = a.MealItem?.FoodItem || '';
-            bVal = b.MealItem?.FoodItem || '';
+          case "FoodItem":
+            aVal = a.MealItem?.FoodItem || "";
+            bVal = b.MealItem?.FoodItem || "";
             break;
-          case 'MealName':
-            aVal = a.MealName || '';
-            bVal = b.MealName || '';
+          case "MealName":
+            aVal = a.MealName || "";
+            bVal = b.MealName || "";
             break;
-          case 'Quantity':
+          case "Quantity":
             aVal = parseFloat(a.Quantity) || 0;
             bVal = parseFloat(b.Quantity) || 0;
             break;
-          case 'TotalCalories':
+          case "TotalCalories":
             aVal = parseFloat(a.TotalCalories) || 0;
             bVal = parseFloat(b.TotalCalories) || 0;
             break;
           default:
-            aVal = '';
-            bVal = '';
+            aVal = "";
+            bVal = "";
         }
-        if (aVal < bVal) return dietSortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return dietSortDirection === 'asc' ? 1 : -1;
+        if (aVal < bVal) return dietSortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return dietSortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -124,11 +128,14 @@ export default function UserDetailsClient() {
 
     if (workoutSearchTerm) {
       const lowerSearch = workoutSearchTerm.toLowerCase();
-      data = data.filter(workout =>
-        (workout.ActivityName || '').toLowerCase().includes(lowerSearch) ||
-        (workout.ActivityCategory || '').toLowerCase().includes(lowerSearch) ||
-        workout.LoggedDate.toLowerCase().includes(lowerSearch) ||
-        workout.DurationInMinutes.toString().includes(lowerSearch)
+      data = data.filter(
+        (workout) =>
+          (workout.ActivityName || "").toLowerCase().includes(lowerSearch) ||
+          (workout.ActivityCategory || "")
+            .toLowerCase()
+            .includes(lowerSearch) ||
+          workout.LoggedDate.toLowerCase().includes(lowerSearch) ||
+          workout.DurationInMinutes.toString().includes(lowerSearch)
       );
     }
 
@@ -136,28 +143,28 @@ export default function UserDetailsClient() {
       data = [...data].sort((a, b) => {
         let aVal, bVal;
         switch (workoutSortColumn) {
-          case 'LoggedDate':
+          case "LoggedDate":
             aVal = new Date(a.LoggedDate);
             bVal = new Date(b.LoggedDate);
             break;
-          case 'ActivityName':
-            aVal = a.ActivityName || '';
-            bVal = b.ActivityName || '';
+          case "ActivityName":
+            aVal = a.ActivityName || "";
+            bVal = b.ActivityName || "";
             break;
-          case 'ActivityCategory':
-            aVal = a.ActivityCategory || '';
-            bVal = b.ActivityCategory || '';
+          case "ActivityCategory":
+            aVal = a.ActivityCategory || "";
+            bVal = b.ActivityCategory || "";
             break;
-          case 'DurationInMinutes':
+          case "DurationInMinutes":
             aVal = parseFloat(a.DurationInMinutes) || 0;
             bVal = parseFloat(b.DurationInMinutes) || 0;
             break;
           default:
-            aVal = '';
-            bVal = '';
+            aVal = "";
+            bVal = "";
         }
-        if (aVal < bVal) return workoutSortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return workoutSortDirection === 'asc' ? 1 : -1;
+        if (aVal < bVal) return workoutSortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return workoutSortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -172,6 +179,13 @@ export default function UserDetailsClient() {
   );
 
   const itemsPerPage = 5;
+  const totalPeriodPages = Math.ceil(periodCycles.length / periodsPerPage);
+
+  const paginatedPeriodCycles = useMemo(() => {
+    const start = (currentPage - 1) * periodsPerPage;
+    const end = start + periodsPerPage;
+    return periodCycles.slice(start, end);
+  }, [periodCycles, currentPage]);
 
   // Filtered and sorted period data
   const filteredPeriodData = useMemo(() => {
@@ -179,9 +193,10 @@ export default function UserDetailsClient() {
 
     if (periodSearchTerm) {
       const lowerSearch = periodSearchTerm.toLowerCase();
-      data = data.filter(item =>
-        item.StartDate.toLowerCase().includes(lowerSearch) ||
-        (item.Severity && item.Severity.toLowerCase().includes(lowerSearch))
+      data = data.filter(
+        (item) =>
+          item.StartDate.toLowerCase().includes(lowerSearch) ||
+          (item.Severity && item.Severity.toLowerCase().includes(lowerSearch))
       );
     }
 
@@ -189,20 +204,20 @@ export default function UserDetailsClient() {
       data = [...data].sort((a, b) => {
         let aVal, bVal;
         switch (periodSortColumn) {
-          case 'StartDate':
+          case "StartDate":
             aVal = new Date(a.StartDate);
             bVal = new Date(b.StartDate);
             break;
-          case 'Severity':
-            aVal = a.Severity || '';
-            bVal = b.Severity || '';
+          case "Severity":
+            aVal = a.Severity || "";
+            bVal = b.Severity || "";
             break;
           default:
-            aVal = '';
-            bVal = '';
+            aVal = "";
+            bVal = "";
         }
-        if (aVal < bVal) return periodSortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return periodSortDirection === 'asc' ? 1 : -1;
+        if (aVal < bVal) return periodSortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return periodSortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -224,10 +239,11 @@ export default function UserDetailsClient() {
 
     if (weightSearchTerm) {
       const lowerSearch = weightSearchTerm.toLowerCase();
-      data = data.filter(entry =>
-        entry.Date.toLowerCase().includes(lowerSearch) ||
-        entry.Weight.toString().includes(lowerSearch) ||
-        entry.BMI.toString().includes(lowerSearch)
+      data = data.filter(
+        (entry) =>
+          entry.Date.toLowerCase().includes(lowerSearch) ||
+          entry.Weight.toString().includes(lowerSearch) ||
+          entry.BMI.toString().includes(lowerSearch)
       );
     }
 
@@ -235,24 +251,24 @@ export default function UserDetailsClient() {
       data = [...data].sort((a, b) => {
         let aVal, bVal;
         switch (weightSortColumn) {
-          case 'Date':
+          case "Date":
             aVal = new Date(a.Date);
             bVal = new Date(b.Date);
             break;
-          case 'Weight':
+          case "Weight":
             aVal = parseFloat(a.Weight);
             bVal = parseFloat(b.Weight);
             break;
-          case 'BMI':
+          case "BMI":
             aVal = parseFloat(a.BMI);
             bVal = parseFloat(b.BMI);
             break;
           default:
-            aVal = '';
-            bVal = '';
+            aVal = "";
+            bVal = "";
         }
-        if (aVal < bVal) return weightSortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return weightSortDirection === 'asc' ? 1 : -1;
+        if (aVal < bVal) return weightSortDirection === "asc" ? -1 : 1;
+        if (aVal > bVal) return weightSortDirection === "asc" ? 1 : -1;
         return 0;
       });
     }
@@ -288,29 +304,41 @@ export default function UserDetailsClient() {
   );
 
   useEffect(() => {
-    const workoutEntries = (Array.isArray(workouts) ? workouts : []).map(workout => ({
-      Date: workout.LoggedDate,
-      Entries: [{
-        Title: `Workout: ${workout.ActivityName}`,
-        Description: `Category: ${workout.ActivityCategory}, Duration: ${workout.DurationInMinutes} minutes`
-      }]
-    }));
-    const dietEntries = (Array.isArray(dietLogs) ? dietLogs : []).map(diet => ({
-      Date: diet.LogDate,
-      Entries: [{
-        Title: `Diet: ${diet.MealItem?.FoodItem || diet.MealName}`,
-        Description: `Meal: ${diet.MealName}, Quantity: ${diet.Quantity}, Calories: ${diet.TotalCalories}`
-      }]
-    }));
-    setCombinedActivityData([...(Array.isArray(activityData) ? activityData : []), ...workoutEntries, ...dietEntries]);
+    const workoutEntries = (Array.isArray(workouts) ? workouts : []).map(
+      (workout) => ({
+        Date: workout.LoggedDate,
+        Entries: [
+          {
+            Title: `Workout: ${workout.ActivityName}`,
+            Description: `Category: ${workout.ActivityCategory}, Duration: ${workout.DurationInMinutes} minutes`,
+          },
+        ],
+      })
+    );
+    const dietEntries = (Array.isArray(dietLogs) ? dietLogs : []).map(
+      (diet) => ({
+        Date: diet.LogDate,
+        Entries: [
+          {
+            Title: `Diet: ${diet.MealItem?.FoodItem || diet.MealName}`,
+            Description: `Meal: ${diet.MealName}, Quantity: ${diet.Quantity}, Calories: ${diet.TotalCalories}`,
+          },
+        ],
+      })
+    );
+    setCombinedActivityData([
+      ...(Array.isArray(activityData) ? activityData : []),
+      ...workoutEntries,
+      ...dietEntries,
+    ]);
   }, [activityData, workouts, dietLogs]);
 
-  const activityByDate = combinedActivityData.reduce((acc, item) => {
-    const date = new Date(item.Date).toISOString().split("T")[0];
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(...item.Entries);
-    return acc;
-  }, {});
+  // const activityByDate = combinedActivityData.reduce((acc, item) => {
+  //   const date = new Date(item.Date).toISOString().split("T")[0];
+  //   if (!acc[date]) acc[date] = [];
+  //   acc[date].push(...item.Entries);
+  //   return acc;
+  // }, {});
   const markersByDate = useMemo(() => {
     const map = {};
     for (const item of combinedActivityData) {
@@ -325,8 +353,7 @@ export default function UserDetailsClient() {
         };
       }
       for (const entry of item.Entries) {
-        if (/diet/i.test(entry.Title))
-          map[date].diet = true;
+        if (/diet/i.test(entry.Title)) map[date].diet = true;
 
         if (/exercise|workout/i.test(entry.Title)) map[date].exercise = true;
         if (/period/i.test(entry.Title) && !/estimate/i.test(entry.Title))
@@ -386,11 +413,14 @@ export default function UserDetailsClient() {
       </div>
     );
   };
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [periodCycles]);
 
   useEffect(() => {
     if (userId) {
       fetchProfileData(userId);
-      fetchPeriodData(userId);
+      // fetchPeriodData(userId);
       fetchWeightData(userId);
       fetchActivityData(userId);
       fetchDietLogs(userId);
@@ -403,7 +433,7 @@ export default function UserDetailsClient() {
       const res = await fetch(
         "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users",
         {
-          cache: 'no-cache'
+          cache: "no-cache",
         }
       );
       const allUsers = await res.json();
@@ -413,41 +443,82 @@ export default function UserDetailsClient() {
       console.error("Error fetching profile data:", error);
     }
   };
-  const fetchActivityData = async (uid) => {
-    try {
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`
-      );
-      const data = await res.json();
-      setActivityData(data.Events || []);
-      // Don't use data.EstimatedNextPeriodDate
-    } catch (error) {
-      console.error("Error fetching activity data:", error);
-    }
-  };
-  useEffect(() => {
-    if (combinedActivityData.length > 0) {
-      // Flatten all entries with their dates
-      const allPeriodLogs = combinedActivityData
-        .flatMap((event) =>
-          event.Entries.map((entry) => ({
-            date: new Date(event.Date),
-            title: entry.Title,
-          }))
-        )
-        .filter((log) => /period logged/i.test(log.title));
+  function extractPeriodCycles(events) {
+    const BLEED_WINDOW_DAYS = 8;
+    let dates = [];
 
-      // Sort by date descending
-      const sorted = allPeriodLogs.sort((a, b) => b.date - a.date);
+    events.forEach((event) => {
+      event.Entries?.forEach((entry) => {
+        if (entry.Title?.toLowerCase().includes("period logged")) {
+          const d = new Date(event.Date);
+          dates.push(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        }
+      });
+    });
 
-      if (sorted.length > 0) {
-        const lastPeriodDate = sorted[0].date;
-        const estimated = new Date(lastPeriodDate);
-        estimated.setDate(estimated.getDate() + 28); // add 28 days
-        setEstimatedDate(estimated);
+    if (!dates.length) return [];
+
+    // sort & unique
+    dates = [...new Set(dates.map((d) => d.toISOString()))]
+      .map((d) => new Date(d))
+      .sort((a, b) => a - b);
+
+    // group bleeding days
+    const groups = [];
+    let current = [dates[0]];
+
+    for (let i = 1; i < dates.length; i++) {
+      const diff = (dates[i] - current[0]) / (1000 * 60 * 60 * 24);
+
+      if (diff <= BLEED_WINDOW_DAYS) {
+        current.push(dates[i]);
+      } else {
+        groups.push(current);
+        current = [dates[i]];
       }
     }
-  }, [combinedActivityData]);
+    groups.push(current);
+
+    // build cycles
+    const cycles = [];
+
+    for (let i = 0; i < groups.length - 1; i++) {
+      const start = groups[i][0];
+      const nextStart = groups[i + 1][0];
+      cycles.push({
+        startDate: start,
+        cycleLength: Math.round((nextStart - start) / (1000 * 60 * 60 * 24)),
+      });
+    }
+
+    // last (current) cycle
+    const lastStart = groups[groups.length - 1][0];
+    cycles.push({
+      startDate: lastStart,
+      cycleLength: Math.round((new Date() - lastStart) / (1000 * 60 * 60 * 24)),
+    });
+
+    return cycles;
+  }
+
+  const fetchActivityData = async (uid) => {
+    const res = await fetch(
+      `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`
+    );
+    const data = await res.json();
+
+    setActivityData(data.Events || []);
+    setPeriodCycles(extractPeriodCycles(data.Events || []));
+  };
+
+  useEffect(() => {
+    if (periodCycles.length > 0) {
+      const last = periodCycles[periodCycles.length - 1];
+      const estimated = new Date(last.startDate);
+      estimated.setDate(estimated.getDate() + last.cycleLength);
+      setEstimatedDate(estimated);
+    }
+  }, [periodCycles]);
 
   const fetchWeightData = async (uid) => {
     try {
@@ -458,18 +529,6 @@ export default function UserDetailsClient() {
       setWeightData(data);
     } catch (error) {
       console.error("Error fetching weight data:", error);
-    }
-  };
-
-  const fetchPeriodData = async (uid) => {
-    try {
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin-activity/period/${uid}`
-      );
-      const data = await res.json();
-      setPeriodData(data);
-    } catch (error) {
-      console.error("Error fetching period data:", error);
     }
   };
 
@@ -497,28 +556,26 @@ export default function UserDetailsClient() {
     }
   };
 
-  const calculateDuration = (startDateStr) => {
-    const start = new Date(startDateStr);
-    const now = new Date();
-    const diffTime = Math.abs(now - start);
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  const approxCycleDuration = 8;
+  // const calculateDuration = (startDateStr) => {
+  //   const start = new Date(startDateStr);
+  //   const now = new Date();
+  //   const diffTime = Math.abs(now - start);
+  //   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  // };
 
   // Check if periods are consecutive
-  const isConsecutivePeriods = useMemo(() => {
-    if (!periodData || periodData.length < 2) return false;
-    const sorted = [...periodData].sort((a, b) => new Date(a.StartDate) - new Date(b.StartDate));
-    for (let i = 1; i < sorted.length; i++) {
-      const prevDate = new Date(sorted[i - 1].StartDate);
-      const currDate = new Date(sorted[i].StartDate);
-      const diffTime = Math.abs(currDate - prevDate);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays !== 1) return false;
-    }
-    return true;
-  }, [periodData]);
+  // const isConsecutivePeriods = useMemo(() => {
+  //   if (!periodData || periodData.length < 2) return false;
+  //   const sorted = [...periodData].sort((a, b) => new Date(a.StartDate) - new Date(b.StartDate));
+  //   for (let i = 1; i < sorted.length; i++) {
+  //     const prevDate = new Date(sorted[i - 1].StartDate);
+  //     const currDate = new Date(sorted[i].StartDate);
+  //     const diffTime = Math.abs(currDate - prevDate);
+  //     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  //     if (diffDays !== 1) return false;
+  //   }
+  //   return true;
+  // }, [periodData]);
 
   return (
     <div className="container-xxl flex-grow-1 container-p-y">
@@ -550,31 +607,45 @@ export default function UserDetailsClient() {
 
             {/* Stage 1 Detail */}
             <div className="mb-4">
-              <h6 className="text-primary fw-bold">Stage 1: Basic Information</h6>
+              <h6 className="text-primary fw-bold">
+                Stage 1: Basic Information
+              </h6>
               <div className="row mb-3">
                 <div className="col-md-3 mb-2">
                   <strong>Email:</strong>
-                  <p className="mb-0 text-muted">{profileData.Email || 'N/A'}</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Email || "N/A"}
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Age:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage1?.Age || 'N/A'}</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage1?.Age || "N/A"}
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Height:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage1?.HeightCm || 'N/A'} cm</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage1?.HeightCm || "N/A"} cm
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Weight:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage1?.WeightKg || 'N/A'} kg</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage1?.WeightKg || "N/A"} kg
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Activity Level:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage1?.ActivityLevel || 'N/A'}</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage1?.ActivityLevel || "N/A"}
+                  </p>
                 </div>
-                 <div className="col-md-6 mb-2">
+                <div className="col-md-6 mb-2">
                   <strong>Calculated Calories:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage1?.CalculatedCalories || 'N/A'}</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage1?.CalculatedCalories || "N/A"}
+                  </p>
                 </div>
               </div>
               {/* <div className="row mb-3">
@@ -589,36 +660,52 @@ export default function UserDetailsClient() {
 
             {/* Stage 2 Details */}
             <div className="mb-4">
-              <h6 className="text-primary fw-bold">Stage 2: Period Information</h6>
+              <h6 className="text-primary fw-bold">
+                Stage 2: Period Information
+              </h6>
               <div className="row mb-3">
                 <div className="col-md-3 mb-2">
                   <strong>Last Period Date:</strong>
                   <p className="mb-0 text-muted">
-                    {profileData.Stage2?.LastPeriodDate ? new Date(profileData.Stage2.LastPeriodDate).toLocaleDateString("en-GB") : 'N/A'}
+                    {profileData.Stage2?.LastPeriodDate
+                      ? new Date(
+                          profileData.Stage2.LastPeriodDate
+                        ).toLocaleDateString("en-GB")
+                      : "N/A"}
                   </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Period Duration:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage2?.PeriodDurationDays || 'N/A'} days</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage2?.PeriodDurationDays || "N/A"} days
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Cycle Duration:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage2?.CycleDurationDays || 'N/A'} days</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage2?.CycleDurationDays || "N/A"} days
+                  </p>
                 </div>
                 <div className="col-md-3 mb-2">
                   <strong>Target Weight:</strong>
-                  <p className="mb-0 text-muted">{profileData.Stage2?.TargetWeight || 'N/A'} kg</p>
+                  <p className="mb-0 text-muted">
+                    {profileData.Stage2?.TargetWeight || "N/A"} kg
+                  </p>
                 </div>
               </div>
               <div className="row mb-3">
                 <div className="col-md-6 mb-2">
                   <strong>Severity:</strong>
                   <ul className="mb-0 list-unstyled">
-                    {profileData.Stage2?.Severity?.length > 0 ? profileData.Stage2.Severity.map((s, i) => (
-                      <li key={i} className="mb-1">
-                        <span className="badge bg-danger">{s}</span>
-                      </li>
-                    )) : <li className="text-muted">N/A</li>}
+                    {profileData.Stage2?.Severity?.length > 0 ? (
+                      profileData.Stage2.Severity.map((s, i) => (
+                        <li key={i} className="mb-1">
+                          <span className="badge bg-danger">{s}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-muted">N/A</li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -633,11 +720,15 @@ export default function UserDetailsClient() {
                 <div className="col-md-12 mb-2">
                   <strong>Goals:</strong>
                   <div>
-                    {profileData.Stage3?.Goal?.length > 0 ? profileData.Stage3.Goal.map((goal, i) => (
-                      <span key={i} className="me-2 mb-1 d-inline-block">
-                        <span className="badge bg-success">{goal}</span>
-                      </span>
-                    )) : <span className="text-muted">N/A</span>}
+                    {profileData.Stage3?.Goal?.length > 0 ? (
+                      profileData.Stage3.Goal.map((goal, i) => (
+                        <span key={i} className="me-2 mb-1 d-inline-block">
+                          <span className="badge bg-success">{goal}</span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-muted">N/A</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -759,74 +850,79 @@ export default function UserDetailsClient() {
                 {/* Activity Log */}
                 <h6 className="fw-bold text-secondary mb-3">Activity Log</h6>
                 <div className="d-flex flex-column gap-3">
-  {/* Show estimated period if date matches */}
-  {estimatedDate &&
-    selectedDate.toISOString().split("T")[0] ===
-      estimatedDate.toISOString().split("T")[0] && (
-      <div
-        style={{
-          backgroundColor: "#ffe6f0",
-          borderLeft: "4px solid #ff80aa",
-          padding: "10px",
-          borderRadius: "6px",
-        }}
-      >
-        <strong className="text-danger">Estimated Period Date</strong>
-        <p className="text-muted mb-0 small">
-          Based on the last logged period and 28-day cycle.
-        </p>
-      </div>
-  )}
+                  {/* Show estimated period if date matches */}
+                  {estimatedDate &&
+                    selectedDate.toISOString().split("T")[0] ===
+                      estimatedDate.toISOString().split("T")[0] && (
+                      <div
+                        style={{
+                          backgroundColor: "#ffe6f0",
+                          borderLeft: "4px solid #ff80aa",
+                          padding: "10px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        <strong className="text-danger">
+                          Estimated Period Date
+                        </strong>
+                        <p className="text-muted mb-0 small">
+                          Based on the user’s historical cycle pattern.
+                        </p>
+                      </div>
+                    )}
 
-  {/* Show each activity with consistent styled box */}
-  {markersByDate[
-    selectedDate.toISOString().split("T")[0]
-  ]?.entries.map((entry, i) => {
-    const title = entry.Title.toLowerCase();
+                  {/* Show each activity with consistent styled box */}
+                  {markersByDate[
+                    selectedDate.toISOString().split("T")[0]
+                  ]?.entries.map((entry, i) => {
+                    const title = entry.Title.toLowerCase();
 
-    let styles = {
-      backgroundColor: "#f8f9fa", // default grey
-      borderLeft: "4px solid #ccc", // default border
-    };
-    let label = "";
-    let labelColor = "";
+                    let styles = {
+                      backgroundColor: "#f8f9fa", // default grey
+                      borderLeft: "4px solid #ccc", // default border
+                    };
+                    let label = "";
+                    let labelColor = "";
 
-    if (/period/i.test(title)) {
-      styles.backgroundColor = "#ffe6f0";
-      styles.borderLeft = "4px solid #ff80aa";
-      label = "Period Log";
-      labelColor = "text-danger";
-    } else if (/diet/i.test(title)) {
-      styles.backgroundColor = "#e3f2fd";
-      styles.borderLeft = "4px solid #2196f3";
-      label = "Diet Log";
-      labelColor = "text-primary";
-    } else if (/exercise|workout/i.test(title)) {
-      styles.backgroundColor = "#f0f0f0";
-      styles.borderLeft = "4px solid #6c757d";
-      label = "Exercise Log";
-      labelColor = "text-secondary";
-    }
+                    if (/period/i.test(title)) {
+                      styles.backgroundColor = "#ffe6f0";
+                      styles.borderLeft = "4px solid #ff80aa";
+                      label = "Period Log";
+                      labelColor = "text-danger";
+                    } else if (/diet/i.test(title)) {
+                      styles.backgroundColor = "#e3f2fd";
+                      styles.borderLeft = "4px solid #2196f3";
+                      label = "Diet Log";
+                      labelColor = "text-primary";
+                    } else if (/exercise|workout/i.test(title)) {
+                      styles.backgroundColor = "#f0f0f0";
+                      styles.borderLeft = "4px solid #6c757d";
+                      label = "Exercise Log";
+                      labelColor = "text-secondary";
+                    }
 
-    return (
-      <div
-        key={i}
-        style={{
-          ...styles,
-          padding: "10px",
-          borderRadius: "6px",
-        }}
-      >
-        {label && (
-          <strong className={labelColor}>{label}</strong>
-        )}
-        <div className="fw-semibold text-dark mb-1">{entry.Title}</div>
-        <div className="text-muted small">{entry.Description}</div>
-      </div>
-    );
-  })}
-</div>
-
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          ...styles,
+                          padding: "10px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        {label && (
+                          <strong className={labelColor}>{label}</strong>
+                        )}
+                        <div className="fw-semibold text-dark mb-1">
+                          {entry.Title}
+                        </div>
+                        <div className="text-muted small">
+                          {entry.Description}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </>
             ) : (
               <div className="text-center text-muted py-5">
@@ -850,71 +946,63 @@ export default function UserDetailsClient() {
             <thead className="table-primary">
               <tr>
                 <th>Sr No.</th>
-                <th>Approx Cycle Duration</th>
-                <th>Current Cycles</th>
-                <th>Current Cycle Duration</th>
-                <th>Start Date</th>
-                <th>Density</th>
+                <th>Cycle Start Date</th>
+                <th>Cycle Length (days)</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((item, index) => {
-                const daysSinceStart = calculateDuration(item.StartDate);
-                const currentCycles = isConsecutivePeriods
-                  ? 1
-                  : Math.floor(daysSinceStart / approxCycleDuration);
-                const currentCycleDuration =
-                  daysSinceStart % approxCycleDuration;
-                const formattedDate = new Date(
-                  item.StartDate
-                ).toLocaleDateString("en-GB");
-
-                const severityValue =
-                  typeof item.Severity === "string"
-                    ? item.Severity.toLowerCase()
-                    : "";
-
-                const badgeColor =
-                  severityValue === "high"
-                    ? "danger"
-                    : severityValue === "low"
-                    ? "warning"
-                    : "info";
-
-                return (
+              {periodCycles.length > 0 ? (
+                paginatedPeriodCycles.map((cycle, index) => (
                   <tr key={index}>
-                    <td>{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                    <td>{approxCycleDuration} days</td>
-                    <td>{currentCycles}</td>
-                    <td>{currentCycleDuration}</td>
-                    <td>{formattedDate}</td>
+                    <td>{(currentPage - 1) * periodsPerPage + index + 1}</td>
+
                     <td>
-                      <span className={`badge bg-${badgeColor} text-dark`}>
-                        {item.Severity}
+                      {new Date(cycle.startDate).toLocaleDateString("en-GB")}
+                    </td>
+                    <td>{cycle.cycleLength}</td>
+                    <td>
+                      <span
+                        className={`badge ${
+                          index === periodCycles.length - 1
+                            ? "bg-warning text-dark"
+                            : "bg-success"
+                        }`}
+                      >
+                        {index === periodCycles.length - 1
+                          ? "Current Cycle"
+                          : "Completed"}
                       </span>
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="text-center text-muted">
+                    No period history available
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPeriodPages > 1 && (
           <nav className="mt-3">
-            <ul className="pagination justify-content-end mb-0">
+            <ul className="pagination justify-content-center mb-0">
               <li
                 className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage((prev) => prev - 1)}
+                  onClick={() => setCurrentPage((p) => p - 1)}
                 >
                   Previous
                 </button>
               </li>
-              {Array.from({ length: totalPages }, (_, i) => (
+
+              {Array.from({ length: totalPeriodPages }, (_, i) => (
                 <li
                   key={i}
                   className={`page-item ${
@@ -929,14 +1017,15 @@ export default function UserDetailsClient() {
                   </button>
                 </li>
               ))}
+
               <li
                 className={`page-item ${
-                  currentPage === totalPages ? "disabled" : ""
+                  currentPage === totalPeriodPages ? "disabled" : ""
                 }`}
               >
                 <button
                   className="page-link"
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  onClick={() => setCurrentPage((p) => p + 1)}
                 >
                   Next
                 </button>
@@ -996,7 +1085,7 @@ export default function UserDetailsClient() {
         {/* Pagination */}
         {totalWeightPages > 1 && (
           <nav className="mt-3">
-            <ul className="pagination justify-content-end mb-0">
+            <ul className="pagination justify-content-center mb-0">
               <li className={`page-item ${weightPage === 1 ? "disabled" : ""}`}>
                 <button
                   className="page-link"
@@ -1037,8 +1126,6 @@ export default function UserDetailsClient() {
         )}
       </div>
 
-     
-
       {/* <!-- diet insight table --> */}
       <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -1069,14 +1156,16 @@ export default function UserDetailsClient() {
             <tbody>
               {paginatedDietLogs.length > 0 ? (
                 paginatedDietLogs.map((log, index) => {
-                  const formattedDate = new Date(log.LogDate).toLocaleDateString("en-GB");
+                  const formattedDate = new Date(
+                    log.LogDate
+                  ).toLocaleDateString("en-GB");
                   return (
                     <tr key={index}>
                       <td>{(dietPage - 1) * dietPerPage + index + 1}</td>
-                      <td>{log.MealItem?.FoodItem || 'N/A'}</td>
-                      <td>{log.MealName || 'N/A'}</td>
-                      <td>{log.Quantity || 'N/A'}</td>
-                      <td>{log.TotalCalories || 'N/A'}</td>
+                      <td>{log.MealItem?.FoodItem || "N/A"}</td>
+                      <td>{log.MealName || "N/A"}</td>
+                      <td>{log.Quantity || "N/A"}</td>
+                      <td>{log.TotalCalories || "N/A"}</td>
                       <td>{formattedDate}</td>
                     </tr>
                   );
@@ -1095,7 +1184,7 @@ export default function UserDetailsClient() {
         {/* Pagination */}
         {totalDietPages > 1 && (
           <nav className="mt-3">
-            <ul className="pagination justify-content-end mb-0">
+            <ul className="pagination justify-content-center mb-0">
               <li className={`page-item ${dietPage === 1 ? "disabled" : ""}`}>
                 <button
                   className="page-link"
@@ -1107,9 +1196,7 @@ export default function UserDetailsClient() {
               {Array.from({ length: totalDietPages }, (_, i) => (
                 <li
                   key={i}
-                  className={`page-item ${
-                    dietPage === i + 1 ? "active" : ""
-                  }`}
+                  className={`page-item ${dietPage === i + 1 ? "active" : ""}`}
                 >
                   <button
                     className="page-link"
@@ -1155,10 +1242,13 @@ export default function UserDetailsClient() {
             <tbody>
               {paginatedActivities.length > 0 ? (
                 paginatedActivities.map((activity, index) => {
-                  const formattedDate = activity.date.toLocaleDateString("en-GB");
+                  const formattedDate =
+                    activity.date.toLocaleDateString("en-GB");
                   return (
                     <tr key={index}>
-                      <td>{(activityPage - 1) * activityPerPage + index + 1}</td>
+                      <td>
+                        {(activityPage - 1) * activityPerPage + index + 1}
+                      </td>
                       <td>{formattedDate}</td>
                       <td>{activity.title}</td>
                       <td>{activity.description}</td>
@@ -1179,8 +1269,10 @@ export default function UserDetailsClient() {
         {/* Pagination */}
         {totalActivityPages > 1 && (
           <nav className="mt-3">
-            <ul className="pagination justify-content-end mb-0">
-              <li className={`page-item ${activityPage === 1 ? "disabled" : ""}`}>
+            <ul className="pagination justify-content-center mb-0">
+              <li
+                className={`page-item ${activityPage === 1 ? "disabled" : ""}`}
+              >
                 <button
                   className="page-link"
                   onClick={() => setActivityPage((prev) => prev - 1)}
@@ -1240,13 +1332,15 @@ export default function UserDetailsClient() {
             <tbody>
               {paginatedWorkouts.length > 0 ? (
                 paginatedWorkouts.map((workout, index) => {
-                  const formattedDate = new Date(workout.LoggedDate).toLocaleDateString("en-GB");
+                  const formattedDate = new Date(
+                    workout.LoggedDate
+                  ).toLocaleDateString("en-GB");
                   return (
                     <tr key={index}>
                       <td>{(workoutPage - 1) * workoutPerPage + index + 1}</td>
-                      <td>{workout.ActivityName || 'N/A'}</td>
-                      <td>{workout.ActivityCategory || 'N/A'}</td>
-                      <td>{workout.DurationInMinutes || 'N/A'}</td>
+                      <td>{workout.ActivityName || "N/A"}</td>
+                      <td>{workout.ActivityCategory || "N/A"}</td>
+                      <td>{workout.DurationInMinutes || "N/A"}</td>
                       <td>{formattedDate}</td>
                     </tr>
                   );
@@ -1265,8 +1359,10 @@ export default function UserDetailsClient() {
         {/* Pagination */}
         {totalWorkoutPages > 1 && (
           <nav className="mt-3">
-            <ul className="pagination justify-content-end mb-0">
-              <li className={`page-item ${workoutPage === 1 ? "disabled" : ""}`}>
+            <ul className="pagination justify-content-center mb-0">
+              <li
+                className={`page-item ${workoutPage === 1 ? "disabled" : ""}`}
+              >
                 <button
                   className="page-link"
                   onClick={() => setWorkoutPage((prev) => prev - 1)}
@@ -1305,7 +1401,6 @@ export default function UserDetailsClient() {
           </nav>
         )}
       </div>
-
     </div>
   );
 }

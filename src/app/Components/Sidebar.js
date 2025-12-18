@@ -14,11 +14,11 @@ export default function Sidebar() {
       icon: "ri-user-line",
       submenu: [
         { href: "/Users", label: "All Users", icon: "ri-user-3-line" },
-        {
-          href: "/SuperUsers",
-          label: "Super Users",
-          icon: "ri-shield-user-line",
-        },
+        // {
+        //   href: "/SuperUsers",
+        //   label: "Super Users",
+        //   icon: "ri-shield-user-line",
+        // },
       ],
     },
     {

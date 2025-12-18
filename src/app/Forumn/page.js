@@ -18,6 +18,7 @@ export default function Page() {
     Media: [],
   });
   const [showCommentsMap, setShowCommentsMap] = useState({});
+  const [showReportsMap, setShowReportsMap] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('date_desc');
 
@@ -51,14 +52,35 @@ export default function Page() {
           });
         }
 
-        // Associate comments with posts
-        const postsWithComments = postsResponse.map(post => ({
+        // Group reports by PostId
+        const reportsByPostId = {};
+        if (Array.isArray(postsResponse)) {
+          postsResponse.forEach(post => {
+            if (post.Reports && Array.isArray(post.Reports)) {
+              post.Reports.forEach(report => {
+                if (!reportsByPostId[post.Id]) {
+                  reportsByPostId[post.Id] = [];
+                }
+                const user = usersResponse[report.ReporterUserId];
+                reportsByPostId[post.Id].push({
+                  ...report,
+                  UserName: report.ReporterName || "Unknown User",
+                  UserAvatar: user?.avatar || getDefaultAvatar(report.ReporterName || "User")
+                });
+              });
+            }
+          });
+        }
+
+        // Associate comments and reports with posts
+        const postsWithCommentsAndReports = postsResponse.map(post => ({
           ...post,
-          Comments: commentsByPostId[post.Id] || []
+          Comments: commentsByPostId[post.Id] || [],
+          Reports: reportsByPostId[post.Id] || []
         }));
 
         // Sort posts by date (most recent first)
-        const sortedPosts = postsWithComments.sort((a, b) =>
+        const sortedPosts = postsWithCommentsAndReports.sort((a, b) =>
           new Date(b.CreatedAt) - new Date(a.CreatedAt)
         );
 
@@ -654,6 +676,10 @@ export default function Page() {
                         <i className="bi bi-chat-left-dots-fill text-primary"></i>{" "}
                         {post.Comments?.length || 0} Comments
                       </span>
+                      <span>
+                        <i className="bi bi-flag-fill text-warning"></i>{" "}
+                        {post.Reports?.length || 0} Reports
+                      </span>
                     </div>
 
                     <div className="d-flex justify-content-end gap-2">
@@ -697,6 +723,19 @@ export default function Page() {
                     >
                       {showComments ? "Hide Comments" : "Show Comments"}
                     </button>
+                    {post.Reports && post.Reports.length > 0 && (
+                      <button
+                        className="btn btn-sm btn-outline-warning ms-2"
+                        onClick={() =>
+                          setShowReportsMap((prev) => ({
+                            ...prev,
+                            [post.Id]: !prev[post.Id],
+                          }))
+                        }
+                      >
+                        {showReportsMap[post.Id] ? "Hide Reports" : "Show Reports"}
+                      </button>
+                    )}
                   </div>
 
                   {/* Comments section */}
@@ -796,6 +835,79 @@ export default function Page() {
                               <i className="ri-delete-bin-line"></i>
                             </button>
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reports section */}
+                  {showReportsMap[post.Id] && post.Reports && post.Reports.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: "10px",
+                        padding: "10px",
+                        backgroundColor: "#fff3cd",
+                        borderRadius: "8px",
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      <h6
+                        style={{
+                          margin: "0 0 8px",
+                          fontSize: "14px",
+                          fontWeight: "bold",
+                          color: "#856404",
+                        }}
+                      >
+                        Reports ({post.Reports.length})
+                      </h6>
+                      {post.Reports.map((report) => (
+                        <div
+                          key={report.Id}
+                          style={{
+                            padding: "8px",
+                            marginBottom: "8px",
+                            backgroundColor: "white",
+                            borderRadius: "6px",
+                            border: "1px solid #ffeaa7",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            <img
+                              src={report.UserAvatar || getDefaultAvatar(report.UserName || "User")}
+                              alt={report.UserName || "User"}
+                              style={{
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                              }}
+                              onError={(e) => {
+                                e.target.src = getDefaultAvatar(report.UserName || "User");
+                              }}
+                            />
+                            <small style={{ color: "#856404", fontWeight: "bold" }}>
+                              {report.UserName || ""}
+                            </small>
+                          </div>
+                          <p
+                            style={{
+                              margin: "0",
+                              fontSize: "14px",
+                              color: "#856404",
+                              lineHeight: "1.4",
+                            }}
+                          >
+                            {report.Reason}
+                          </p>
                         </div>
                       ))}
                     </div>

@@ -6,6 +6,7 @@ import DietPlanAssignmentModal from "./DietPlanAssignmentModal";
 import { useAlert } from "../utils/alertcontxt";
 import { useConfirm } from "../utils/confirmContext";
 import { dietPlanApi } from "../utils/apiClient";
+import * as XLSX from 'xlsx';
 
 export default function Page() {
   const { showAlert } = useAlert();
@@ -638,6 +639,59 @@ export default function Page() {
     return [...new Set(mealTypes)];
   };
 
+  const exportMealsToExcel = () => {
+    // Collect all meals from all diet plans
+    const allMeals = [];
+
+    dietPlans.forEach((plan) => {
+      if (plan.Meals && Array.isArray(plan.Meals)) {
+        plan.Meals.forEach((meal) => {
+          allMeals.push({
+            'Diet Plan Name': plan.Name || 'Unnamed Plan',
+            'Meal Type': meal.Name || '',
+            'Calories': meal.RecommendedCalories || 0,
+            'Protein (g)': meal.RecommendedProtein || 0,
+            'Carbs (g)': meal.RecommendedCarbs || 0,
+            'Fats (g)': meal.RecommendedFats || 0,
+            'Plan Description': plan.Description || '',
+          });
+        });
+      }
+    });
+
+    if (allMeals.length === 0) {
+      showAlert('No meals found to export.', 'warning');
+      return;
+    }
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(allMeals);
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Meals');
+
+    // Generate filename with current date
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `diet_plan_meals_${date}.xlsx`;
+
+    // Write workbook to array buffer
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+
+    // Create blob and download
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showAlert(`Successfully exported ${allMeals.length} meals to Excel.`, 'success');
+  };
+
   return (
     <div className="content-wrapper">
       <div className="container-xxl flex-grow-1 container-p-y">
@@ -750,14 +804,23 @@ export default function Page() {
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 className="mb-0">Diet Plans</h5>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Search plans..."
-                  style={{ maxWidth: 250, fontSize: 14 }}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+                <div className="d-flex gap-2">
+                  {/* <button
+                    className="btn btn-success btn-sm"
+                    onClick={exportMealsToExcel}
+                  >
+                    <i className="bi bi-file-earmark-spreadsheet me-1"></i>
+                    Export Meals
+                  </button> */}
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search plans..."
+                    style={{ maxWidth: 250, fontSize: 14 }}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="card-body">
                 {apiLoading && (

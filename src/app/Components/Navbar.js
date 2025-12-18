@@ -19,14 +19,14 @@ export default function Navbar() {
 
       <div className="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
         {/* Search */}
-        <div className="navbar-nav align-items-center">
+        {/* <div className="navbar-nav align-items-center">
           <div className="nav-item navbar-search-wrapper mb-0">
             <a className="nav-item nav-link search-toggler fw-normal px-0" href="#" onClick={(e) => e.preventDefault()}>
               <i className="ri-search-line ri-22px scaleX-n1-rtl me-3"></i>
               <span className="d-none d-md-inline-block text-muted">Search (Ctrl+/)</span>
             </a>
           </div>
-        </div>
+        </div> */}
         {/* /Search */}
 
         <ul className="navbar-nav flex-row align-items-center ms-auto">

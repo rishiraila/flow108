@@ -14,6 +14,8 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  height: 100%;
+  overflow: hidden; 
 }
 
 body {
@@ -378,4 +380,62 @@ a {
 
 .footer-page strong {
   font-weight: bold;
+}
+.layout-page {
+  margin-left: 0px; /* 260 + 16 + 16 */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+
+/* ===== Sidebar Card Style ===== */
+.layout-menu {
+  position: fixed;
+ 
+
+  background: #ffffff !important;   /* ✅ white background */
+  border-radius: 16px;    /* ✅ rounded corners */
+
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.2); /* ✅ soft shadow */
+
+  overflow-y: auto;       /* internal scroll if menu is long */
+  z-index: 1000;
+}
+
+.content-wrapper {
+  flex: 1;
+  overflow-y: auto;     /* ✅ ONLY CONTENT SCROLLS */
+  padding: 0;
+  margin: 0;
+}
+.layout-wrapper,
+.layout-container {
+  height: 100vh;
+  overflow: hidden; /* ⛔ prevent extra scroll */
+}
+.sidebar-header {
+  position: relative;
+}
+
+.sidebar-close-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  font-weight: 600;
+  color: #000; /* black */
+  cursor: pointer;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1100;
+}
+
+@media (max-width: 991px) {
+  .sidebar-close-btn {
+    display: block;
+  }
 }
