@@ -70,7 +70,7 @@ export default function WorkoutsPage() {
     Time: "",
     Format: "",
     Image: "",
-    RestSeconds: 30
+    RestSeconds: ""
   });
 
   // Styled alert states
@@ -408,7 +408,7 @@ export default function WorkoutsPage() {
                       name="RestSeconds"
                       value={newWorkout.RestSeconds}
                       onChange={handleInputChange}
-                      placeholder="30"
+                      placeholder=""
                       min="0"
                     />
                     <div className="form-text">Enter the rest time in seconds between exercises</div>

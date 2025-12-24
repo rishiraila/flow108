@@ -165,7 +165,7 @@ export default function WorkoutAssignmentModal({
                   </small>
                 )}
               </div>
-
+{/* 
               <div className="row">
                 <div className="col-md-6 mb-3">
                   <label htmlFor="orderInput" className="form-label">
@@ -201,7 +201,7 @@ export default function WorkoutAssignmentModal({
                     required
                   />
                 </div>
-              </div>
+              </div> */}
 
               <div className="modal-footer">
                 <button
