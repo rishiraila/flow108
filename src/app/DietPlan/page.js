@@ -16,16 +16,11 @@ export default function Page() {
   const [formData, setFormData] = useState({
     Name: "",
     Description: "",
-    Meals: [
-      {
-        Name: "",
-        RecommendedCalories: 0,
-        RecommendedProtein: 0,
-        RecommendedCarbs: 0,
-        RecommendedFats: 0,
-      },
-    ],
+    selectedMeals: [],
+    Meals: [],
   });
+
+  const availableMeals = ["Breakfast", "Lunch", "Snack", "Dinner"];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -146,6 +141,15 @@ export default function Page() {
     }
   }, [dietPlans]);
 
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      Meals: (prev.selectedMeals || []).map((meal) => ({
+        Name: meal,
+      })),
+    }));
+  }, [formData.selectedMeals]);
+
   const fetchDietPlans = async () => {
     try {
       setApiLoading(true);
@@ -248,6 +252,23 @@ export default function Page() {
     }));
   };
 
+  const handleMealSelection = (meal) => {
+    setFormData((prev) => {
+      const isSelected = (prev.selectedMeals || []).includes(meal);
+      if (isSelected) {
+        return {
+          ...prev,
+          selectedMeals: (prev.selectedMeals || []).filter((m) => m !== meal),
+        };
+      } else {
+        return {
+          ...prev,
+          selectedMeals: [...(prev.selectedMeals || []), meal],
+        };
+      }
+    });
+  };
+
   const handleMealChange = (index, field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -298,24 +319,25 @@ export default function Page() {
     setError(null);
     setSuccess(false);
 
-    const validMeals = formData.Meals.filter(
-      (meal) => meal.Name.trim() && meal.RecommendedCalories > 0
-    );
+    const validMeals = formData.Meals.filter((meal) => meal.Name.trim());
 
     if (validMeals.length === 0) {
-      setError(
-        "Please add at least one meal with a name and recommended calories."
-      );
+      setError("Please select at least one meal.");
+      setLoading(false);
+      return;
+    }
+
+    // Check for duplicate meal types
+    const mealNames = validMeals.map((meal) => meal.Name);
+    const uniqueMealNames = new Set(mealNames);
+    if (mealNames.length !== uniqueMealNames.size) {
+      setError("Meal type already exists. Please ensure all meal types are unique.");
       setLoading(false);
       return;
     }
 
     const mealsPayload = validMeals.map((meal) => ({
       Name: meal.Name,
-      RecommendedCalories: meal.RecommendedCalories,
-      RecommendedProtein: meal.RecommendedProtein,
-      RecommendedCarbs: meal.RecommendedCarbs,
-      RecommendedFats: meal.RecommendedFats,
     }));
 
     const payload = {
@@ -325,37 +347,16 @@ export default function Page() {
     };
 
     try {
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminDietPlan/Dietplan/Create",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const { dietPlanApi } = await import("../utils/apiClient");
+      const result = await dietPlanApi.create(payload);
 
       if (result.Status) {
         setSuccess(true);
         setFormData({
           Name: "",
           Description: "",
-          Meals: [
-            {
-              Name: "",
-              RecommendedCalories: 0,
-              RecommendedProtein: 0,
-              RecommendedCarbs: 0,
-              RecommendedFats: 0,
-            },
-          ],
+          selectedMeals: [],
+          Meals: [],
         });
         fetchDietPlans();
         setTimeout(() => setSuccess(false), 3000);
@@ -480,7 +481,7 @@ export default function Page() {
           prevPlans.filter((plan) => plan.Id !== planId)
         );
         console.log("🗑️ Showing success alert...");
-        showAlert("Diet plan deleted successfully.", "success");
+        alert("Diet plan deleted successfully.");
         // Refresh the list to ensure consistency
         console.log("🗑️ Refreshing diet plans list...");
         fetchDietPlans();
@@ -592,6 +593,15 @@ export default function Page() {
       return;
     }
 
+    // Check for duplicate meal types
+    const mealNames = validMeals.map(meal => meal.Name);
+    const uniqueMealNames = new Set(mealNames);
+    if (mealNames.length !== uniqueMealNames.size) {
+      setEditError("Meal type already exists. Please ensure all meal types are unique.");
+      setEditLoading(false);
+      return;
+    }
+
     const mealsPayload = validMeals.map((meal) => ({
       Name: meal.Name,
       RecommendedCalories: meal.RecommendedCalories,
@@ -626,8 +636,8 @@ export default function Page() {
 
   const filteredPlans = dietPlans.filter(
     (plan) =>
-      plan.Name?.toLowerCase().includes(search.toLowerCase()) ||
-      plan.Description?.toLowerCase().includes(search.toLowerCase())
+      (plan.Name && plan.Name.toLowerCase().includes(search.toLowerCase())) ||
+      (plan.Description && plan.Description.toLowerCase().includes(search.toLowerCase()))
   );
 
   const getMealTypes = (meals) => {
@@ -703,15 +713,8 @@ export default function Page() {
               setFormData({
                 Name: "",
                 Description: "",
-                Meals: [
-                  {
-                    Name: "",
-                    RecommendedCalories: 0,
-                    RecommendedProtein: 0,
-                    RecommendedCarbs: 0,
-                    RecommendedFats: 0,
-                  },
-                ],
+                selectedMeals: [],
+                Meals: [],
               });
               setError(null);
               setSuccess(false);
@@ -1425,123 +1428,23 @@ export default function Page() {
                       </div>
 
                       <div className="mb-3">
-                        <label className="form-label">Meals</label>
-                        {formData.Meals.map((meal, index) => (
-                          <div key={index} className="mb-3 border rounded p-3">
-                            <div className="row g-2 mb-2">
-                              <div className="col-md-4">
-                                <label className="form-label">Meal Name</label>
-                                <select
-                                  className="form-select"
-                                  value={meal.Name}
-                                  onChange={(e) =>
-                                    handleMealChange(index, "Name", e.target.value)
-                                  }
-                                  required
-                                >
-                                  <option value="">Select meal</option>
-                                  <option value="Breakfast">Breakfast</option>
-                                  <option value="Lunch">Lunch</option>
-                                  <option value="Snack">Snack</option>
-                                  <option value="Dinner">Dinner</option>
-                                </select>
-                              </div>
-                              <div className="col-md-2">
-                                <label className="form-label">Calories</label>
-                                <input
-                                  type="number"
-                                  className="form-control"
-                                  placeholder="0"
-                                  min="0"
-                                  value={meal.RecommendedCalories}
-                                  onChange={(e) =>
-                                    handleMealChange(
-                                      index,
-                                      "RecommendedCalories",
-                                      e.target.value
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                              <div className="col-md-2 d-flex align-items-end">
-                                <label className="form-label">&nbsp;</label>
-                                <button
-                                  type="button"
-                                  className="btn btn-outline-danger btn-sm w-100"
-                                  onClick={() => removeMeal(index)}
-                                  disabled={formData.Meals.length === 1}
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </div>
+                        <label className="form-label">Select Meals</label>
+                        <div>
+                          {availableMeals.map((meal) => (
+                            <div key={meal} className="form-check">
+                              <input
+                                className="form-check-input"
+                                type="checkbox"
+                                id={`meal-${meal}`}
+                                checked={(formData.selectedMeals || []).includes(meal)}
+                                onChange={() => handleMealSelection(meal)}
+                              />
+                              <label className="form-check-label" htmlFor={`meal-${meal}`}>
+                                {meal}
+                              </label>
                             </div>
-                            <div className="row g-2">
-                              <div className="col-md-3">
-                                <label className="form-label">Protein (g)</label>
-                                <input
-                                  type="number"
-                                  className="form-control"
-                                  placeholder="0"
-                                  min="0"
-                                  value={meal.RecommendedProtein}
-                                  onChange={(e) =>
-                                    handleMealChange(
-                                      index,
-                                      "RecommendedProtein",
-                                      e.target.value
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                              <div className="col-md-3">
-                                <label className="form-label">Carbs (g)</label>
-                                <input
-                                  type="number"
-                                  className="form-control"
-                                  placeholder="0"
-                                  min="0"
-                                  value={meal.RecommendedCarbs}
-                                  onChange={(e) =>
-                                    handleMealChange(
-                                      index,
-                                      "RecommendedCarbs",
-                                      e.target.value
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                              <div className="col-md-3">
-                                <label className="form-label">Fats (g)</label>
-                                <input
-                                  type="number"
-                                  className="form-control"
-                                  placeholder="0"
-                                  min="0"
-                                  value={meal.RecommendedFats}
-                                  onChange={(e) =>
-                                    handleMealChange(
-                                      index,
-                                      "RecommendedFats",
-                                      e.target.value
-                                    )
-                                  }
-                                  required
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary btn-sm mt-2"
-                          onClick={addMeal}
-                        >
-                          <i className="bi bi-plus-circle me-1"></i>
-                          Add Meal
-                        </button>
+                          ))}
+                        </div>
                       </div>
 
                       <button

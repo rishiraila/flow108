@@ -5,6 +5,14 @@ import BannerAssignmentModal from "../BannerAssignmentModal";
 import Masonry from 'react-masonry-css';
 
 export default function BannersPage() {
+  // Character limits
+  const CHAR_LIMITS = {
+    name: 50,
+    title: 100,
+    content: 500,
+    redirectUrl: 200
+  };
+
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,6 +25,7 @@ export default function BannersPage() {
   const [editBanner, setEditBanner] = useState({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('date_desc');
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Load banners on component mount
   useEffect(() => {
@@ -48,11 +57,42 @@ export default function BannersPage() {
     }
   };
 
+  // Validation function
+  const validateBanner = (banner) => {
+    const errors = {};
+
+    if (banner.name.length > CHAR_LIMITS.name) {
+      errors.name = `Name must be ${CHAR_LIMITS.name} characters or less`;
+    }
+    if (banner.title.length > CHAR_LIMITS.title) {
+      errors.title = `Title must be ${CHAR_LIMITS.title} characters or less`;
+    }
+    if (banner.content.length > CHAR_LIMITS.content) {
+      errors.content = `Content must be ${CHAR_LIMITS.content} characters or less`;
+    }
+    if (banner.redirectUrl.length > CHAR_LIMITS.redirectUrl) {
+      errors.redirectUrl = `Redirect URL must be ${CHAR_LIMITS.redirectUrl} characters or less`;
+    }
+
+    return errors;
+  };
+
   const handleAddBanner = async () => {
     if (!newBanner.name || !newBanner.title || !newBanner.content || !newBanner.redirectUrl || !newBanner.imageFile) {
       alert('Please provide all required fields: name, title, content, redirect URL, and select an image file.');
       return;
     }
+
+    // Validate character limits
+    const errors = validateBanner(newBanner);
+    if (Object.keys(errors).length > 0) {
+      const errorMessages = Object.values(errors).join('\n');
+      alert('Please fix the following errors:\n\n' + errorMessages);
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors({});
 
     try {
       const result = await addBanner(newBanner.name, newBanner.title, newBanner.content, newBanner.redirectUrl, newBanner.imageFile);
@@ -71,9 +111,21 @@ export default function BannersPage() {
   };
 
   const handleEditBanner = async () => {
+    // Validate character limits
+    const errors = validateBanner(editBanner);
+    if (Object.keys(errors).length > 0) {
+      const errorMessages = Object.values(errors).join('\n');
+      alert('Please fix the following errors:\n\n' + errorMessages);
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors({});
+
     try {
       const result = await updateBanner(editingBanner.id, editBanner.name, editBanner.title, editBanner.content, editBanner.redirectUrl, editBanner.imageFile);
       if (result.status) {
+        alert("✅ Banner updated successfully!");
         // Reload banners after successful update
         await loadBanners();
         setShowEditBannerModal(false);
@@ -126,30 +178,34 @@ export default function BannersPage() {
   };
 
   const filteredBanners = useMemo(() => {
-    let filtered = banners.filter(banner =>
-      (banner.name && banner.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (banner.title && banner.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (banner.description && banner.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    let filtered = banners;
 
-    switch (sortOption) {
-      case 'date_desc':
-        filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        break;
-      case 'date_asc':
-        filtered.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-        break;
-      case 'likes_desc':
-        filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-        break;
-      case 'likes_asc':
-        filtered.sort((a, b) => (a.likes || 0) - (b.likes || 0));
-        break;
-      default:
-        break;
+    if (searchQuery) {
+      const search = searchQuery.toLowerCase();
+      filtered = banners.filter(banner =>
+        (banner.name || '').toLowerCase().includes(search) ||
+        (banner.title || '').toLowerCase().includes(search) ||
+        (banner.description || '').toLowerCase().includes(search)
+      );
     }
 
-    return filtered;
+    // Sort the filtered array
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOption) {
+        case 'date_desc':
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'date_asc':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'likes_desc':
+          return (b.likes || 0) - (a.likes || 0);
+        case 'likes_asc':
+          return (a.likes || 0) - (b.likes || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
   }, [banners, searchQuery, sortOption]);
 
   const breakpointCols = { default: 3, 1100: 2, 700: 1 };
@@ -506,14 +562,51 @@ export default function BannersPage() {
           <div className="modal-backdrop">
             <div className="modal-content-custom">
               <h5 className="mb-3">Add Banner</h5>
-              <input className="form-control mb-2" placeholder="Name" value={newBanner.name}
-                onChange={(e) => setNewBanner({ ...newBanner, name: e.target.value })} />
-              <input className="form-control mb-2" placeholder="Title" value={newBanner.title}
-                onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })} />
-              <textarea className="form-control mb-2" placeholder="Content" rows="3" value={newBanner.content}
-                onChange={(e) => setNewBanner({ ...newBanner, content: e.target.value })} />
-              <input className="form-control mb-2" placeholder="Redirect URL" value={newBanner.redirectUrl}
-                onChange={(e) => setNewBanner({ ...newBanner, redirectUrl: e.target.value })} />
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.name ? 'is-invalid' : ''}`}
+                  placeholder="Name"
+                  value={newBanner.name}
+                  maxLength={CHAR_LIMITS.name}
+                  onChange={(e) => setNewBanner({ ...newBanner, name: e.target.value })}
+                />
+                <small className="text-muted">{newBanner.name.length}/{CHAR_LIMITS.name} characters</small>
+                {validationErrors.name && <div className="invalid-feedback">{validationErrors.name}</div>}
+              </div>
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
+                  placeholder="Title"
+                  value={newBanner.title}
+                  maxLength={CHAR_LIMITS.title}
+                  onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
+                />
+                <small className="text-muted">{newBanner.title.length}/{CHAR_LIMITS.title} characters</small>
+                {validationErrors.title && <div className="invalid-feedback">{validationErrors.title}</div>}
+              </div>
+              <div className="mb-2">
+                <textarea
+                  className={`form-control ${validationErrors.content ? 'is-invalid' : ''}`}
+                  placeholder="Content"
+                  rows="3"
+                  value={newBanner.content}
+                  maxLength={CHAR_LIMITS.content}
+                  onChange={(e) => setNewBanner({ ...newBanner, content: e.target.value })}
+                />
+                <small className="text-muted">{newBanner.content.length}/{CHAR_LIMITS.content} characters</small>
+                {validationErrors.content && <div className="invalid-feedback">{validationErrors.content}</div>}
+              </div>
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.redirectUrl ? 'is-invalid' : ''}`}
+                  placeholder="Redirect URL"
+                  value={newBanner.redirectUrl}
+                  maxLength={CHAR_LIMITS.redirectUrl}
+                  onChange={(e) => setNewBanner({ ...newBanner, redirectUrl: e.target.value })}
+                />
+                <small className="text-muted">{newBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
+                {validationErrors.redirectUrl && <div className="invalid-feedback">{validationErrors.redirectUrl}</div>}
+              </div>
               <input type="file" className="form-control mb-3" accept="image/*"
                 onChange={(e) => handleImageUpload(e, 'add')} />
               <div className="d-flex justify-content-end gap-2">
@@ -529,14 +622,51 @@ export default function BannersPage() {
           <div className="modal-backdrop">
             <div className="modal-content-custom">
               <h5 className="mb-3">Edit Banner</h5>
-              <input className="form-control mb-2" placeholder="Name" value={editBanner.name}
-                onChange={(e) => setEditBanner({ ...editBanner, name: e.target.value })} />
-              <input className="form-control mb-2" placeholder="Title" value={editBanner.title}
-                onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value })} />
-              <textarea className="form-control mb-2" placeholder="Content" rows="3" value={editBanner.content}
-                onChange={(e) => setEditBanner({ ...editBanner, content: e.target.value })} />
-              <input className="form-control mb-2" placeholder="Redirect URL" value={editBanner.redirectUrl}
-                onChange={(e) => setEditBanner({ ...editBanner, redirectUrl: e.target.value })} />
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.name ? 'is-invalid' : ''}`}
+                  placeholder="Name"
+                  value={editBanner.name}
+                  maxLength={CHAR_LIMITS.name}
+                  onChange={(e) => setEditBanner({ ...editBanner, name: e.target.value })}
+                />
+                <small className="text-muted">{editBanner.name.length}/{CHAR_LIMITS.name} characters</small>
+                {validationErrors.name && <div className="invalid-feedback">{validationErrors.name}</div>}
+              </div>
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
+                  placeholder="Title"
+                  value={editBanner.title}
+                  maxLength={CHAR_LIMITS.title}
+                  onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value })}
+                />
+                <small className="text-muted">{editBanner.title.length}/{CHAR_LIMITS.title} characters</small>
+                {validationErrors.title && <div className="invalid-feedback">{validationErrors.title}</div>}
+              </div>
+              <div className="mb-2">
+                <textarea
+                  className={`form-control ${validationErrors.content ? 'is-invalid' : ''}`}
+                  placeholder="Content"
+                  rows="3"
+                  value={editBanner.content}
+                  maxLength={CHAR_LIMITS.content}
+                  onChange={(e) => setEditBanner({ ...editBanner, content: e.target.value })}
+                />
+                <small className="text-muted">{editBanner.content.length}/{CHAR_LIMITS.content} characters</small>
+                {validationErrors.content && <div className="invalid-feedback">{validationErrors.content}</div>}
+              </div>
+              <div className="mb-2">
+                <input
+                  className={`form-control ${validationErrors.redirectUrl ? 'is-invalid' : ''}`}
+                  placeholder="Redirect URL"
+                  value={editBanner.redirectUrl}
+                  maxLength={CHAR_LIMITS.redirectUrl}
+                  onChange={(e) => setEditBanner({ ...editBanner, redirectUrl: e.target.value })}
+                />
+                <small className="text-muted">{editBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
+                {validationErrors.redirectUrl && <div className="invalid-feedback">{validationErrors.redirectUrl}</div>}
+              </div>
               {editingBanner && editingBanner.imageUrl && (
                 <div className="mb-3">
                   <label className="form-label">Current Image:</label>

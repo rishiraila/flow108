@@ -197,6 +197,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
         const result = await response.json();
         if (!result.Status) throw new Error(result.Message || "Failed to unassign user");
       }
+      alert("Selected users unassigned successfully!");
       setAssignSuccess(true);
       onAssignmentSuccess();
       setTimeout(() => {
@@ -425,6 +426,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                                     if (!response.ok) throw new Error("Failed to unassign user");
                                     const result = await response.json();
                                     if (!result.Status) throw new Error(result.Message || "Failed to unassign user");
+                                    alert("User unassigned successfully!");
                                     onAssignmentSuccess();
                                     await fetchAssignedUsers();
                                   } catch (error) {

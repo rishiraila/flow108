@@ -93,6 +93,7 @@ const deleteQuestion = async (id) => {
 
 export default function QuestionsPage() {
   const [filterType, setFilterType] = useState("all"); // values: "all", "public", "private"
+  const [sortOption, setSortOption] = useState("new"); // values: "new", "old"
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -121,6 +122,18 @@ export default function QuestionsPage() {
   useEffect(() => {
     loadQuestions();
   }, [filterType]);
+
+  const sortedQuestions = React.useMemo(() => {
+    const sorted = [...questions].sort((a, b) => {
+      if (sortOption === "new") {
+        return new Date(b.CreatedOn) - new Date(a.CreatedOn);
+      } else if (sortOption === "old") {
+        return new Date(a.CreatedOn) - new Date(b.CreatedOn);
+      }
+      return 0;
+    });
+    return sorted;
+  }, [questions, sortOption]);
 
   const loadQuestions = async () => {
     try {
@@ -446,9 +459,29 @@ export default function QuestionsPage() {
         <div className="row">
           <div className="col-12">
             <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center flex-wrap">
-                <h5 className="mb-0">All Questions ({questions.length})</h5>
-                <div className="btn-group mt-2 mt-md-0" role="group">
+              <div className="card-header">
+                <div className="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                  <h5 className="mb-0">All Questions ({questions.length})</h5>
+                  <div className="btn-group" role="group">
+                    <button
+                      className={`btn btn-outline-secondary ${
+                        sortOption === "new" ? "active" : ""
+                      }`}
+                      onClick={() => setSortOption("new")}
+                    >
+                      <i className="ri-sort-desc me-1"></i>Newest
+                    </button>
+                    <button
+                      className={`btn btn-outline-secondary ${
+                        sortOption === "old" ? "active" : ""
+                      }`}
+                      onClick={() => setSortOption("old")}
+                    >
+                      <i className="ri-sort-asc me-1"></i>Oldest
+                    </button>
+                  </div>
+                </div>
+                <div className="btn-group mt-2" role="group">
                   <button
                     className={`btn btn-outline-primary ${
                       filterType === "all" ? "active" : ""
@@ -486,7 +519,7 @@ export default function QuestionsPage() {
 
               <div className="card-body">
                 <div className="row">
-                  {questions.map((question) => (
+                  {sortedQuestions.map((question) => (
                     <div key={question.Id} className="col-md-6 mb-4">
                       <div className="card h-100">
                         <div className="card-body">

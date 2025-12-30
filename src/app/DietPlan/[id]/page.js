@@ -75,7 +75,7 @@ export default function DietPlanDetails() {
   const [recommendMealForm, setRecommendMealForm] = useState({
     MealItemId: "",
     MealType: "",
-    QuantityText: "",
+    RecommendedQuantity: "",
     DietPlanId: planId,
     Category: "",
   });
@@ -317,14 +317,14 @@ export default function DietPlanDetails() {
     setRecommendMealForm({
       MealItemId: rec.MealItemId || "",
       MealType: rec.MealType || "",
-      QuantityText: rec.Quantity || "",
+      RecommendedQuantity: String(parseFloat(rec.RecommendedQuantity) || ""),
       DietPlanId: rec.DietPlanId || planId,
       Category: rec.Category || "",
     });
 
     // 🆕 show current meal text in the search box
     const label = `${rec.FoodItem || ""}${
-      rec.Quantity ? ` (${rec.Quantity})` : ""
+      rec.RecommendedQuantity ? ` (${rec.RecommendedQuantity})` : ""
     }`;
     setMealSearchTerm(label.trim());
 
@@ -441,10 +441,8 @@ export default function DietPlanDetails() {
       return showAlert("Please select a meal", "error");
     if (!recommendMealForm.MealType)
       return showAlert("Please select meal type", "error");
-    if (
-      !recommendMealForm.QuantityText ||
-      !recommendMealForm.QuantityText.trim()
-    )
+    const quantityStr = String(recommendMealForm.RecommendedQuantity || "").trim();
+    if (!quantityStr)
       return showAlert("Please enter quantity", "error");
 
     try {
@@ -456,7 +454,7 @@ export default function DietPlanDetails() {
         // ✅ ADD MODE (POST /meal)
         fd.append("MealItemId", recommendMealForm.MealItemId);
         fd.append("MealType", recommendMealForm.MealType);
-        fd.append("QuantityText", recommendMealForm.QuantityText);
+        fd.append("RecommendedQuantity", recommendMealForm.RecommendedQuantity);
         fd.append("DietPlanId", recommendMealForm.DietPlanId);
 
         const res = await fetch(
@@ -497,7 +495,7 @@ export default function DietPlanDetails() {
           setRecommendMealForm({
             MealItemId: "",
             MealType: "",
-            QuantityText: "",
+            RecommendedQuantity: "",
             DietPlanId: planId,
             Category: "",
           });
@@ -508,7 +506,7 @@ export default function DietPlanDetails() {
       } else {
         // ✅ EDIT MODE (PATCH /api/admin/recommendations/{id})
         fd.append("MealType", recommendMealForm.MealType);
-        fd.append("QuantityText", recommendMealForm.QuantityText);
+        fd.append("RecommendedQuantity", recommendMealForm.RecommendedQuantity);
         if (recommendMealForm.Category) {
           fd.append("Category", recommendMealForm.Category);
         }
@@ -581,7 +579,7 @@ export default function DietPlanDetails() {
   const filteredRecommendedMeals = recommendedMeals.filter((r) => {
     const text = `${r.FoodItem ?? r.foodItem ?? ""} ${
       r.MealType ?? r.mealType ?? ""
-    } ${r.Category ?? r.category ?? ""} ${r.Quantity ?? r.quantity ?? ""}`
+    } ${r.Category ?? r.category ?? ""} ${r.RecommendedQuantity ?? r.recommendedQuantity ?? ""}`
       .toLowerCase()
       .trim();
 
@@ -605,9 +603,9 @@ export default function DietPlanDetails() {
         valA = (a.Category ?? a.category ?? "").toString().toLowerCase();
         valB = (b.Category ?? b.category ?? "").toString().toLowerCase();
         break;
-      case "Quantity":
-        valA = (a.Quantity ?? a.quantity ?? "").toString().toLowerCase();
-        valB = (b.Quantity ?? b.quantity ?? "").toString().toLowerCase();
+      case "RecommendedQuantity":
+        valA = (a.RecommendedQuantity ?? a.recommendedQuantity ?? "").toString().toLowerCase();
+        valB = (b.RecommendedQuantity ?? b.recommendedQuantity ?? "").toString().toLowerCase();
         break;
       default:
         break;
@@ -901,7 +899,7 @@ export default function DietPlanDetails() {
                       setRecommendMealForm({
                         MealItemId: "",
                         MealType: "",
-                        QuantityText: "",
+                        RecommendedQuantity: "",
                         DietPlanId: planId,
                         Category: "",
                       });
@@ -1001,16 +999,16 @@ export default function DietPlanDetails() {
                           <th
                             style={{ cursor: "pointer" }}
                             onClick={() => {
-                              setRecSortKey("Quantity");
+                              setRecSortKey("RecommendedQuantity");
                               setRecSortOrder((prev) =>
-                                recSortKey === "Quantity" && prev === "asc"
+                                recSortKey === "RecommendedQuantity" && prev === "asc"
                                   ? "desc"
                                   : "asc"
                               );
                             }}
                           >
-                            Quantity{" "}
-                            {recSortKey === "Quantity"
+                            Recommended Quantity{" "}
+                            {recSortKey === "RecommendedQuantity"
                               ? recSortOrder === "asc"
                                 ? "↑"
                                 : "↓"
@@ -1033,7 +1031,7 @@ export default function DietPlanDetails() {
                             <td>{r.FoodItem ?? r.foodItem ?? "—"}</td>
                             <td>{r.MealType ?? r.mealType ?? "—"}</td>
                             <td>{r.Category ?? r.category ?? "—"}</td>
-                            <td>{r.Quantity ?? r.quantity ?? "—"}</td>
+                            <td>{r.RecommendedQuantity ?? r.recommendedQuantity ?? "—"}</td>
                             <td>
                               <button
                                 className="btn btn-sm btn-warning me-2"
@@ -1143,7 +1141,7 @@ export default function DietPlanDetails() {
                       {/* Meal (only really needed for ADD; we still show it for EDIT but not required) */}
                       <div className="col-md-6 mb-3">
                         <label htmlFor="MealItemId" className="form-label">
-                          Meal
+                          Food Item
                         </label>
 
                         {dropdownMealsLoading ? (
@@ -1194,13 +1192,14 @@ export default function DietPlanDetails() {
                                   onChange={(e) => {
                                     const mealId = e.target.value;
 
-                                    // save selected meal id
+                                    // save selected meal id and pre-fill quantity with base quantity
                                     setRecommendMealForm((prev) => ({
                                       ...prev,
                                       MealItemId: mealId,
+                                      RecommendedQuantity: "",
                                     }));
 
-                                    // find selected meal & show in search box
+                                    // find selected meal & show in search box, and pre-fill quantity
                                     const selected = dropdownMeals.find(
                                       (m) => m.Id === mealId
                                     );
@@ -1208,6 +1207,10 @@ export default function DietPlanDetails() {
                                       setMealSearchTerm(
                                         `${selected.FoodItem} (${selected.Quantity})`
                                       );
+                                      setRecommendMealForm((prev) => ({
+                                        ...prev,
+                                        RecommendedQuantity: String(parseFloat(selected.Quantity) || ""),
+                                      }));
                                     }
                                   }}
                                   required
@@ -1288,18 +1291,19 @@ export default function DietPlanDetails() {
                             : "col-md-12 mb-3"
                         }
                       >
-                        <label htmlFor="QuantityText" className="form-label">
-                          Quantity
+                        <label htmlFor="RecommendedQuantity" className="form-label">
+                          Recommended Quantity
                         </label>
                         <input
-                          type="text"
+                          type="number"
                           className="form-control"
-                          id="QuantityText"
-                          value={recommendMealForm.QuantityText}
+                          id="RecommendedQuantity"
+                          placeholder="Enter quantity (number only)"
+                          value={recommendMealForm.RecommendedQuantity}
                           onChange={(e) =>
                             setRecommendMealForm({
                               ...recommendMealForm,
-                              QuantityText: e.target.value,
+                              RecommendedQuantity: e.target.value,
                             })
                           }
                           required

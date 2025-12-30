@@ -184,11 +184,13 @@ export const dietPlanApi = {
   },
   
   create: async (planData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/Dietplan/Create`, {
+    // Use local API route for create
+    const response = await enhancedFetch('/api/AdminDietPlan/Dietplan/Create', {
       method: 'POST',
       body: JSON.stringify(planData)
     });
-    return handleApiResponse(response);
+    // Return the full response for create operations (includes Status, Message, Data)
+    return response;
   },
   
   update: async (planData) => {
@@ -245,6 +247,52 @@ export const mealApi = {
 
   getAllMeals: async () => {
     const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/GetAllMeals`);
+    return handleApiResponse(response);
+  },
+
+  recommendMeal: async (recommendationData) => {
+    const formData = new FormData();
+    formData.append('MealItemId', recommendationData.MealItemId);
+    formData.append('MealType', recommendationData.MealType);
+    formData.append('RecommendedQuantity', recommendationData.RecommendedQuantity);
+    formData.append('DietPlanId', recommendationData.DietPlanId);
+
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/recommendations/meal`, {
+      method: 'POST',
+      body: formData
+    });
+    return handleApiResponse(response);
+  },
+
+  getRecommendations: async (dietPlanId = null) => {
+    const url = dietPlanId
+      ? `${API_BASE_URL}/admin/recommendations?dietPlanId=${dietPlanId}`
+      : `${API_BASE_URL}/admin/recommendations`;
+
+    const response = await enhancedFetch(url);
+    return handleApiResponse(response);
+  },
+
+  updateRecommendation: async (recommendationId, recommendationData) => {
+    const formData = new FormData();
+    Object.keys(recommendationData).forEach(key => {
+      if (recommendationData[key] !== undefined && recommendationData[key] !== null) {
+        formData.append(key, recommendationData[key]);
+      }
+    });
+
+    const response = await enhancedFetch(`${API_BASE_URL}/admin/recommendations/${recommendationId}`, {
+      method: 'PATCH',
+      body: formData
+    });
+    return handleApiResponse(response);
+  },
+
+  deleteRecommendation: async (recommendationId) => {
+    const response = await enhancedFetch(`${API_BASE_URL}/GlobalUsers/${recommendationId}`, {
+      method: 'DELETE',
+      headers: { accept: '*/*' }
+    });
     return handleApiResponse(response);
   }
 };

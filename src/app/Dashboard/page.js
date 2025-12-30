@@ -148,11 +148,10 @@ export default function Page() {
   };
 
   return (
-    <div>
-      <div className="content-wrapper">
-        {/* <!-- Content --> */}
+    <div className="content-wrapper">
+      {/* <!-- Content --> */}
 
-        <div className="container-xxl flex-grow-1 container-p-y">
+      <div className="container-xxl flex-grow-1 container-p-y">
           {/* <!-- Card Border Shadow --> */}
           <div className="row g-6">
           <div className="col-6 col-sm-6 col-lg-3 mb-2">
@@ -606,7 +605,6 @@ export default function Page() {
         {/* <!-- / Footer --> */}
 
         <div className="content-backdrop fade"></div>
-      </div>
     </div>
   );
 }

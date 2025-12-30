@@ -15,7 +15,7 @@ export default function Page() {
     totalUsers: 0,
     paidMembers: 0,
     totalQuestions: 0,
-    totalPosts: 0
+    totalPosts: 0,
   });
 
   const usersPerPage = 10;
@@ -48,14 +48,39 @@ export default function Page() {
 
       const data = await response.json();
 
-     if (response.ok && data.Status === true && data.Data === true) {
-  alert("User deleted successfully.");
-  fetchUsers();
-} else {
-  alert("Failed to delete user.");
-  console.error("API error:", data);
-}
+      if (response.ok && data.Status === true && data.Data === true) {
+        alert("User deleted successfully.");
+        await fetchUsers();
 
+        // Check if current page is now empty and adjust pagination
+        const filteredUsers = Array.isArray(users)
+          ? [...users]
+              .filter((user) =>
+                view === "userList" ? user.IsApproved : !user.IsApproved
+              )
+              .filter((user) => {
+                const term = searchTerm.toLowerCase();
+                return (
+                  user.Name?.toLowerCase().includes(term) ||
+                  user.Email?.toLowerCase().includes(term)
+                );
+              })
+          : [];
+
+        const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+        const indexOfLastUser = currentPage * usersPerPage;
+        const indexOfFirstUser = indexOfLastUser - usersPerPage;
+
+        // If current page is empty or exceeds total pages, adjust to previous page or last page
+        if (indexOfFirstUser >= filteredUsers.length && currentPage > 1) {
+          setCurrentPage(Math.min(currentPage - 1, totalPages));
+        } else if (totalPages > 0 && currentPage > totalPages) {
+          setCurrentPage(totalPages);
+        }
+      } else {
+        alert("Failed to delete user.");
+        console.error("API error:", data);
+      }
     } catch (error) {
       console.error("Delete error:", error);
       alert("An error occurred while deleting the user.");
@@ -75,17 +100,17 @@ export default function Page() {
     fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users")
       .then((res) => res.json())
       .then((data) => {
-  console.log("Fetched Users:", data);
-  // Example: if response is { Status: true, Data: [user1, user2] }
-  if (Array.isArray(data)) {
-    setUsers(data);
-  } else if (data?.Data && Array.isArray(data.Data)) {
-    setUsers(data.Data); // Use the actual array inside response
-  } else {
-    setUsers([]); // Fallback to empty array
-    console.error("Unexpected response format", data);
-  }
-})
+        console.log("Fetched Users:", data);
+        // Example: if response is { Status: true, Data: [user1, user2] }
+        if (Array.isArray(data)) {
+          setUsers(data);
+        } else if (data?.Data && Array.isArray(data.Data)) {
+          setUsers(data.Data); // Use the actual array inside response
+        } else {
+          setUsers([]); // Fallback to empty array
+          console.error("Unexpected response format", data);
+        }
+      })
 
       .catch((error) => console.error("Error fetching users:", error));
   };
@@ -93,7 +118,9 @@ export default function Page() {
   const loadStats = async () => {
     try {
       // Fetch all users from API
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const response = await fetch(
+        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
+      );
       const data = await response.json();
       let usersArray = [];
       if (Array.isArray(data)) {
@@ -102,7 +129,7 @@ export default function Page() {
         usersArray = data.Data;
       }
       const totalUsers = usersArray.length;
-      const paidMembers = usersArray.filter(user => user.IsApproved).length;
+      const paidMembers = usersArray.filter((user) => user.IsApproved).length;
 
       // Get total questions and posts for the other stats
       const allQuestions = await fetchQuestions();
@@ -113,7 +140,7 @@ export default function Page() {
         totalUsers,
         paidMembers,
         totalQuestions: allQuestions.length,
-        totalPosts: allPosts.length
+        totalPosts: allPosts.length,
       });
     } catch (err) {
       console.error("Error loading stats:", err);
@@ -124,75 +151,120 @@ export default function Page() {
     fetchUsers();
     loadStats();
   }, []);
+const isBlank = (value) => !value || value.trim() === "";
 
-  const handleSubmitUser = async (e) => {
-    e.preventDefault();
+ const handleSubmitUser = async (e) => {
+  e.preventDefault();
 
-    const url = isEditing
-      ? `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${editUserId}`
-      : "https://flow108.coinagesoft.com/api/AdminAccount/add-user";
+  // 🔒 Trim & normalize values
+  const email = newUser.Email.trim().toLowerCase();
+  const name = newUser.Name.trim();
+  const givenName = newUser.GivenName.trim();
+  const familyName = newUser.FamilyName.trim();
 
-    const method = isEditing ? "PATCH" : "POST";
-    const body = isEditing
-      ? {
-          Email: newUser.Email,
-          Name: newUser.Name,
-          GivenName: newUser.GivenName,
-          FamilyName: newUser.FamilyName,
-          // ProfilePictureUrl: newUser.ProfilePictureUrl,
-          IsEmailVerified: newUser.IsEmailVerified,
-          IsApproved: newUser.IsApproved,
-        }
-      : view === "requestApproval"
-      ? {
-          OID: "1",
-          Email: newUser.Email,
-          Name: newUser.Name,
-          GivenName: "",
-          FamilyName: "",
-          // ProfilePictureUrl: "",
-          IsEmailVerified: false,
-          IsApproved: newUser.IsApproved,
-        }
-      : newUser;
+  // ❌ Validation: Email
+  if (isBlank(email)) {
+    alert("Email cannot be empty or contain only spaces.");
+    return;
+  }
 
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+  // ❌ Validation: Check for leading/trailing spaces in original email
+  if (newUser.Email !== newUser.Email.trim()) {
+    alert("Email cannot have leading or trailing spaces.");
+    return;
+  }
+
+  // ❌ Validation: Name
+  if (isBlank(name)) {
+    alert("Name cannot be empty or contain only spaces.");
+    return;
+  }
+
+  // ❌ Validation: Given Name (only in Add User view)
+  if (view === "userList" && newUser.GivenName && isBlank(givenName)) {
+    alert("Given Name cannot contain only spaces.");
+    return;
+  }
+
+  // ❌ Validation: Family Name (only in Add User view)
+  if (view === "userList" && newUser.FamilyName && isBlank(familyName)) {
+    alert("Family Name cannot contain only spaces.");
+    return;
+  }
+
+  const url = isEditing
+    ? `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${editUserId}`
+    : "https://flow108.coinagesoft.com/api/AdminAccount/add-user";
+
+  const method = isEditing ? "PATCH" : "POST";
+
+  const body = isEditing
+    ? {
+        Email: email,
+        Name: name,
+        GivenName: givenName,
+        FamilyName: familyName,
+        IsEmailVerified: newUser.IsEmailVerified,
+        IsApproved: newUser.IsApproved,
+      }
+    : view === "requestApproval"
+    ? {
+        OID: "1",
+        Email: email,
+        Name: name,
+        GivenName: "",
+        FamilyName: "",
+        IsEmailVerified: false,
+        IsApproved: newUser.IsApproved,
+      }
+    : {
+        ...newUser,
+        Email: email,
+        Name: name,
+        GivenName: givenName,
+        FamilyName: familyName,
+      };
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.Status === true) {
+      alert(isEditing ? "User updated successfully." : "User added successfully.");
+
+      fetchUsers();
+
+      setNewUser({
+        OID: "1",
+        Email: "",
+        Name: "",
+        GivenName: "",
+        FamilyName: "",
+        IsEmailVerified: false,
+        IsApproved: true,
       });
 
-      const data = await res.json();
+      setIsEditing(false);
+      setEditUserId(null);
 
-      if (res.ok && data.Status === true) {
-        alert(
-          isEditing ? "User updated successfully." : "User added successfully."
-        );
-        fetchUsers();
-        setNewUser({
-          OID: "1",
-          Email: "",
-          Name: "",
-          GivenName: "",
-          FamilyName: "",
-          // ProfilePictureUrl: "",
-          IsEmailVerified: false,
-          IsApproved: true,
-        });
-        setIsEditing(false);
-        setEditUserId(null);
-        const modalEl = document.getElementById("addUserModal");
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
-      } else {
-        alert(data.Message || "Failed to save user.");
-      }
-    } catch (err) {
-      console.error("Submit error:", err);
-      alert("An error occurred.");
+      const modalEl = document.getElementById("addUserModal");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      modal.hide();
+    } else {
+      alert(data.Message || "Failed to save user.");
     }
-  };
+  } catch (err) {
+    console.error("Submit error:", err);
+    alert("An error occurred.");
+  }
+};
+
+
 
   const handleStatusChange = async (userId, isApproved) => {
     try {
@@ -220,39 +292,39 @@ export default function Page() {
   };
 
   const sortedUsers = Array.isArray(users)
-  ? [...users]
-      .filter((user) => view === "userList" ? user.IsApproved : !user.IsApproved)
-      .filter((user) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          user.Name?.toLowerCase().includes(term) ||
-          user.Email?.toLowerCase().includes(term)
-        );
-      })
-      .sort((a, b) => {
-        if (!sortColumn) return 0;
+    ? [...users]
+        .filter((user) =>
+          view === "userList" ? user.IsApproved : !user.IsApproved
+        )
+        .filter((user) => {
+          const term = searchTerm.toLowerCase();
+          return (
+            user.Name?.toLowerCase().includes(term) ||
+            user.Email?.toLowerCase().includes(term)
+          );
+        })
+        .sort((a, b) => {
+          if (!sortColumn) return 0;
 
-        let valA = a[sortColumn] ?? "";
-        let valB = b[sortColumn] ?? "";
+          let valA = a[sortColumn] ?? "";
+          let valB = b[sortColumn] ?? "";
 
-        if (sortColumn === "IsApproved") {
-          valA = a.IsApproved ? 1 : 0;
-          valB = b.IsApproved ? 1 : 0;
-        } else if (sortColumn === "Plan") {
-          valA = a.Plan || "";
-          valB = b.Plan || "";
-        } else {
-          valA = valA.toString().toLowerCase();
-          valB = valB.toString().toLowerCase();
-        }
+          if (sortColumn === "IsApproved") {
+            valA = a.IsApproved ? 1 : 0;
+            valB = b.IsApproved ? 1 : 0;
+          } else if (sortColumn === "Plan") {
+            valA = a.Plan || "";
+            valB = b.Plan || "";
+          } else {
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+          }
 
-        if (valA < valB) return sortDirection === "asc" ? -1 : 1;
-        if (valA > valB) return sortDirection === "asc" ? 1 : -1;
-        return 0;
-      })
-  : [];
-
-
+          if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+          if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+          return 0;
+        })
+    : [];
 
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
@@ -271,9 +343,8 @@ export default function Page() {
   };
 
   return (
-    <div>
-      <div className="content-wrapper">
-        <div className="container-xxl flex-grow-1 container-p-y">
+    <div className="content-wrapper">
+      <div className="container-xxl flex-grow-1 container-p-y">
           {/* Stats */}
           <div className="row g-6 mb-6">
             {[
@@ -561,7 +632,10 @@ export default function Page() {
                         required
                         value={newUser.Email}
                         onChange={(e) =>
-                          setNewUser({ ...newUser, Email: e.target.value })
+                          setNewUser({
+                            ...newUser,
+                            Email: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -670,7 +744,6 @@ export default function Page() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

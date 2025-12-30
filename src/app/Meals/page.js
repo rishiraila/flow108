@@ -9,6 +9,7 @@ export default function MealsPage() {
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingMeal, setEditingMeal] = useState(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetchMeals();
@@ -45,16 +46,34 @@ export default function MealsPage() {
     }
   };
 
+  const filteredMeals = meals.filter((meal) =>
+    meal.MealType?.toLowerCase().includes(search.toLowerCase()) ||
+    meal.FoodItem?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="content-wrapper">
       <div className="container-xxl flex-grow-1 container-p-y">
-        <h2>All Meals</h2>
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <h2>All Meals</h2>
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Search meals..."
+            style={{ maxWidth: 250, fontSize: 14 }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
         {loading && <p>Loading meals...</p>}
         {error && <p className="text-danger">{error}</p>}
         {!loading && !error && meals.length === 0 && <p>No meals found.</p>}
-        {!loading && !error && meals.length > 0 && (
+        {!loading && !error && meals.length > 0 && filteredMeals.length === 0 && search && (
+          <p>No meal found.</p>
+        )}
+        {!loading && !error && meals.length > 0 && filteredMeals.length > 0 && (
           <div className="list-group">
-            {meals.map((meal) => (
+            {filteredMeals.map((meal) => (
               <div
                 key={meal.Id}
                 className="list-group-item d-flex justify-content-between align-items-center"
