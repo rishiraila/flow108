@@ -310,7 +310,7 @@ export default function UserDetailsClient() {
         Entries: [
           {
             Title: `Workout: ${workout.ActivityName}`,
-            Description: `Category: ${workout.ActivityCategory}, Duration: ${workout.DurationInMinutes} minutes`,
+            Description: `${workout.ActivityCategory && workout.ActivityCategory !== 'undefined' ? `Category: ${workout.ActivityCategory}, ` : ''}Duration: ${workout.DurationInMinutes} minutes`,
           },
         ],
       })
@@ -948,6 +948,7 @@ export default function UserDetailsClient() {
                 <th>Sr No.</th>
                 <th>Cycle Start Date</th>
                 <th>Cycle Length (days)</th>
+                <th>Severity</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -961,6 +962,15 @@ export default function UserDetailsClient() {
                       {new Date(cycle.startDate).toLocaleDateString("en-GB")}
                     </td>
                     <td>{cycle.cycleLength}</td>
+                    <td>
+                      {profileData?.Stage2?.Severity?.length > 0
+                        ? profileData.Stage2.Severity.map((s, i) => (
+                            <span key={i} className="badge bg-danger me-1">
+                              {s}
+                            </span>
+                          ))
+                        : "N/A"}
+                    </td>
                     <td>
                       <span
                         className={`badge ${
@@ -978,7 +988,7 @@ export default function UserDetailsClient() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="4" className="text-center text-muted">
+                  <td colSpan="5" className="text-center text-muted">
                     No period history available
                   </td>
                 </tr>
@@ -1236,7 +1246,7 @@ export default function UserDetailsClient() {
                 <th>Sr No.</th>
                 <th>Date</th>
                 <th>Title</th>
-                <th>Description</th>
+                <th>Duration</th>
               </tr>
             </thead>
             <tbody>
@@ -1313,94 +1323,7 @@ export default function UserDetailsClient() {
       </div>
 
       {/* <!-- workout insight table --> */}
-      <div className="card border-0 mt-4 shadow-sm rounded-4 p-4 mb-4">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <h4 className="mb-0 fw-bold text-dark">Assigned workouts</h4>
-        </div>
-
-        <div className="table-responsive">
-          <table className="table table-bordered table-striped mb-0">
-            <thead className="table-primary">
-              <tr>
-                <th>Sr No.</th>
-                <th>Activity Name</th>
-                <th>Category</th>
-                <th>Duration (Minutes)</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedWorkouts.length > 0 ? (
-                paginatedWorkouts.map((workout, index) => {
-                  const formattedDate = new Date(
-                    workout.LoggedDate
-                  ).toLocaleDateString("en-GB");
-                  return (
-                    <tr key={index}>
-                      <td>{(workoutPage - 1) * workoutPerPage + index + 1}</td>
-                      <td>{workout.ActivityName || "N/A"}</td>
-                      <td>{workout.ActivityCategory || "N/A"}</td>
-                      <td>{workout.DurationInMinutes || "N/A"}</td>
-                      <td>{formattedDate}</td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="5" className="text-center text-muted">
-                    No workout data available
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalWorkoutPages > 1 && (
-          <nav className="mt-3">
-            <ul className="pagination justify-content-center mb-0">
-              <li
-                className={`page-item ${workoutPage === 1 ? "disabled" : ""}`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => setWorkoutPage((prev) => prev - 1)}
-                >
-                  Previous
-                </button>
-              </li>
-              {Array.from({ length: totalWorkoutPages }, (_, i) => (
-                <li
-                  key={i}
-                  className={`page-item ${
-                    workoutPage === i + 1 ? "active" : ""
-                  }`}
-                >
-                  <button
-                    className="page-link"
-                    onClick={() => setWorkoutPage(i + 1)}
-                  >
-                    {i + 1}
-                  </button>
-                </li>
-              ))}
-              <li
-                className={`page-item ${
-                  workoutPage === totalWorkoutPages ? "disabled" : ""
-                }`}
-              >
-                <button
-                  className="page-link"
-                  onClick={() => setWorkoutPage((prev) => prev + 1)}
-                >
-                  Next
-                </button>
-              </li>
-            </ul>
-          </nav>
-        )}
-      </div>
+     
     </div>
   );
 }

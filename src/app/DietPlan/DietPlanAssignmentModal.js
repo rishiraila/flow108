@@ -1,7 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 
-export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAssignmentSuccess, mode = 'assign' }) {
+export default function DietPlanAssignmentModal({
+  isOpen,
+  onClose,
+  planId,
+  onAssignmentSuccess,
+  mode = "assign",
+}) {
   const [users, setUsers] = useState([]);
   const [assignedUsers, setAssignedUsers] = useState([]);
   const [allAssignments, setAllAssignments] = useState([]);
@@ -12,6 +18,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
   const [unassignSelectedLoading, setUnassignSelectedLoading] = useState(false);
   const [assignError, setAssignError] = useState(null);
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [unassignSuccess, setUnassignSuccess] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [selectedAssignedUsers, setSelectedAssignedUsers] = useState([]);
   const [unassigningUsers, setUnassigningUsers] = useState(new Set());
@@ -33,7 +40,9 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const response = await fetch(
+        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
+      );
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
       setUsers(data.Data || []);
@@ -107,7 +116,9 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
         onClose();
       }, 2000);
     } catch (error) {
-      setAssignError(error.message || "Failed to assign plan to selected users");
+      setAssignError(
+        error.message || "Failed to assign plan to selected users"
+      );
     } finally {
       setAssignLoading(false);
     }
@@ -138,13 +149,14 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
     setUnassignAllLoading(true);
     setAssignError(null);
     setAssignSuccess(false);
+    setUnassignSuccess(false);
     try {
       const { dietAssignmentApi } = await import("../utils/apiClient");
       await dietAssignmentApi.unassignAllFromPlan(planId);
-      setAssignSuccess(true);
+      setUnassignSuccess(true);
       onAssignmentSuccess();
       setTimeout(() => {
-        setAssignSuccess(false);
+        setUnassignSuccess(false);
         onClose();
       }, 2000);
     } catch (error) {
@@ -182,6 +194,7 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
     setUnassignSelectedLoading(true);
     setAssignError(null);
     setAssignSuccess(false);
+    setUnassignSuccess(false);
     try {
       for (const userId of selectedAssignedUsers) {
         const response = await fetch(
@@ -195,13 +208,14 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
         );
         if (!response.ok) throw new Error("Failed to unassign user");
         const result = await response.json();
-        if (!result.Status) throw new Error(result.Message || "Failed to unassign user");
+        if (!result.Status)
+          throw new Error(result.Message || "Failed to unassign user");
       }
       alert("Selected users unassigned successfully!");
-      setAssignSuccess(true);
+      setUnassignSuccess(true);
       onAssignmentSuccess();
       setTimeout(() => {
-        setAssignSuccess(false);
+        setUnassignSuccess(false);
         onClose();
       }, 2000);
     } catch (error) {
@@ -224,16 +238,24 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              {mode === 'view' ? 'View Assigned Users' : 'Assign Diet Plan to User(s)'}
+              {mode === "view"
+                ? "View Assigned Users"
+                : "Assign Diet Plan to User(s)"}
             </h5>
-            <button type="button" className="btn-close" onClick={onClose}></button>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={onClose}
+            ></button>
           </div>
           <div className="modal-body">
-            {mode === 'view' ? (
+            {mode === "view" ? (
               <>
                 {assignedUsers.length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-muted">No users assigned to this diet plan yet.</p>
+                    <p className="text-muted">
+                      No users assigned to this diet plan yet.
+                    </p>
                   </div>
                 ) : (
                   <div className="table-responsive">
@@ -250,7 +272,9 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                           <tr key={user.UserId}>
                             <td>{user.Name || "N/A"}</td>
                             <td>{user.Email || "N/A"}</td>
-                            <td>{new Date(user.AssignedDate).toLocaleDateString()}</td>
+                            <td>
+                              {new Date(user.AssignedDate).toLocaleDateString()}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -263,6 +287,11 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                 {assignSuccess && (
                   <div className="alert alert-success" role="alert">
                     Plan assigned successfully!
+                  </div>
+                )}
+                {unassignSuccess && (
+                  <div className="alert alert-success" role="alert">
+                    Users unassigned successfully!
                   </div>
                 )}
                 {assignError && (
@@ -283,12 +312,12 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                   </div>
                 ) : users.filter(
                     (user) =>
-                      !assignedUsers.some(
-                        (assigned) => assigned.Id === user.Id
-                      )
+                      !assignedUsers.some((assigned) => assigned.Id === user.Id)
                   ).length === 0 ? (
                   <div className="text-center py-4">
-                    <p className="text-muted">All users are already assigned to this diet plan.</p>
+                    <p className="text-muted">
+                      All users are already assigned to this diet plan.
+                    </p>
                   </div>
                 ) : (
                   <>
@@ -299,18 +328,28 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                             <th>
                               <input
                                 type="checkbox"
-                                checked={selectedUsers.length === users.filter(
-                                  (user) => !assignedUsers.some(
-                                    (assigned) => assigned.Id === user.Id
-                                  )
-                                ).length && users.length > 0}
+                                checked={
+                                  selectedUsers.length ===
+                                    users.filter(
+                                      (user) =>
+                                        !assignedUsers.some(
+                                          (assigned) => assigned.Id === user.Id
+                                        )
+                                    ).length && users.length > 0
+                                }
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setSelectedUsers(users.filter(
-                                      (user) => !assignedUsers.some(
-                                        (assigned) => assigned.Id === user.Id
-                                      )
-                                    ).map((u) => u.Id));
+                                    setSelectedUsers(
+                                      users
+                                        .filter(
+                                          (user) =>
+                                            !assignedUsers.some(
+                                              (assigned) =>
+                                                assigned.Id === user.Id
+                                            )
+                                        )
+                                        .map((u) => u.Id)
+                                    );
                                   } else {
                                     setSelectedUsers([]);
                                   }
@@ -335,7 +374,9 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                                   <input
                                     type="checkbox"
                                     checked={selectedUsers.includes(user.Id)}
-                                    onChange={() => toggleUserSelection(user.Id)}
+                                    onChange={() =>
+                                      toggleUserSelection(user.Id)
+                                    }
                                   />
                                 </td>
                                 <td>{user.Name || "N/A"}</td>
@@ -351,21 +392,27 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                         onClick={unassignAllFromPlan}
                         disabled={unassignAllLoading}
                       >
-                        {unassignAllLoading ? "Unassigning..." : "Unassign from All Users"}
+                        {unassignAllLoading
+                          ? "Unassigning..."
+                          : "Unassign from All Users"}
                       </button>
                       <button
                         className="btn btn-success"
                         onClick={assignAllToPlan}
                         disabled={assignAllLoading}
                       >
-                        {assignAllLoading ? "Assigning..." : "Assign to All Users"}
+                        {assignAllLoading
+                          ? "Assigning..."
+                          : "Assign to All Users"}
                       </button>
                       <button
                         className="btn btn-primary"
                         onClick={assignPlanToSelectedUsers}
                         disabled={assignLoading}
                       >
-                        {assignLoading ? "Assigning..." : "Assign Plan to Selected Users"}
+                        {assignLoading
+                          ? "Assigning..."
+                          : "Assign Plan to Selected Users"}
                       </button>
                     </div>
                   </>
@@ -374,79 +421,121 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                   <>
                     <h6 className="mt-4">Assigned Users</h6>
                     <div className="table-responsive">
-                    <table className="table table-hover">
-                      <thead>
-                        <tr>
-                          <th>
-                            <input
-                              type="checkbox"
-                              checked={selectedAssignedUsers.length === assignedUsers.length && assignedUsers.length > 0}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedAssignedUsers(assignedUsers.map((u) => u.Id));
-                                } else {
-                                  setSelectedAssignedUsers([]);
-                                }
-                              }}
-                            />
-                          </th>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assignedUsers.map((user) => (
-                          <tr key={user.Id}>
-                            <td>
+                      <table className="table table-hover">
+                        <thead>
+                          <tr>
+                            <th>
                               <input
                                 type="checkbox"
-                                checked={selectedAssignedUsers.includes(user.Id)}
-                                onChange={() => toggleAssignedUserSelection(user.Id)}
-                              />
-                            </td>
-                            <td>{user.Name || "N/A"}</td>
-                            <td>{user.Email || "N/A"}</td>
-                            <td>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                disabled={unassigningUsers.has(user.Id)}
-                                onClick={async () => {
-                                  setUnassigningUsers(prev => new Set(prev).add(user.Id));
-                                  try {
-                                    const response = await fetch(
-                                      `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${user.Id}`,
-                                      {
-                                        method: "DELETE",
-                                        headers: {
-                                          accept: "*/*",
-                                        },
-                                      }
+                                checked={
+                                  selectedAssignedUsers.length ===
+                                    assignedUsers.length &&
+                                  assignedUsers.length > 0
+                                }
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedAssignedUsers(
+                                      assignedUsers.map((u) => u.Id)
                                     );
-                                    if (!response.ok) throw new Error("Failed to unassign user");
-                                    const result = await response.json();
-                                    if (!result.Status) throw new Error(result.Message || "Failed to unassign user");
-                                    alert("User unassigned successfully!");
-                                    onAssignmentSuccess();
-                                    await fetchAssignedUsers();
-                                  } catch (error) {
-                                    setAssignError(error.message || "Failed to unassign user");
-                                  } finally {
-                                    setUnassigningUsers(prev => {
-                                      const newSet = new Set(prev);
-                                      newSet.delete(user.Id);
-                                      return newSet;
-                                    });
+                                  } else {
+                                    setSelectedAssignedUsers([]);
                                   }
                                 }}
-                              >
-                                {unassigningUsers.has(user.Id) ? "Unassigning..." : "Unassign"}
-                              </button>
-                            </td>
+                              />
+                            </th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Action</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {assignedUsers.map((user) => (
+                            <tr key={user.Id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedAssignedUsers.includes(
+                                    user.Id
+                                  )}
+                                  onChange={() =>
+                                    toggleAssignedUserSelection(user.Id)
+                                  }
+                                />
+                              </td>
+                              <td>{user.Name || "N/A"}</td>
+                              <td>{user.Email || "N/A"}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-danger"
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+
+                                    console.log("UNASSIGN CLICKED"); // 🔍 DEBUG (you can remove later)
+
+                                    const confirmed = window.confirm(
+                                      `Are you sure you want to unassign the diet plan from ${user.Name}?`
+                                    );
+
+                                    if (!confirmed) return;
+
+                                    // 🔒 disable AFTER confirmation
+                                    setUnassigningUsers((prev) =>
+                                      new Set(prev).add(user.Id)
+                                    );
+                                    setAssignError(null);
+
+                                    try {
+                                      const response = await fetch(
+                                        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${user.Id}`,
+                                        {
+                                          method: "DELETE",
+                                          headers: { accept: "*/*" },
+                                        }
+                                      );
+
+                                      if (!response.ok)
+                                        throw new Error(
+                                          "Failed to unassign user"
+                                        );
+
+                                      const result = await response.json();
+                                      if (!result.Status) {
+                                        throw new Error(
+                                          result.Message ||
+                                            "Failed to unassign user"
+                                        );
+                                      }
+
+                                      setUnassignSuccess(true);
+                                      await fetchAssignedUsers();
+                                      onAssignmentSuccess();
+
+                                      setTimeout(
+                                        () => setUnassignSuccess(false),
+                                        3000
+                                      );
+                                    } catch (error) {
+                                      setAssignError(
+                                        error.message ||
+                                          "Failed to unassign user"
+                                      );
+                                    } finally {
+                                      setUnassigningUsers((prev) => {
+                                        const next = new Set(prev);
+                                        next.delete(user.Id);
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                >
+                                  Unassign
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                     <div className="d-flex justify-content-end mt-3">
                       <button
@@ -454,7 +543,9 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
                         onClick={unassignPlanFromSelectedUsers}
                         disabled={unassignSelectedLoading}
                       >
-                        {unassignSelectedLoading ? "Unassigning..." : "Unassign Selected Users"}
+                        {unassignSelectedLoading
+                          ? "Unassigning..."
+                          : "Unassign Selected Users"}
                       </button>
                     </div>
                   </>
@@ -463,7 +554,11 @@ export default function DietPlanAssignmentModal({ isOpen, onClose, planId, onAss
             )}
           </div>
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onClose}
+            >
               Close
             </button>
           </div>

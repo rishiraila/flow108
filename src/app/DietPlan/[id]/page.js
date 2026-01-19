@@ -316,7 +316,11 @@ export default function DietPlanDetails() {
 
     setRecommendMealForm({
       MealItemId: rec.MealItemId || "",
-      MealType: rec.MealType || "",
+      MealType:
+        dietMealTypes.find(
+          (t) => t.toLowerCase() === String(rec.MealType).toLowerCase()
+        ) || "",
+
       RecommendedQuantity: String(parseFloat(rec.RecommendedQuantity) || ""),
       DietPlanId: rec.DietPlanId || planId,
       Category: rec.Category || "",
@@ -441,9 +445,10 @@ export default function DietPlanDetails() {
       return showAlert("Please select a meal", "error");
     if (!recommendMealForm.MealType)
       return showAlert("Please select meal type", "error");
-    const quantityStr = String(recommendMealForm.RecommendedQuantity || "").trim();
-    if (!quantityStr)
-      return showAlert("Please enter quantity", "error");
+    const quantityStr = String(
+      recommendMealForm.RecommendedQuantity || ""
+    ).trim();
+    if (!quantityStr) return showAlert("Please enter quantity", "error");
 
     try {
       setSubmittingRecommendation(true);
@@ -560,26 +565,22 @@ export default function DietPlanDetails() {
       setSubmittingRecommendation(false);
     }
   };
-  // 🔹 Unique meal types for this plan (from dietPlan.Meals)
-  const dietMealTypesSet = new Set(
-    (meals || []).map((m) => m.Name).filter(Boolean)
-  );
-
-  // Ensure current selected MealType (when editing) is also in the list
-  if (
-    recommendMealForm.MealType &&
-    !dietMealTypesSet.has(recommendMealForm.MealType)
-  ) {
-    dietMealTypesSet.add(recommendMealForm.MealType);
-  }
-
-  const dietMealTypes = Array.from(dietMealTypesSet);
+  // 🔹 Unique meal types for this plan (from dietPlan.Meals), trimmed
+  const dietMealTypes = [
+    ...new Set(
+      [
+        ...(meals || []).map((m) => (m.Name || "").trim()).filter(Boolean),
+      ].filter(Boolean)
+    ),
+  ];
 
   // 🔹 Filter, sort, and paginate Recommended Meals
   const filteredRecommendedMeals = recommendedMeals.filter((r) => {
     const text = `${r.FoodItem ?? r.foodItem ?? ""} ${
       r.MealType ?? r.mealType ?? ""
-    } ${r.Category ?? r.category ?? ""} ${r.RecommendedQuantity ?? r.recommendedQuantity ?? ""}`
+    } ${r.Category ?? r.category ?? ""} ${
+      r.RecommendedQuantity ?? r.recommendedQuantity ?? ""
+    }`
       .toLowerCase()
       .trim();
 
@@ -604,8 +605,12 @@ export default function DietPlanDetails() {
         valB = (b.Category ?? b.category ?? "").toString().toLowerCase();
         break;
       case "RecommendedQuantity":
-        valA = (a.RecommendedQuantity ?? a.recommendedQuantity ?? "").toString().toLowerCase();
-        valB = (b.RecommendedQuantity ?? b.recommendedQuantity ?? "").toString().toLowerCase();
+        valA = (a.RecommendedQuantity ?? a.recommendedQuantity ?? "")
+          .toString()
+          .toLowerCase();
+        valB = (b.RecommendedQuantity ?? b.recommendedQuantity ?? "")
+          .toString()
+          .toLowerCase();
         break;
       default:
         break;
@@ -1001,7 +1006,8 @@ export default function DietPlanDetails() {
                             onClick={() => {
                               setRecSortKey("RecommendedQuantity");
                               setRecSortOrder((prev) =>
-                                recSortKey === "RecommendedQuantity" && prev === "asc"
+                                recSortKey === "RecommendedQuantity" &&
+                                prev === "asc"
                                   ? "desc"
                                   : "asc"
                               );
@@ -1031,7 +1037,11 @@ export default function DietPlanDetails() {
                             <td>{r.FoodItem ?? r.foodItem ?? "—"}</td>
                             <td>{r.MealType ?? r.mealType ?? "—"}</td>
                             <td>{r.Category ?? r.category ?? "—"}</td>
-                            <td>{r.RecommendedQuantity ?? r.recommendedQuantity ?? "—"}</td>
+                            <td>
+                              {r.RecommendedQuantity ??
+                                r.recommendedQuantity ??
+                                "—"}
+                            </td>
                             <td>
                               <button
                                 className="btn btn-sm btn-warning me-2"
@@ -1209,7 +1219,9 @@ export default function DietPlanDetails() {
                                       );
                                       setRecommendMealForm((prev) => ({
                                         ...prev,
-                                        RecommendedQuantity: String(parseFloat(selected.Quantity) || ""),
+                                        RecommendedQuantity: String(
+                                          parseFloat(selected.Quantity) || ""
+                                        ),
                                       }));
                                     }
                                   }}
@@ -1233,7 +1245,6 @@ export default function DietPlanDetails() {
                         </label>
                         <select
                           className="form-select"
-                          id="MealType"
                           value={recommendMealForm.MealType}
                           onChange={(e) =>
                             setRecommendMealForm({
@@ -1243,19 +1254,24 @@ export default function DietPlanDetails() {
                           }
                           required
                         >
-                          <option value="">Select meal type</option>
+                          <option value="" disabled>
+                            Select meal type
+                          </option>
 
-                          {dietMealTypes.length === 0 ? (
-                            <option value="" disabled>
-                              No meal types defined in this plan
-                            </option>
-                          ) : (
-                            dietMealTypes.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
+                          {dietMealTypes.map((type) => {
+                            const isCurrent =
+                              type === recommendMealForm.MealType;
+
+                            return (
+                              <option
+                                key={type}
+                                value={type}
+                                disabled={isCurrent} // 🔒 disable current one
+                              >
+                                {type} {isCurrent ? "(current)" : ""}
                               </option>
-                            ))
-                          )}
+                            );
+                          })}
                         </select>
                       </div>
                     </div>
@@ -1291,7 +1307,10 @@ export default function DietPlanDetails() {
                             : "col-md-12 mb-3"
                         }
                       >
-                        <label htmlFor="RecommendedQuantity" className="form-label">
+                        <label
+                          htmlFor="RecommendedQuantity"
+                          className="form-label"
+                        >
                           Recommended Quantity
                         </label>
                         <input

@@ -6,7 +6,7 @@ import DietPlanAssignmentModal from "./DietPlanAssignmentModal";
 import { useAlert } from "../utils/alertcontxt";
 import { useConfirm } from "../utils/confirmContext";
 import { dietPlanApi } from "../utils/apiClient";
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 export default function Page() {
   const { showAlert } = useAlert();
@@ -27,6 +27,8 @@ export default function Page() {
   const [dietPlans, setDietPlans] = useState([]);
   const [apiLoading, setApiLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
+  const BASE_MEALS = ["Breakfast", "Lunch", "Snack", "Dinner"];
+  const EXTRA_MEALS = ["Pre-workout", "Post-workout"];
 
   const [showAddMealModal, setShowAddMealModal] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -58,6 +60,8 @@ export default function Page() {
   const [modalMode, setModalMode] = useState("assign");
 
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const [availableAdditionalMeals, setAvailableAdditionalMeals] = useState([]);
 
   const [stats, setStats] = useState({
     totalPlans: 0,
@@ -101,8 +105,7 @@ export default function Page() {
         plan.Meals.forEach((meal) => {
           // using Name as the category
           if (meal.Name) {
-            mealTypeCounts[meal.Name] =
-              (mealTypeCounts[meal.Name] || 0) + 1;
+            mealTypeCounts[meal.Name] = (mealTypeCounts[meal.Name] || 0) + 1;
           }
         });
       }
@@ -331,7 +334,9 @@ export default function Page() {
     const mealNames = validMeals.map((meal) => meal.Name);
     const uniqueMealNames = new Set(mealNames);
     if (mealNames.length !== uniqueMealNames.size) {
-      setError("Meal type already exists. Please ensure all meal types are unique.");
+      setError(
+        "Meal type already exists. Please ensure all meal types are unique."
+      );
       setLoading(false);
       return;
     }
@@ -410,35 +415,71 @@ export default function Page() {
     }));
   };
 
-  const handleMealSubmit = async (e) => {
-    e.preventDefault();
-    if (selectedPlanId) {
-      const mealData = {
-        MealType: mealFormData.MealType,
-        Features: mealFormData.Features,
-        Calories: mealFormData.Calories,
-        Fats: mealFormData.Fats,
-        Carbs: mealFormData.Carbs,
-        Protein: mealFormData.Protein,
-      };
-      await addMealToPlan(selectedPlanId, mealData);
-    }
+const handleMealSubmit = async (e) => {
+  e.preventDefault();
+
+  const plan = dietPlans.find(p => p.Id === selectedPlanId);
+  const existingMealTypes =
+    plan?.Meals?.map(meal => meal.Name) || [];
+
+  if (existingMealTypes.includes(mealFormData.MealType)) {
+    setAddMealError("This meal type already exists in the plan.");
+    return;
+  }
+
+  if (!EXTRA_MEALS.includes(mealFormData.MealType)) {
+    setAddMealError("This meal type cannot be added manually.");
+    return;
+  }
+
+  const mealData = {
+    MealType: mealFormData.MealType,
+    Features: mealFormData.Features,
+    Calories: mealFormData.Calories,
+    Fats: mealFormData.Fats,
+    Carbs: mealFormData.Carbs,
+    Protein: mealFormData.Protein,
   };
 
-  const openAddMealModal = (planId) => {
-    setSelectedPlanId(planId);
-    setShowAddMealModal(true);
-    setMealFormData({
-      MealType: "",
-      Features: "",
-      Calories: 0,
-      Fats: 0,
-      Carbs: 0,
-      Protein: 0,
-    });
-    setAddMealError(null);
-    setAddMealSuccess(false);
-  };
+  await addMealToPlan(selectedPlanId, mealData);
+};
+
+
+ const openAddMealModal = (planId) => {
+  const plan = dietPlans.find(p => p.Id === planId);
+
+  // Meals already present in plan
+  const existingMealTypes =
+    plan?.Meals?.map(meal => meal.Name) || [];
+
+  // Meals selected during plan creation (checkbox meals)
+  const baseMealTypes =
+    plan?.Meals
+      ?.map(meal => meal.Name)
+      .filter(name => BASE_MEALS.includes(name)) || [];
+
+  // Allow ONLY extra meals that are not already used
+  const allowedMeals = EXTRA_MEALS.filter(
+    meal =>
+      !existingMealTypes.includes(meal) &&
+      !baseMealTypes.includes(meal)
+  );
+
+  setAvailableAdditionalMeals(allowedMeals);
+  setSelectedPlanId(planId);
+  setShowAddMealModal(true);
+  setMealFormData({
+    MealType: "",
+    Features: "",
+    Calories: 0,
+    Fats: 0,
+    Carbs: 0,
+    Protein: 0,
+  });
+  setAddMealError(null);
+  setAddMealSuccess(false);
+};
+
 
   const openAssignModal = async (plan, mode = "assign") => {
     setSelectedPlanForAssignment(plan);
@@ -501,22 +542,21 @@ export default function Page() {
   const handleEditPlan = (plan) => {
     setEditingPlan({
       ...plan,
-      Meals:
-        plan.Meals?.map((meal) => ({
-          Name: meal.Name || "",
-          RecommendedCalories: meal.RecommendedCalories || 0,
-          RecommendedProtein: meal.RecommendedProtein || 0,
-          RecommendedCarbs: meal.RecommendedCarbs || 0,
-          RecommendedFats: meal.RecommendedFats || 0,
-        })) || [
-          {
-            Name: "",
-            RecommendedCalories: 0,
-            RecommendedProtein: 0,
-            RecommendedCarbs: 0,
-            RecommendedFats: 0,
-          },
-        ],
+      Meals: plan.Meals?.map((meal) => ({
+        Name: meal.Name || "",
+        RecommendedCalories: meal.RecommendedCalories || 0,
+        RecommendedProtein: meal.RecommendedProtein || 0,
+        RecommendedCarbs: meal.RecommendedCarbs || 0,
+        RecommendedFats: meal.RecommendedFats || 0,
+      })) || [
+        {
+          Name: "",
+          RecommendedCalories: 0,
+          RecommendedProtein: 0,
+          RecommendedCarbs: 0,
+          RecommendedFats: 0,
+        },
+      ],
     });
     setShowEditModal(true);
     setEditError(null);
@@ -581,33 +621,27 @@ export default function Page() {
     setEditError(null);
     setEditSuccess(false);
 
-    const validMeals = editingPlan.Meals.filter(
-      (meal) => meal.Name.trim() && meal.RecommendedCalories > 0
-    );
+    const validMeals = editingPlan.Meals.filter((meal) => meal.Name.trim());
 
     if (validMeals.length === 0) {
-      setEditError(
-        "Please add at least one meal with a name and recommended calories."
-      );
+      setEditError("Please add at least one meal with a name.");
       setEditLoading(false);
       return;
     }
 
     // Check for duplicate meal types
-    const mealNames = validMeals.map(meal => meal.Name);
+    const mealNames = validMeals.map((meal) => meal.Name);
     const uniqueMealNames = new Set(mealNames);
     if (mealNames.length !== uniqueMealNames.size) {
-      setEditError("Meal type already exists. Please ensure all meal types are unique.");
+      setEditError(
+        "Meal type already exists. Please ensure all meal types are unique."
+      );
       setEditLoading(false);
       return;
     }
 
     const mealsPayload = validMeals.map((meal) => ({
       Name: meal.Name,
-      RecommendedCalories: meal.RecommendedCalories,
-      RecommendedProtein: meal.RecommendedProtein,
-      RecommendedCarbs: meal.RecommendedCarbs,
-      RecommendedFats: meal.RecommendedFats,
     }));
 
     const payload = {
@@ -637,15 +671,14 @@ export default function Page() {
   const filteredPlans = dietPlans.filter(
     (plan) =>
       (plan.Name && plan.Name.toLowerCase().includes(search.toLowerCase())) ||
-      (plan.Description && plan.Description.toLowerCase().includes(search.toLowerCase()))
+      (plan.Description &&
+        plan.Description.toLowerCase().includes(search.toLowerCase()))
   );
 
   const getMealTypes = (meals) => {
     if (!meals || !Array.isArray(meals)) return [];
 
-    const mealTypes = meals
-      .map((meal) => meal.Name)
-      .filter(Boolean);
+    const mealTypes = meals.map((meal) => meal.Name).filter(Boolean);
     return [...new Set(mealTypes)];
   };
 
@@ -657,20 +690,20 @@ export default function Page() {
       if (plan.Meals && Array.isArray(plan.Meals)) {
         plan.Meals.forEach((meal) => {
           allMeals.push({
-            'Diet Plan Name': plan.Name || 'Unnamed Plan',
-            'Meal Type': meal.Name || '',
-            'Calories': meal.RecommendedCalories || 0,
-            'Protein (g)': meal.RecommendedProtein || 0,
-            'Carbs (g)': meal.RecommendedCarbs || 0,
-            'Fats (g)': meal.RecommendedFats || 0,
-            'Plan Description': plan.Description || '',
+            "Diet Plan Name": plan.Name || "Unnamed Plan",
+            "Meal Type": meal.Name || "",
+            Calories: meal.RecommendedCalories || 0,
+            "Protein (g)": meal.RecommendedProtein || 0,
+            "Carbs (g)": meal.RecommendedCarbs || 0,
+            "Fats (g)": meal.RecommendedFats || 0,
+            "Plan Description": plan.Description || "",
           });
         });
       }
     });
 
     if (allMeals.length === 0) {
-      showAlert('No meals found to export.', 'warning');
+      showAlert("No meals found to export.", "warning");
       return;
     }
 
@@ -679,19 +712,19 @@ export default function Page() {
 
     // Create workbook
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Meals');
+    XLSX.utils.book_append_sheet(wb, ws, "Meals");
 
     // Generate filename with current date
-    const date = new Date().toISOString().split('T')[0];
+    const date = new Date().toISOString().split("T")[0];
     const filename = `diet_plan_meals_${date}.xlsx`;
 
     // Write workbook to array buffer
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
 
     // Create blob and download
-    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
@@ -699,7 +732,10 @@ export default function Page() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    showAlert(`Successfully exported ${allMeals.length} meals to Excel.`, 'success');
+    showAlert(
+      `Successfully exported ${allMeals.length} meals to Excel.`,
+      "success"
+    );
   };
 
   return (
@@ -910,7 +946,8 @@ export default function Page() {
                                 <ul className="list-unstyled small">
                                   {plan.Meals?.map((meal, idx) => (
                                     <li key={idx}>
-                                      {meal.Name}: {meal.RecommendedCalories} cal
+                                      {meal.Name}: {meal.RecommendedCalories}{" "}
+                                      cal
                                     </li>
                                   ))}
                                 </ul>
@@ -991,8 +1028,6 @@ export default function Page() {
             </div>
           </div>
 
-
-
           {/* Add Meal Modal */}
           {showAddMealModal && (
             <div
@@ -1036,12 +1071,11 @@ export default function Page() {
                           required
                         >
                           <option value="">Select meal type</option>
-                          <option value="Breakfast">Breakfast</option>
-                          <option value="Lunch">Lunch</option>
-                          <option value="Snack">Snack</option>
-                          <option value="Dinner">Dinner</option>
-                          <option value="Pre-workout">Pre-workout</option>
-                          <option value="Post-workout">Post-workout</option>
+                          {availableAdditionalMeals.map((meal) => (
+                            <option key={meal} value={meal}>
+                              {meal}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div className="mb-3">
@@ -1209,10 +1243,7 @@ export default function Page() {
                         />
                       </div>
                       <div className="mb-3">
-                        <label
-                          htmlFor="editDescription"
-                          className="form-label"
-                        >
+                        <label htmlFor="editDescription" className="form-label">
                           Description
                         </label>
                         <textarea
@@ -1228,7 +1259,7 @@ export default function Page() {
                       {editingPlan.Meals?.map((meal, index) => (
                         <div key={index} className="mb-3 border rounded p-3">
                           <div className="row g-2 mb-2">
-                            <div className="col-md-4">
+                            <div className="col-md-10">
                               <label className="form-label">Meal Name</label>
                               <select
                                 className="form-select"
@@ -1249,23 +1280,6 @@ export default function Page() {
                                 <option value="Dinner">Dinner</option>
                               </select>
                             </div>
-                            <div className="col-md-2">
-                              <label className="form-label">Calories</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                min="0"
-                                value={meal.RecommendedCalories}
-                                onChange={(e) =>
-                                  handleEditMealChange(
-                                    index,
-                                    "RecommendedCalories",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                            </div>
                             <div className="col-md-2 d-flex align-items-end">
                               <label className="form-label">&nbsp;</label>
                               <button
@@ -1276,59 +1290,6 @@ export default function Page() {
                               >
                                 <i className="bi bi-trash"></i>
                               </button>
-                            </div>
-                          </div>
-                          <div className="row g-2">
-                            <div className="col-md-3">
-                              <label className="form-label">Protein (g)</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                min="0"
-                                value={meal.RecommendedProtein}
-                                onChange={(e) =>
-                                  handleEditMealChange(
-                                    index,
-                                    "RecommendedProtein",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="col-md-3">
-                              <label className="form-label">Carbs (g)</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                min="0"
-                                value={meal.RecommendedCarbs}
-                                onChange={(e) =>
-                                  handleEditMealChange(
-                                    index,
-                                    "RecommendedCarbs",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
-                            </div>
-                            <div className="col-md-3">
-                              <label className="form-label">Fats (g)</label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                min="0"
-                                value={meal.RecommendedFats}
-                                onChange={(e) =>
-                                  handleEditMealChange(
-                                    index,
-                                    "RecommendedFats",
-                                    e.target.value
-                                  )
-                                }
-                                required
-                              />
                             </div>
                           </div>
                         </div>
@@ -1436,10 +1397,15 @@ export default function Page() {
                                 className="form-check-input"
                                 type="checkbox"
                                 id={`meal-${meal}`}
-                                checked={(formData.selectedMeals || []).includes(meal)}
+                                checked={(
+                                  formData.selectedMeals || []
+                                ).includes(meal)}
                                 onChange={() => handleMealSelection(meal)}
                               />
-                              <label className="form-check-label" htmlFor={`meal-${meal}`}>
+                              <label
+                                className="form-check-label"
+                                htmlFor={`meal-${meal}`}
+                              >
                                 {meal}
                               </label>
                             </div>
