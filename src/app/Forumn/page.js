@@ -23,78 +23,44 @@ export default function Page() {
   const [sortOption, setSortOption] = useState('date_desc');
 
   const loadPosts = async () => {
-    try {
-      // Fetch posts, comments, and users concurrently
-      const [postsResponse, commentsResponse, usersResponse] = await Promise.all([
-        fetchForumPosts(),
-        fetchForumComments(),
-        fetchAllUsers()
-      ]);
+  try {
+    setLoading(true);
 
-      console.log("API response from fetchForumPosts:", postsResponse);
-      console.log("API response from fetchForumComments:", commentsResponse);
-      console.log("API response from fetchAllUsers:", usersResponse);
+    const res = await fetchForumPosts(); // MUST return res.data
+    console.log("FORUM POSTS:", res);
 
-      if (Array.isArray(postsResponse)) {
-        // Group comments by PostId
-        const commentsByPostId = {};
-        if (Array.isArray(commentsResponse)) {
-          commentsResponse.forEach(comment => {
-            if (!commentsByPostId[comment.PostId]) {
-              commentsByPostId[comment.PostId] = [];
-            }
-            const user = usersResponse[comment.UserId];
-            commentsByPostId[comment.PostId].push({
-              ...comment,
-              UserName: comment.IsAnonymous ? `${user?.name || "User"} (Anonymous)` : (user?.name || "Unknown User"),
-              UserAvatar: comment.IsAnonymous ? getDefaultAvatar("Anonymous") : (user?.avatar || getDefaultAvatar(user?.name || "User"))
-            });
-          });
-        }
-
-        // Group reports by PostId
-        const reportsByPostId = {};
-        if (Array.isArray(postsResponse)) {
-          postsResponse.forEach(post => {
-            if (post.Reports && Array.isArray(post.Reports)) {
-              post.Reports.forEach(report => {
-                if (!reportsByPostId[post.Id]) {
-                  reportsByPostId[post.Id] = [];
-                }
-                const user = usersResponse[report.ReporterUserId];
-                reportsByPostId[post.Id].push({
-                  ...report,
-                  UserName: report.ReporterName || "Unknown User",
-                  UserAvatar: user?.avatar || getDefaultAvatar(report.ReporterName || "User")
-                });
-              });
-            }
-          });
-        }
-
-        // Associate comments and reports with posts
-        const postsWithCommentsAndReports = postsResponse.map(post => ({
-          ...post,
-          Comments: commentsByPostId[post.Id] || [],
-          Reports: reportsByPostId[post.Id] || []
-        }));
-
-        // Sort posts by date (most recent first)
-        const sortedPosts = postsWithCommentsAndReports.sort((a, b) =>
-          new Date(b.CreatedAt) - new Date(a.CreatedAt)
-        );
-
-        setPosts(sortedPosts);
-      } else {
-        setError("Failed to load posts");
-      }
-    } catch (err) {
-      console.error("Error fetching posts, comments, or users:", err);
-      setError("Something went wrong while fetching posts, comments, or users");
-    } finally {
-      setLoading(false);
+    if (!Array.isArray(res)) {
+      setError("Invalid posts response");
+      return;
     }
-  };
+
+    // Fix media URLs
+    const baseUrl = "https://flow108.coinagesoft.com";
+
+    const normalizedPosts = res.map(post => ({
+      ...post,
+      Media: post.Media?.Url
+        ? { ...post.Media, Url: baseUrl + post.Media.Url }
+        : null,
+      Comments: post.Comments || [],
+      Reports: post.Reports || []
+    }));
+
+    setPosts(
+      normalizedPosts.sort(
+        (a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt)
+      )
+    );
+
+    setError(null);
+  } catch (err) {
+    console.error("Error loading posts:", err);
+    setError("Failed to load forum posts");
+  } finally {
+    setLoading(false);
+  }
+};
+
   const deleteComment = async (commentId) => {
     try {
       const response = await fetch(

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { fetchForumPosts, fetchQuestions, fetchUserCount } from "../utils/api";
+import { userApi } from "../utils/apiClient";
 import Link from "next/link";
 
 
@@ -71,15 +72,8 @@ export default function Page() {
 
     const loadStats = async () => {
       try {
-        // Fetch all users from API
-        const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
-        const data = await response.json();
-        let usersArray = [];
-        if (Array.isArray(data)) {
-          usersArray = data;
-        } else if (data?.Data && Array.isArray(data.Data)) {
-          usersArray = data.Data;
-        }
+        // Fetch all users from API using apiClient (includes JWT token)
+        const usersArray = await userApi.getAll();
         const totalUsers = usersArray.length;
         const pendingApprovals = usersArray.filter(user => !user.IsApproved).length;
 

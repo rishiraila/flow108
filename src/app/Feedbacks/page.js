@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 export default function Page() {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -9,11 +10,7 @@ export default function Page() {
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
-      const response = await fetch("https://flow108.coinagesoft.com/api/admin/AdminFeedback/all");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/AdminFeedback/all");
       setFeedbacks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching feedbacks:", err);

@@ -6,8 +6,8 @@ import DietPlanAssignmentModal from "../DietPlanAssignmentModal";
 import EditMealModal from "../EditMealModal";
 import { useAlert } from "../../utils/alertcontxt";
 import { useConfirm } from "../../utils/confirmContext";
-import { dietPlanApi } from "../../utils/apiClient";
-import { fetchAllMeals, recommendMealToDietPlan } from "../../utils/api";
+import { dietPlanApi, mealApi, dietAssignmentApi } from "../../utils/apiClient";
+import { fetchAllMeals } from "../../utils/api";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -84,7 +84,10 @@ export default function DietPlanDetails() {
 
   // Flatten meals for display
   const flattenedItems = meals.flatMap((meal) =>
-    (meal.FoodItems || []).map((item) => ({ ...item, mealType: meal.MealType }))
+    (meal.FoodItems || []).map((item) => ({
+      ...item,
+      mealType: meal.MealType,
+    })),
   );
 
   // Calculate nutrition totals
@@ -92,24 +95,24 @@ export default function DietPlanDetails() {
   const totalFoodItems = flattenedItems.length;
   const totalCalories = flattenedItems.reduce(
     (sum, item) => sum + (item.calories || 0),
-    0
+    0,
   );
   const totalCarbs = flattenedItems.reduce(
     (sum, item) => sum + (item.carbs || 0),
-    0
+    0,
   );
   const totalProtein = flattenedItems.reduce(
     (sum, item) => sum + (item.protein || 0),
-    0
+    0,
   );
   const totalFats = flattenedItems.reduce(
     (sum, item) => sum + (item.fats || 0),
-    0
+    0,
   );
 
   // ====== All Meals Pagination ======
   const filteredAllMeals = allMeals.filter((meal) =>
-    meal.FoodItem.toLowerCase().includes(allMealSearch.toLowerCase())
+    meal.FoodItem.toLowerCase().includes(allMealSearch.toLowerCase()),
   );
 
   const sortedAllMeals = [...filteredAllMeals].sort((a, b) => {
@@ -122,14 +125,14 @@ export default function DietPlanDetails() {
 
   const paginatedAllMeals = sortedAllMeals.slice(
     (allMealPage - 1) * allMealsPerPage,
-    allMealPage * allMealsPerPage
+    allMealPage * allMealsPerPage,
   );
 
   // ====== Meals Pagination ======
   const filteredMeals = flattenedItems.filter((item) =>
     `${item.mealType} ${item.name}`
       .toLowerCase()
-      .includes(mealSearch.toLowerCase())
+      .includes(mealSearch.toLowerCase()),
   );
 
   const sortedMeals = [...filteredMeals].sort((a, b) => {
@@ -152,7 +155,7 @@ export default function DietPlanDetails() {
 
   const paginatedMeals = sortedMeals.slice(
     (mealPage - 1) * mealsPerPage,
-    mealPage * mealsPerPage
+    mealPage * mealsPerPage,
   );
 
   const handleSaveMeal = (updatedMeal) => {
@@ -180,7 +183,7 @@ export default function DietPlanDetails() {
   }, [showRecommendMealModal]);
   // ====== Assigned Users ======
   const filteredUsers = assignedUsers.filter((u) =>
-    `${u.Name} ${u.Email}`.toLowerCase().includes(userSearch.toLowerCase())
+    `${u.Name} ${u.Email}`.toLowerCase().includes(userSearch.toLowerCase()),
   );
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -193,44 +196,32 @@ export default function DietPlanDetails() {
 
   const paginatedUsers = sortedUsers.slice(
     (userPage - 1) * usersPerPage,
-    userPage * usersPerPage
+    userPage * usersPerPage,
   );
 
   const fetchDietPlanDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/dietplan/${planId}`
-      );
-      if (!response.ok) throw new Error("Failed to fetch diet plan");
-      const planData = await response.json();
-      if (planData.Status && planData.Data) {
-        setDietPlan(planData.Data);
-        setMeals(planData.Data.Meals || []);
+      const res = await dietPlanApi.getById(planId);
 
-        // Fetch assigned users
-        try {
-          const usersResponse = await fetch(
-            "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
-          );
-          if (!usersResponse.ok)
-            throw new Error("Failed to fetch assigned users");
-          const usersData = await usersResponse.json();
-          if (usersData.Status && usersData.Data) {
-            const planWithUsers = usersData.Data.find(
-              (p) => p.DietPlanId === planId
-            );
-            setAssignedUsers(
-              planWithUsers ? planWithUsers.AssignedUsers || [] : []
-            );
-            await fetchRecommendedMeals();
-          }
-        } catch (err) {
-          console.error("Failed to fetch assigned users:", err);
+      if (res?.Status === true && res.Data) {
+        setDietPlan(res.Data);
+        setMeals(res.Data.Meals || []);
+      } else {
+        throw new Error(res?.Message || "Invalid diet plan data");
+      }
+
+      // Fetch assigned users for this diet plan
+      try {
+        const assignedUsersRes = await dietAssignmentApi.getPlanAssignments(planId);
+        if (Array.isArray(assignedUsersRes)) {
+          setAssignedUsers(assignedUsersRes);
+        } else {
           setAssignedUsers([]);
         }
-      } else {
-        throw new Error("Invalid diet plan data");
+      } catch (assignedUsersErr) {
+        console.error("Error fetching assigned users:", assignedUsersErr);
+        setAssignedUsers([]);
       }
     } catch (err) {
       setError(err.message || "Failed to load diet plan");
@@ -241,26 +232,20 @@ export default function DietPlanDetails() {
 
   const unassignUser = async (userId) => {
     try {
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${userId}`,
-        {
-          method: "DELETE",
-          headers: {
-            accept: "*/*",
-          },
-        }
-      );
-      if (!response.ok) throw new Error("Failed to unassign user");
-      const result = await response.json();
-      if (result.Status) {
+      const result = await dietAssignmentApi.removeAssignment(userId, planId);
+      if (result && result.Status === true) {
+        showAlert("User unassigned successfully.", "success");
         // Refetch assigned users
         fetchDietPlanDetails();
       } else {
-        alert("Failed to unassign user: " + result.Message);
+        showAlert(
+          "Failed to unassign user: " + (result?.Message || "Unknown error"),
+          "error",
+        );
       }
     } catch (err) {
       console.error("Error unassigning user:", err);
-      alert("Error unassigning user: " + err.message);
+      showAlert("Error unassigning user: " + err.message, "error");
     }
   };
 
@@ -279,37 +264,39 @@ export default function DietPlanDetails() {
     }
   };
 
-  const fetchRecommendedMeals = async () => {
-    try {
-      setRecommendMealLoading(true);
+const fetchRecommendedMeals = async () => {
+  try {
+    setRecommendMealLoading(true);
 
-      // Use the endpoint you shared (no query params)
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/recommendations`
-      );
-      if (!res.ok) throw new Error("Failed to fetch recommended meals");
-      const payload = await res.json();
+    const json = await mealApi.getRecommendations();
 
-      // API returns { status: true, message: "...", data: [...] }
-      const arr = payload?.data || payload?.Data || [];
-      if (!Array.isArray(arr)) {
-        setRecommendedMeals([]);
-        return;
-      }
+    // API returns ALL recommendations
+    const list = json?.data ?? json?.Data ?? [];
 
-      // Keep only items with DietPlanId === planId
-      const filtered = arr.filter(
-        (it) => String(it.DietPlanId || "") === String(planId)
-      );
-
-      setRecommendedMeals(filtered);
-    } catch (err) {
-      console.error("Error fetching recommended meals:", err);
+    if (!Array.isArray(list)) {
       setRecommendedMeals([]);
-    } finally {
-      setRecommendMealLoading(false);
+      return;
     }
-  };
+
+    // ✅ FILTER by current diet plan
+    const filtered = list.filter(
+      (r) =>
+        String(r.DietPlanId).toLowerCase() ===
+        String(planId).toLowerCase(),
+    );
+
+    setRecommendedMeals(filtered);
+  } catch (err) {
+    console.error("Error fetching recommended meals:", err);
+    setRecommendedMeals([]);
+  } finally {
+    setRecommendMealLoading(false);
+  }
+};
+
+
+
+
   // Open modal in EDIT mode with pre-filled data
   const handleEditRecommendationClick = (rec) => {
     setEditingRecommendationId(rec.Id); // which recommendation we are editing
@@ -318,7 +305,7 @@ export default function DietPlanDetails() {
       MealItemId: rec.MealItemId || "",
       MealType:
         dietMealTypes.find(
-          (t) => t.toLowerCase() === String(rec.MealType).toLowerCase()
+          (t) => t.toLowerCase() === String(rec.MealType).toLowerCase(),
         ) || "",
 
       RecommendedQuantity: String(parseFloat(rec.RecommendedQuantity) || ""),
@@ -336,7 +323,6 @@ export default function DietPlanDetails() {
   };
 
   // Delete a recommendation
-  // Delete a recommendation
   const handleDeleteRecommendation = async (id) => {
     // ✅ Native browser confirmation
     const confirmed =
@@ -347,21 +333,15 @@ export default function DietPlanDetails() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/GlobalUsers/${id}`,
-        {
-          method: "DELETE",
-          headers: { accept: "*/*" },
-        }
-      );
-
-      const data = await res.json().catch(() => ({}));
-
-      if (data.status === true || data.Status === true) {
+      const result = await mealApi.deleteRecommendation(id);
+      if (result && (result.status === true || result.Status === true)) {
         showAlert("Recommendation deleted successfully.", "success");
         fetchRecommendedMeals(); // refresh list
       } else {
-        showAlert(data.message || "Failed to delete recommendation.", "error");
+        showAlert(
+          result?.message || "Failed to delete recommendation.",
+          "error",
+        );
       }
     } catch (err) {
       console.error("Error deleting recommendation:", err);
@@ -389,7 +369,7 @@ export default function DietPlanDetails() {
   const filteredDropdownMeals = dropdownMeals.filter((meal) =>
     `${meal.FoodItem} ${meal.Quantity}`
       .toLowerCase()
-      .includes(mealSearchTerm.toLowerCase())
+      .includes(mealSearchTerm.toLowerCase()),
   );
 
   const handleAddToPlan = (meal) => {
@@ -400,7 +380,7 @@ export default function DietPlanDetails() {
 
   const handleDeletePlan = async () => {
     const confirmed = await showConfirm(
-      "Are you sure you want to delete this diet plan? This action cannot be undone."
+      "Are you sure you want to delete this diet plan? This action cannot be undone.",
     );
 
     if (!confirmed) {
@@ -446,45 +426,32 @@ export default function DietPlanDetails() {
     if (!recommendMealForm.MealType)
       return showAlert("Please select meal type", "error");
     const quantityStr = String(
-      recommendMealForm.RecommendedQuantity || ""
+      recommendMealForm.RecommendedQuantity || "",
     ).trim();
     if (!quantityStr) return showAlert("Please enter quantity", "error");
 
     try {
       setSubmittingRecommendation(true);
 
-      const fd = new FormData();
-
       if (!isEditing) {
-        // ✅ ADD MODE (POST /meal)
-        fd.append("MealItemId", recommendMealForm.MealItemId);
-        fd.append("MealType", recommendMealForm.MealType);
-        fd.append("RecommendedQuantity", recommendMealForm.RecommendedQuantity);
-        fd.append("DietPlanId", recommendMealForm.DietPlanId);
+        // ✅ ADD MODE using mealApi.recommendMeal
+        const recommendationData = {
+          MealItemId: recommendMealForm.MealItemId,
+          MealType: recommendMealForm.MealType,
+          RecommendedQuantity: recommendMealForm.RecommendedQuantity,
+          DietPlanId: recommendMealForm.DietPlanId,
+        };
 
-        const res = await fetch(
-          `https://flow108.coinagesoft.com/api/admin/recommendations/meal`,
-          {
-            method: "POST",
-            body: fd,
-          }
-        );
+        const result = await mealApi.recommendMeal(recommendationData);
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => null);
-          throw new Error(text || "Failed to add recommendation");
-        }
-
-        const result = await res.json();
-        const dataArray = result.data || result.Data || [];
-
-        if (result.status === true || result.Status === true) {
+        if (result && (result.status === true || result.Status === true)) {
           showAlert("Recommendation added successfully!", "success");
 
+          const dataArray = result.data || result.Data || [];
           if (Array.isArray(dataArray) && dataArray.length > 0) {
             setRecommendedMeals((prev) => {
               const existingIds = new Set(
-                prev.map((r) => r.Id || r.id || r.mealId)
+                prev.map((r) => r.Id || r.id || r.mealId),
               );
               const merged = [...prev];
               dataArray.forEach((item) => {
@@ -506,41 +473,36 @@ export default function DietPlanDetails() {
           });
           setShowRecommendMealModal(false);
         } else {
-          showAlert(result.message || "Failed to add recommendation.", "error");
+          showAlert(
+            result?.message || "Failed to add recommendation.",
+            "error",
+          );
         }
       } else {
-        // ✅ EDIT MODE (PATCH /api/admin/recommendations/{id})
-        fd.append("MealType", recommendMealForm.MealType);
-        fd.append("RecommendedQuantity", recommendMealForm.RecommendedQuantity);
+        // ✅ EDIT MODE using mealApi.updateRecommendation
+        const updateData = {
+          MealType: recommendMealForm.MealType,
+          RecommendedQuantity: recommendMealForm.RecommendedQuantity,
+          DietPlanId: recommendMealForm.DietPlanId,
+        };
         if (recommendMealForm.Category) {
-          fd.append("Category", recommendMealForm.Category);
+          updateData.Category = recommendMealForm.Category;
         }
-        fd.append("DietPlanId", recommendMealForm.DietPlanId);
 
-        const res = await fetch(
-          `https://flow108.coinagesoft.com/api/admin/recommendations/${editingRecommendationId}`,
-          {
-            method: "PATCH",
-            body: fd,
-          }
+        const result = await mealApi.updateRecommendation(
+          editingRecommendationId,
+          updateData,
         );
 
-        if (!res.ok) {
-          const text = await res.text().catch(() => null);
-          throw new Error(text || "Failed to update recommendation");
-        }
-
-        const result = await res.json();
-        const updated = result.data || result.Data;
-
-        if (result.status === true || result.Status === true) {
+        if (result && (result.status === true || result.Status === true)) {
           showAlert("Recommendation updated successfully!", "success");
 
+          const updated = result.data || result.Data;
           if (updated) {
             setRecommendedMeals((prev) =>
               prev.map((r) =>
-                (r.Id || r.id) === updated.Id ? { ...r, ...updated } : r
-              )
+                (r.Id || r.id) === updated.Id ? { ...r, ...updated } : r,
+              ),
             );
           } else {
             await fetchRecommendedMeals();
@@ -550,8 +512,8 @@ export default function DietPlanDetails() {
           setShowRecommendMealModal(false);
         } else {
           showAlert(
-            result.message || "Failed to update recommendation.",
-            "error"
+            result?.message || "Failed to update recommendation.",
+            "error",
           );
         }
       }
@@ -570,7 +532,7 @@ export default function DietPlanDetails() {
     ...new Set(
       [
         ...(meals || []).map((m) => (m.Name || "").trim()).filter(Boolean),
-      ].filter(Boolean)
+      ].filter(Boolean),
     ),
   ];
 
@@ -626,7 +588,7 @@ export default function DietPlanDetails() {
 
   const paginatedRecommendedMeals = sortedRecommendedMeals.slice(
     (recPage - 1) * recPerPage,
-    recPage * recPerPage
+    recPage * recPerPage,
   );
 
   if (loading) {
@@ -803,7 +765,7 @@ export default function DietPlanDetails() {
                             onClick={() => {
                               setUserSortKey("Name");
                               setUserSortOrder(
-                                userSortOrder === "asc" ? "desc" : "asc"
+                                userSortOrder === "asc" ? "desc" : "asc",
                               );
                             }}
                             style={{ cursor: "pointer" }}
@@ -819,7 +781,7 @@ export default function DietPlanDetails() {
                             onClick={() => {
                               setUserSortKey("Email");
                               setUserSortOrder(
-                                userSortOrder === "asc" ? "desc" : "asc"
+                                userSortOrder === "asc" ? "desc" : "asc",
                               );
                             }}
                             style={{ cursor: "pointer" }}
@@ -877,7 +839,7 @@ export default function DietPlanDetails() {
                       setUserPage((p) =>
                         p < Math.ceil(filteredUsers.length / usersPerPage)
                           ? p + 1
-                          : p
+                          : p,
                       )
                     }
                     disabled={
@@ -951,7 +913,7 @@ export default function DietPlanDetails() {
                               setRecSortOrder((prev) =>
                                 recSortKey === "FoodItem" && prev === "asc"
                                   ? "desc"
-                                  : "asc"
+                                  : "asc",
                               );
                             }}
                           >
@@ -970,7 +932,7 @@ export default function DietPlanDetails() {
                               setRecSortOrder((prev) =>
                                 recSortKey === "MealType" && prev === "asc"
                                   ? "desc"
-                                  : "asc"
+                                  : "asc",
                               );
                             }}
                           >
@@ -989,7 +951,7 @@ export default function DietPlanDetails() {
                               setRecSortOrder((prev) =>
                                 recSortKey === "Category" && prev === "asc"
                                   ? "desc"
-                                  : "asc"
+                                  : "asc",
                               );
                             }}
                           >
@@ -1009,7 +971,7 @@ export default function DietPlanDetails() {
                                 recSortKey === "RecommendedQuantity" &&
                                 prev === "asc"
                                   ? "desc"
-                                  : "asc"
+                                  : "asc",
                               );
                             }}
                           >
@@ -1211,16 +1173,16 @@ export default function DietPlanDetails() {
 
                                     // find selected meal & show in search box, and pre-fill quantity
                                     const selected = dropdownMeals.find(
-                                      (m) => m.Id === mealId
+                                      (m) => m.Id === mealId,
                                     );
                                     if (selected) {
                                       setMealSearchTerm(
-                                        `${selected.FoodItem} (${selected.Quantity})`
+                                        `${selected.FoodItem} (${selected.Quantity})`,
                                       );
                                       setRecommendMealForm((prev) => ({
                                         ...prev,
                                         RecommendedQuantity: String(
-                                          parseFloat(selected.Quantity) || ""
+                                          parseFloat(selected.Quantity) || "",
                                         ),
                                       }));
                                     }
@@ -1352,8 +1314,8 @@ export default function DietPlanDetails() {
                             ? "Updating..."
                             : "Adding..."
                           : editingRecommendationId
-                          ? "Update Recommendation"
-                          : "Add Recommendation"}
+                            ? "Update Recommendation"
+                            : "Add Recommendation"}
                       </button>
                     </div>
                   </form>

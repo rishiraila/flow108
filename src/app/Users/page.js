@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { fetchForumPosts, fetchQuestions } from "../utils/api";
+import { userApi } from "../utils/apiClient";
 
 export default function Page() {
   const [users, setUsers] = useState([]);
@@ -34,6 +35,7 @@ export default function Page() {
     if (!confirm("Are you sure you want to delete this user?")) return;
 
     try {
+      // Use apiClient for delete request (includes JWT token)
       const response = await fetch(
         `https://flow108.coinagesoft.com/api/AdminAccount/delete-user-by-email?email=${encodeURIComponent(
           email
@@ -42,6 +44,7 @@ export default function Page() {
           method: "DELETE",
           headers: {
             accept: "*/*",
+            "Authorization": `Bearer ${localStorage.getItem('adminToken')}`,
           },
         }
       );
@@ -96,38 +99,21 @@ export default function Page() {
     }
   };
 
-  const fetchUsers = () => {
-    fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("Fetched Users:", data);
-        // Example: if response is { Status: true, Data: [user1, user2] }
-        if (Array.isArray(data)) {
-          setUsers(data);
-        } else if (data?.Data && Array.isArray(data.Data)) {
-          setUsers(data.Data); // Use the actual array inside response
-        } else {
-          setUsers([]); // Fallback to empty array
-          console.error("Unexpected response format", data);
-        }
-      })
-
-      .catch((error) => console.error("Error fetching users:", error));
+  const fetchUsers = async () => {
+    try {
+      const usersArray = await userApi.getAll();
+      console.log("Fetched Users:", usersArray);
+      setUsers(usersArray);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setUsers([]); // Fallback to empty array
+    }
   };
 
   const loadStats = async () => {
     try {
-      // Fetch all users from API
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
-      );
-      const data = await response.json();
-      let usersArray = [];
-      if (Array.isArray(data)) {
-        usersArray = data;
-      } else if (data?.Data && Array.isArray(data.Data)) {
-        usersArray = data.Data;
-      }
+      // Fetch all users from API using apiClient (includes JWT token)
+      const usersArray = await userApi.getAll();
       const totalUsers = usersArray.length;
       const paidMembers = usersArray.filter((user) => user.IsApproved).length;
 
@@ -228,7 +214,10 @@ const isBlank = (value) => !value || value.trim() === "";
   try {
     const res = await fetch(url, {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem('adminToken')}`
+      },
       body: JSON.stringify(body),
     });
 
@@ -274,6 +263,7 @@ const isBlank = (value) => !value || value.trim() === "";
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('adminToken')}`,
           },
           body: JSON.stringify({ IsApproved: isApproved }),
         }

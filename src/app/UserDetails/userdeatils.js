@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 export default function UserDetailsClient() {
   const searchParams = useSearchParams();
@@ -430,13 +431,9 @@ export default function UserDetailsClient() {
 
   const fetchProfileData = async (uid) => {
     try {
-      const res = await fetch(
-        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users",
-        {
-          cache: "no-cache",
-        }
+      const allUsers = await authenticatedFetch(
+        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users"
       );
-      const allUsers = await res.json();
       const profile = allUsers.find((user) => user.UserId === uid);
       setProfileData(profile || null);
     } catch (error) {
@@ -502,10 +499,9 @@ export default function UserDetailsClient() {
   }
 
   const fetchActivityData = async (uid) => {
-    const res = await fetch(
+    const data = await authenticatedFetch(
       `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`
     );
-    const data = await res.json();
 
     setActivityData(data.Events || []);
     setPeriodCycles(extractPeriodCycles(data.Events || []));
@@ -522,10 +518,9 @@ export default function UserDetailsClient() {
 
   const fetchWeightData = async (uid) => {
     try {
-      const res = await fetch(
+      const data = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`
       );
-      const data = await res.json();
       setWeightData(data);
     } catch (error) {
       console.error("Error fetching weight data:", error);
@@ -534,10 +529,9 @@ export default function UserDetailsClient() {
 
   const fetchDietLogs = async (uid) => {
     try {
-      const res = await fetch(
+      const data = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/AdminDietPlan/allLogs/${uid}`
       );
-      const data = await res.json();
       setDietLogs(data);
     } catch (error) {
       console.error("Error fetching diet logs:", error);

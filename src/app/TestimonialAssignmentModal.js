@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import authenticatedFetch from "./utils/authenticatedFetch";
 
 export default function TestimonialAssignmentModal({ isOpen, onClose, testimonialId, testimonialTitle, onAssignmentSuccess }) {
   const [users, setUsers] = useState([]);
@@ -21,9 +22,7 @@ export default function TestimonialAssignmentModal({ isOpen, onClose, testimonia
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
+      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
       setUsers(data.Data || []);
     } catch (error) {
       setAssignError(error.message || "Failed to load users");
@@ -56,17 +55,10 @@ export default function TestimonialAssignmentModal({ isOpen, onClose, testimonia
         formData.append('AssignToAll', 'true');
       }
 
-      const response = await fetch("https://flow108.coinagesoft.com/api/admin/testimonials/assign", {
+      const result = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/testimonials/assign", {
         method: "POST",
-        headers: {
-          accept: "*/*",
-        },
         body: formData,
       });
-
-      if (!response.ok) throw new Error("Failed to assign testimonial");
-
-      const result = await response.json();
       if (result.status) {
         setAssignSuccess(true);
         onAssignmentSuccess();

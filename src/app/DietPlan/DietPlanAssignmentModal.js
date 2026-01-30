@@ -40,12 +40,9 @@ export default function DietPlanAssignmentModal({
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
-      );
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
-      setUsers(data.Data || []);
+      const { userApi } = await import("../utils/apiClient");
+      const data = await userApi.getAll();
+      setUsers(data || []);
     } catch (error) {
       setAssignError(error.message || "Failed to load users");
     } finally {
@@ -55,17 +52,10 @@ export default function DietPlanAssignmentModal({
 
   const fetchAssignedUsers = async () => {
     try {
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/users`
-      );
-      if (!response.ok) {
-        console.warn(`Failed to fetch assigned users: ${response.status}`);
-        setAssignedUsers([]);
-        return;
-      }
-      const data = await response.json();
-      if (data.Status && Array.isArray(data.Data)) {
-        setAssignedUsers(data.Data);
+      const { dietAssignmentApi } = await import("../utils/apiClient");
+      const data = await dietAssignmentApi.getPlanAssignments(planId);
+      if (Array.isArray(data)) {
+        setAssignedUsers(data);
       } else {
         setAssignedUsers([]);
       }
@@ -86,15 +76,12 @@ export default function DietPlanAssignmentModal({
     }
   };
 
-  const assignPlanToUser = async (userId) => {
-    try {
-      const { dietAssignmentApi } = await import("../utils/apiClient");
-      await dietAssignmentApi.assignToUser(userId, planId);
-      return true;
-    } catch (error) {
-      throw error;
-    }
-  };
+ const assignPlanToUser = async (userId) => {
+  const { dietAssignmentApi } = await import("../utils/apiClient");
+  await dietAssignmentApi.assignToUser(userId, planId);
+  return true;
+};
+
 
   const assignPlanToSelectedUsers = async () => {
     if (selectedUsers.length === 0) {
@@ -124,26 +111,21 @@ export default function DietPlanAssignmentModal({
     }
   };
 
-  const assignAllToPlan = async () => {
-    setAssignAllLoading(true);
-    setAssignError(null);
-    setAssignSuccess(false);
-    try {
-      const { dietAssignmentApi } = await import("../utils/apiClient");
-      await dietAssignmentApi.assignAllToPlan(planId);
-      alert("Diet plan assigned successfully!");
-      setAssignSuccess(true);
-      onAssignmentSuccess();
-      setTimeout(() => {
-        setAssignSuccess(false);
-        onClose();
-      }, 2000);
-    } catch (error) {
-      setAssignError(error.message || "Failed to assign plan to all users");
-    } finally {
-      setAssignAllLoading(false);
-    }
-  };
+ const assignAllToPlan = async () => {
+  setAssignAllLoading(true);
+  try {
+    const { dietAssignmentApi } = await import("../utils/apiClient");
+    await dietAssignmentApi.assignAllToPlan(planId);
+    alert("Diet plan assigned to all users!");
+    onAssignmentSuccess();
+    onClose();
+  } catch (err) {
+    setAssignError(err.message);
+  } finally {
+    setAssignAllLoading(false);
+  }
+};
+
 
   const unassignAllFromPlan = async () => {
     setUnassignAllLoading(true);
@@ -196,20 +178,9 @@ export default function DietPlanAssignmentModal({
     setAssignSuccess(false);
     setUnassignSuccess(false);
     try {
+      const { dietAssignmentApi } = await import("../utils/apiClient");
       for (const userId of selectedAssignedUsers) {
-        const response = await fetch(
-          `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${userId}`,
-          {
-            method: "DELETE",
-            headers: {
-              accept: "*/*",
-            },
-          }
-        );
-        if (!response.ok) throw new Error("Failed to unassign user");
-        const result = await response.json();
-        if (!result.Status)
-          throw new Error(result.Message || "Failed to unassign user");
+        await dietAssignmentApi.removeAssignment(userId, planId);
       }
       alert("Selected users unassigned successfully!");
       setUnassignSuccess(true);
@@ -486,26 +457,8 @@ export default function DietPlanAssignmentModal({
                                     setAssignError(null);
 
                                     try {
-                                      const response = await fetch(
-                                        `https://flow108.coinagesoft.com/api/AdminDietPlan/${planId}/unassign/${user.Id}`,
-                                        {
-                                          method: "DELETE",
-                                          headers: { accept: "*/*" },
-                                        }
-                                      );
-
-                                      if (!response.ok)
-                                        throw new Error(
-                                          "Failed to unassign user"
-                                        );
-
-                                      const result = await response.json();
-                                      if (!result.Status) {
-                                        throw new Error(
-                                          result.Message ||
-                                            "Failed to unassign user"
-                                        );
-                                      }
+                                      const { dietAssignmentApi } = await import("../utils/apiClient");
+                                      await dietAssignmentApi.removeAssignment(user.Id, planId);
 
                                       setUnassignSuccess(true);
                                       await fetchAssignedUsers();

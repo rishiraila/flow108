@@ -153,89 +153,91 @@ export default function Page() {
     }));
   }, [formData.selectedMeals]);
 
-  const fetchDietPlans = async () => {
-    try {
-      setApiLoading(true);
-      setApiError(null);
+ const fetchDietPlans = async () => {
+  try {
+    setApiLoading(true);
+    setApiError(null);
 
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminDietPlan"
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    // dietPlanApi.getAll() RETURNS ARRAY DIRECTLY
+    const plans = await dietPlanApi.getAll();
 
-      const data = await response.json();
-
-      if (data.Status && data.Data && Array.isArray(data.Data)) {
-        let plansWithUserCounts = [];
-        try {
-          const usersResponse = await fetch(
-            "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
-          );
-          if (usersResponse.ok) {
-            const usersData = await usersResponse.json();
-            if (usersData.Status && usersData.Data) {
-              const plansWithUsers = usersData.Data;
-              const userCountMap = {};
-              plansWithUsers.forEach((plan) => {
-                userCountMap[plan.DietPlanId] = plan.AssignedUsers
-                  ? plan.AssignedUsers.length
-                  : 0;
-              });
-              plansWithUserCounts = data.Data.map((plan) => {
-                const planId = plan.Id || plan.id;
-                return {
-                  ...plan,
-                  userCount: userCountMap[planId] || 0,
-                };
-              });
-            } else {
-              throw new Error("Invalid users data structure");
-            }
-          } else {
-            throw new Error("Failed to fetch users data");
-          }
-        } catch (err) {
-          console.error(
-            "Error fetching assigned users, falling back to individual calls:",
-            err
-          );
-          plansWithUserCounts = await Promise.all(
-            data.Data.map(async (plan) => {
-              try {
-                const userCount = await fetchUserCountForPlan(
-                  plan.Id || plan.id
-                );
-                return {
-                  ...plan,
-                  userCount: userCount,
-                };
-              } catch (err) {
-                console.error(
-                  `Error fetching user count for plan ${plan.Id}:`,
-                  err
-                );
-                return {
-                  ...plan,
-                  userCount: 0,
-                };
-              }
-            })
-          );
-        }
-
-        setDietPlans(plansWithUserCounts);
-      } else {
-        throw new Error(data.Message || "Failed to fetch diet plans");
-      }
-    } catch (err) {
-      console.error("Error fetching diet plans:", err);
-      setApiError(err.message || "Failed to fetch diet plans");
-    } finally {
-      setApiLoading(false);
+    if (!Array.isArray(plans)) {
+      throw new Error("Invalid diet plans response");
     }
-  };
+
+    let plansWithUserCounts = [];
+
+    try {
+      // Try optimized API (with users)
+      const usersResponse = await fetch(
+        "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
+      );
+
+      if (!usersResponse.ok) {
+        throw new Error("Failed to fetch users data");
+      }
+
+      const usersData = await usersResponse.json();
+
+      if (!usersData.Status || !Array.isArray(usersData.Data)) {
+        throw new Error("Invalid users data structure");
+      }
+
+      // Build map: DietPlanId -> userCount
+      const userCountMap = {};
+      usersData.Data.forEach((plan) => {
+        userCountMap[plan.DietPlanId] = plan.AssignedUsers
+          ? plan.AssignedUsers.length
+          : 0;
+      });
+
+      plansWithUserCounts = plans.map((plan) => {
+        const planId = plan.Id || plan.id;
+        return {
+          ...plan,
+          userCount: userCountMap[planId] || 0,
+        };
+      });
+    } catch (err) {
+      console.warn(
+        "⚠️ Bulk user fetch failed, falling back to individual calls:",
+        err
+      );
+
+      // Fallback: fetch user count per plan
+      plansWithUserCounts = await Promise.all(
+        plans.map(async (plan) => {
+          try {
+            const userCount = await fetchUserCountForPlan(
+              plan.Id || plan.id
+            );
+            return {
+              ...plan,
+              userCount,
+            };
+          } catch (err) {
+            console.error(
+              `Error fetching user count for plan ${plan.Id}:`,
+              err
+            );
+            return {
+              ...plan,
+              userCount: 0,
+            };
+          }
+        })
+      );
+    }
+
+    setDietPlans(plansWithUserCounts);
+  } catch (err) {
+    console.error("❌ Error fetching diet plans:", err);
+    setApiError(err.message || "Failed to fetch diet plans");
+  } finally {
+    setApiLoading(false);
+  }
+};
+
 
   const fetchUserCountForPlan = async (planId) => {
     try {

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import authenticatedFetch from "./utils/authenticatedFetch";
 
 export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignmentSuccess }) {
   const [users, setUsers] = useState([]);
@@ -34,21 +35,12 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
     setAssignError(null);
     setAssignSuccess(false);
     try {
-      const response = await fetch(
+      const result = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/users/${userId}/dietplans/${planId}`,
         {
           method: "POST",
-          headers: {
-            accept: "*/*",
-          },
-          body: null,
         }
       );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-      const result = await response.json();
       if (result.status) {
         setAssignSuccess(true);
         onAssignmentSuccess();

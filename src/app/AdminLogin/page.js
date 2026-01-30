@@ -2,26 +2,74 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../utils/firebase';
 
 export default function Page() {
-  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
-
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
+    setSuccessMsg('');
 
-    // ✅ Hardcoded credentials check
-    if (username === 'coinage@admin.com' && password === 'admin123') {
-      setSuccessMsg('Login Successful! Redirecting...');
-      setTimeout(() => {
-        router.push('/Dashboard');
-      }, 1000);
-    } else {
-      alert('Invalid email or password!');
+    try {
+      // Sign in with Google
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+
+      // Call the API with the token
+      const response = await fetch('https://flow108.coinagesoft.com/api/AdminAccount/firebase-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          FirebaseIdToken: idToken
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.Status) {
+        setSuccessMsg('Login Successful! Redirecting...');
+        // Store the JWT token returned from backend, not the Firebase token
+        const jwtToken = data.Data; // Assuming the JWT token is in the Data field
+        console.log('🔑 JWT Token received from backend:', jwtToken);
+
+        // Decode JWT token to see payload
+        try {
+          const payload = jwtToken.split('.')[1];
+          const decodedPayload = JSON.parse(atob(payload));
+          console.log('🔓 Decoded JWT Payload:', decodedPayload);
+          console.log('👤 User ID from JWT:', decodedPayload.sub || decodedPayload.userId || decodedPayload.UserId || decodedPayload.jti || decodedPayload.email);
+          console.log('📧 Email from JWT:', decodedPayload.email);
+          console.log('🔑 JWT ID (jti):', decodedPayload.jti);
+          console.log('👑 Admin Role:', decodedPayload.admin_role);
+
+          // Store admin ID for use in Questions page
+          const adminId = decodedPayload.sub || decodedPayload.userId || decodedPayload.UserId || decodedPayload.jti || decodedPayload.email;
+          if (adminId) {
+            localStorage.setItem('adminId', adminId);
+            console.log('💾 Admin ID stored in localStorage:', adminId);
+          }
+        } catch (decodeError) {
+          console.error('❌ Error decoding JWT:', decodeError);
+        }
+
+        localStorage.setItem('adminToken', jwtToken);
+        localStorage.setItem('adminEmail', user.email);
+        setTimeout(() => {
+          router.push('/Dashboard');
+        }, 1000);
+      } else {
+        alert(data.Message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      alert('Google sign-in failed. Please try again.');
     }
   };
 
@@ -65,76 +113,40 @@ export default function Page() {
 
                 {successMsg && <div className="text-success mb-3">{successMsg}</div>}
 
-                <form onSubmit={handleLogin} className="mb-5 flex-grow-1 d-flex flex-column">
-                  <div className="form-floating form-floating-outline mb-5">
-                    <input
-                      type="text"
-                      className="form-control"
-                      id="username"
-                      placeholder="Enter your email"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                    <label htmlFor="username">Email</label>
-                  </div>
-
-                  <div className="mb-5">
-                    <div className="form-password-toggle">
-                      <div className="input-group input-group-merge">
-                        <div className="form-floating form-floating-outline">
-                          <input
-                            type={showPassword ? 'text' : 'password'}
-                            id="password"
-                            className="form-control"
-                            placeholder="********"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                          <label htmlFor="password">Password</label>
-                        </div>
-                        <span
-                          className="input-group-text cursor-pointer"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                          <i
-                            className={
-                              showPassword ? 'ri-eye-line' : 'ri-eye-off-line'
-                            }
-                          ></i>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-5 d-flex justify-content-between mt-5">
-                    <div className="form-check mt-2">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="remember-me"
-                      />
-                      <label className="form-check-label" htmlFor="remember-me">
-                        Remember Me
-                      </label>
-                    </div>
-                    <Link href="/Forgot" className="float-end mb-1 mt-2">
-                      <span>Forgot Password?</span>
-                    </Link>
-                  </div>
-
-                  <button type="submit" className="btn btn-primary d-grid w-100 mt-auto">
-                    Sign in
+                <div className="mb-5 flex-grow-1 d-flex flex-column">
+                  <button
+                    onClick={handleGoogleLogin}
+                    className="btn btn-outline-secondary d-grid w-100 mt-auto d-flex align-items-center justify-content-center gap-2"
+                    style={{
+                      border: '1px solid #dadce0',
+                      backgroundColor: '#fff',
+                      color: '#3c4043',
+                      padding: '12px 24px',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'background-color 0.2s, box-shadow 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#f8f9fa';
+                      e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = '#fff';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
                   </button>
-                </form>
+                </div>
 
-                <p className="text-center mt-3">
-                  <span>New to Camrilla? </span>
-                  <Link href="/Signup">
-                    <span>Create an account</span>
-                  </Link>
-                </p>
+               
               </div>
             </div>
 

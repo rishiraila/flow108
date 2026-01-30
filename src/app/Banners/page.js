@@ -568,9 +568,9 @@ export default function BannersPage() {
                   placeholder="Name"
                   value={newBanner.name}
                   maxLength={CHAR_LIMITS.name}
-                  onChange={(e) => setNewBanner({ ...newBanner, name: e.target.value })}
+                  onChange={(e) => setNewBanner({ ...newBanner, name: e.target.value.slice(0, CHAR_LIMITS.name) })}
                 />
-                <small className="text-muted">{newBanner.name.length}/{CHAR_LIMITS.name} characters</small>
+                <small className={newBanner.name.length >= CHAR_LIMITS.name ? "text-danger" : "text-muted"}>{newBanner.name.length}/{CHAR_LIMITS.name} characters</small>
                 {validationErrors.name && <div className="invalid-feedback">{validationErrors.name}</div>}
               </div>
               <div className="mb-2">
@@ -579,9 +579,9 @@ export default function BannersPage() {
                   placeholder="Title"
                   value={newBanner.title}
                   maxLength={CHAR_LIMITS.title}
-                  onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value })}
+                  onChange={(e) => setNewBanner({ ...newBanner, title: e.target.value.slice(0, CHAR_LIMITS.title) })}
                 />
-                <small className="text-muted">{newBanner.title.length}/{CHAR_LIMITS.title} characters</small>
+                <small className={newBanner.title.length >= CHAR_LIMITS.title ? "text-danger" : "text-muted"}>{newBanner.title.length}/{CHAR_LIMITS.title} characters</small>
                 {validationErrors.title && <div className="invalid-feedback">{validationErrors.title}</div>}
               </div>
               <div className="mb-2">
@@ -591,9 +591,9 @@ export default function BannersPage() {
                   rows="3"
                   value={newBanner.content}
                   maxLength={CHAR_LIMITS.content}
-                  onChange={(e) => setNewBanner({ ...newBanner, content: e.target.value })}
+                  onChange={(e) => setNewBanner({ ...newBanner, content: e.target.value.slice(0, CHAR_LIMITS.content) })}
                 />
-                <small className="text-muted">{newBanner.content.length}/{CHAR_LIMITS.content} characters</small>
+                <small className={newBanner.content.length >= CHAR_LIMITS.content ? "text-danger" : "text-muted"}>{newBanner.content.length}/{CHAR_LIMITS.content} characters</small>
                 {validationErrors.content && <div className="invalid-feedback">{validationErrors.content}</div>}
               </div>
               <div className="mb-2">
@@ -602,9 +602,9 @@ export default function BannersPage() {
                   placeholder="Redirect URL"
                   value={newBanner.redirectUrl}
                   maxLength={CHAR_LIMITS.redirectUrl}
-                  onChange={(e) => setNewBanner({ ...newBanner, redirectUrl: e.target.value })}
+                  onChange={(e) => setNewBanner({ ...newBanner, redirectUrl: e.target.value.slice(0, CHAR_LIMITS.redirectUrl) })}
                 />
-                <small className="text-muted">{newBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
+                <small className={newBanner.redirectUrl.length >= CHAR_LIMITS.redirectUrl ? "text-danger" : "text-muted"}>{newBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
                 {validationErrors.redirectUrl && <div className="invalid-feedback">{validationErrors.redirectUrl}</div>}
               </div>
               <input type="file" className="form-control mb-3" accept="image/*"
@@ -628,9 +628,9 @@ export default function BannersPage() {
                   placeholder="Name"
                   value={editBanner.name}
                   maxLength={CHAR_LIMITS.name}
-                  onChange={(e) => setEditBanner({ ...editBanner, name: e.target.value })}
+                  onChange={(e) => setEditBanner({ ...editBanner, name: e.target.value.slice(0, CHAR_LIMITS.name) })}
                 />
-                <small className="text-muted">{editBanner.name.length}/{CHAR_LIMITS.name} characters</small>
+                <small className={editBanner.name.length >= CHAR_LIMITS.name ? "text-danger" : "text-muted"}>{editBanner.name.length}/{CHAR_LIMITS.name} characters</small>
                 {validationErrors.name && <div className="invalid-feedback">{validationErrors.name}</div>}
               </div>
               <div className="mb-2">
@@ -639,9 +639,9 @@ export default function BannersPage() {
                   placeholder="Title"
                   value={editBanner.title}
                   maxLength={CHAR_LIMITS.title}
-                  onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value })}
+                  onChange={(e) => setEditBanner({ ...editBanner, title: e.target.value.slice(0, CHAR_LIMITS.title) })}
                 />
-                <small className="text-muted">{editBanner.title.length}/{CHAR_LIMITS.title} characters</small>
+                <small className={editBanner.title.length >= CHAR_LIMITS.title ? "text-danger" : "text-muted"}>{editBanner.title.length}/{CHAR_LIMITS.title} characters</small>
                 {validationErrors.title && <div className="invalid-feedback">{validationErrors.title}</div>}
               </div>
               <div className="mb-2">
@@ -651,9 +651,9 @@ export default function BannersPage() {
                   rows="3"
                   value={editBanner.content}
                   maxLength={CHAR_LIMITS.content}
-                  onChange={(e) => setEditBanner({ ...editBanner, content: e.target.value })}
+                  onChange={(e) => setEditBanner({ ...editBanner, content: e.target.value.slice(0, CHAR_LIMITS.content) })}
                 />
-                <small className="text-muted">{editBanner.content.length}/{CHAR_LIMITS.content} characters</small>
+                <small className={editBanner.content.length >= CHAR_LIMITS.content ? "text-danger" : "text-muted"}>{editBanner.content.length}/{CHAR_LIMITS.content} characters</small>
                 {validationErrors.content && <div className="invalid-feedback">{validationErrors.content}</div>}
               </div>
               <div className="mb-2">
@@ -662,9 +662,9 @@ export default function BannersPage() {
                   placeholder="Redirect URL"
                   value={editBanner.redirectUrl}
                   maxLength={CHAR_LIMITS.redirectUrl}
-                  onChange={(e) => setEditBanner({ ...editBanner, redirectUrl: e.target.value })}
+                  onChange={(e) => setEditBanner({ ...editBanner, redirectUrl: e.target.value.slice(0, CHAR_LIMITS.redirectUrl) })}
                 />
-                <small className="text-muted">{editBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
+                <small className={editBanner.redirectUrl.length >= CHAR_LIMITS.redirectUrl ? "text-danger" : "text-muted"}>{editBanner.redirectUrl.length}/{CHAR_LIMITS.redirectUrl} characters</small>
                 {validationErrors.redirectUrl && <div className="invalid-feedback">{validationErrors.redirectUrl}</div>}
               </div>
               {editingBanner && editingBanner.imageUrl && (

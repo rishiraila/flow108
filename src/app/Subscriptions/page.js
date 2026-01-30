@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 export default function Page() {
   const [plans, setPlans] = useState([]);
@@ -28,10 +29,9 @@ export default function Page() {
     setSelectedPlanId(planId);
 
     try {
-      const res = await fetch(
+      const data = await authenticatedFetch(
         "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
       );
-      const data = await res.json();
 
       const approvedUsers = (data?.Data || []).filter((u) => u.IsApproved);
       setUsers(approvedUsers);
@@ -39,10 +39,9 @@ export default function Page() {
       const plansMap = {};
       for (const user of approvedUsers) {
         try {
-          const res = await fetch(
+          const plans = await authenticatedFetch(
             `https://flow108.coinagesoft.com/api/UserPlans/user/${user.Id}`
           );
-          const plans = await res.json();
           plansMap[user.Id] = plans?.[0]?.Title || "No Plan Assigned";
         } catch {
           plansMap[user.Id] = "No Plan Assigned";
@@ -63,25 +62,18 @@ export default function Page() {
     if (!plan || !userId) return;
 
     try {
-      const res = await fetch(
+      await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/plans/unassign?userId=${userId}&planId=${plan.Id}`,
         {
           method: "POST",
-          headers: {
-            accept: "*/*",
-          },
         }
       );
 
-      if (res.ok) {
-        showToast("Plan unassigned successfully!");
-        setUserPlans((prev) => ({
-          ...prev,
-          [userId]: "No Plan Assigned",
-        }));
-      } else {
-        showToast("Failed to unassign plan.", false);
-      }
+      showToast("Plan unassigned successfully!");
+      setUserPlans((prev) => ({
+        ...prev,
+        [userId]: "No Plan Assigned",
+      }));
     } catch (err) {
       console.error("Unassign error:", err.message);
       showToast("Error unassigning plan.", false);
@@ -92,37 +84,32 @@ export default function Page() {
     if (!planId || !userId) return;
 
     try {
-      const res = await fetch(
+      await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/plans/assign?userId=${userId}&planId=${planId}`,
         {
           method: "POST",
-          headers: { accept: "*/*" },
         }
       );
 
-      if (res.ok) {
-        showToast("Plan assigned successfully!");
-        setUserPlans((prev) => ({
-          ...prev,
-          [userId]: plans.find((p) => p.Id === planId)?.Title || "Assigned",
-        }));
-      } else {
-        showToast("Failed to assign plan.", false);
-      }
+      showToast("Plan assigned successfully!");
+      setUserPlans((prev) => ({
+        ...prev,
+        [userId]: plans.find((p) => p.Id === planId)?.Title || "Assigned",
+      }));
     } catch (err) {
       console.error("Assignment error:", err.message);
       showToast("Error assigning plan.", false);
     }
   };
 
-  const fetchPlans = () => {
-    fetch("https://flow108.coinagesoft.com/api/admin/plans")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log("API Response:", data);
-        setPlans(data);
-      })
-      .catch((err) => console.error("Error fetching plans:", err));
+  const fetchPlans = async () => {
+    try {
+      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/plans");
+      console.log("API Response:", data);
+      setPlans(data);
+    } catch (err) {
+      console.error("Error fetching plans:", err);
+    }
   };
 
   const handleAddPlan = async (e) => {
@@ -136,16 +123,13 @@ export default function Page() {
     };
 
     try {
-      const res = await fetch(
+      await authenticatedFetch(
         "https://flow108.coinagesoft.com/api/admin/plans",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         }
       );
-
-      if (!res.ok) throw new Error("Failed to add plan");
 
       window.bootstrap.Modal.getInstance(
         document.getElementById("addPlanModal")
@@ -205,19 +189,13 @@ export default function Page() {
   };
 
   try {
-    const res = await fetch(
+    await authenticatedFetch(
       `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ Correct endpoint
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       }
     );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Update failed: ${res.status} ${errorText}`);
-    }
 
     window.bootstrap.Modal.getInstance(
       document.getElementById("editPlanModal")
@@ -257,14 +235,12 @@ export default function Page() {
     if (!confirmDelete) return;
 
     try {
-      const res = await fetch(
+      await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/plans/${planId}`,
         {
           method: "DELETE",
         }
       );
-
-      if (!res.ok) throw new Error("Failed to delete");
 
       showToast("Plan deleted successfully!");
       fetchPlans();

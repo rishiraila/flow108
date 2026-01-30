@@ -9,76 +9,7 @@ import {
 } from "../utils/api";
 import EditMealModal from "../DietPlan/EditMealModal";
 
-// Dummy data for meal calculations
-const dummyMeals = [
-  {
-    id: 1,
-    name: "Breakfast",
-    time: "08:00 AM",
-    items: [
-      {
-        name: "Oatmeal with Berries",
-        calories: 320,
-        protein: 12,
-        carbs: 45,
-        fats: 8,
-      },
-      { name: "Greek Yogurt", calories: 150, protein: 15, carbs: 8, fats: 6 },
-      { name: "Banana", calories: 105, protein: 1, carbs: 27, fats: 0 },
-    ],
-    totalCalories: 575,
-    totalProtein: 28,
-    totalCarbs: 80,
-    totalFats: 14,
-  },
-  {
-    id: 2,
-    name: "Lunch",
-    time: "12:30 PM",
-    items: [
-      {
-        name: "Grilled Chicken Salad",
-        calories: 420,
-        protein: 35,
-        carbs: 15,
-        fats: 22,
-      },
-      { name: "Quinoa", calories: 222, protein: 8, carbs: 39, fats: 4 },
-      { name: "Avocado", calories: 234, protein: 3, carbs: 12, fats: 21 },
-    ],
-    totalCalories: 876,
-    totalProtein: 46,
-    totalCarbs: 66,
-    totalFats: 47,
-  },
-  {
-    id: 3,
-    name: "Snack",
-    time: "03:00 PM",
-    items: [
-      { name: "Apple", calories: 95, protein: 0, carbs: 25, fats: 0 },
-      { name: "Almonds (20g)", calories: 116, protein: 4, carbs: 4, fats: 10 },
-    ],
-    totalCalories: 211,
-    totalProtein: 4,
-    totalCarbs: 29,
-    totalFats: 10,
-  },
-  {
-    id: 4,
-    name: "Dinner",
-    time: "07:00 PM",
-    items: [
-      { name: "Salmon Fillet", calories: 412, protein: 39, carbs: 0, fats: 25 },
-      { name: "Sweet Potato", calories: 112, protein: 2, carbs: 26, fats: 0 },
-      { name: "Broccoli", calories: 55, protein: 4, carbs: 11, fats: 1 },
-    ],
-    totalCalories: 579,
-    totalProtein: 45,
-    totalCarbs: 37,
-    totalFats: 26,
-  },
-];
+// API data will be loaded dynamically
 
 const dailyGoals = {
   calories: 2500,
@@ -90,9 +21,9 @@ const dailyGoals = {
 export default function CaloriesCounter() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [meals, setMeals] = useState(dummyMeals);
+  const [meals, setMeals] = useState([]);
   const [uploadStatus, setUploadStatus] = useState(null);
-  const [activeTab, setActiveTab] = useState("upload");
+  const [activeTab, setActiveTab] = useState("calculator");
   const [showModal, setShowModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importMessage, setImportMessage] = useState(null);
@@ -128,13 +59,30 @@ export default function CaloriesCounter() {
     const loadMeals = async () => {
       setIsLoadingMeals(true);
       setMealsError(null);
+
       try {
+        // Check if user is authenticated
+        const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') || localStorage.getItem('token') : null;
+        if (!token) {
+          console.warn('No authentication token found, redirecting to login');
+          setMealsError("Authentication required. Please log in to access meal data.");
+          setIsLoadingMeals(false);
+          return;
+        }
+
         const apiMeals = await fetchAllMeals();
+        console.log("API Meals fetched:", apiMeals);
         const transformedMeals = transformMealsData(apiMeals);
+        console.log("Transformed meals:", transformedMeals);
         setMeals(transformedMeals);
       } catch (error) {
         console.error("Error loading meals:", error);
-        setMealsError("Failed to load meals from server. Using sample data.");
+        if (error.message.includes('401')) {
+          console.warn('Authentication failed, token may be expired');
+          setMealsError("Authentication failed. Please log in again.");
+        } else {
+          setMealsError("Failed to load meals from server. Using sample data.");
+        }
         // Keep dummy data as fallback
       } finally {
         setIsLoadingMeals(false);

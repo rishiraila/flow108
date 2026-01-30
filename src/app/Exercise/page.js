@@ -3,9 +3,61 @@
 import React, { useState, useEffect } from "react";
 import { fetchWorkoutPlans, updateWorkoutPlan, deleteWorkoutPlan, addWorkoutPlan } from "../utils/api";
 import WorkoutPlanAssignmentModal from "../WorkoutPlanAssignmentModal";
-import { getImageUrl } from "../utils/imageUtils";
+import { getImageUrl, isVideoFile, isAudioFile, processWorkoutImages } from "../utils/imageUtils";
 import { useAlert } from "../utils/alertcontxt";
 import { useConfirm } from "../utils/confirmContext";
+
+// MediaDisplay component to handle images, videos, and audio
+const MediaDisplay = ({ src, alt, className, style, onError }) => {
+  const isVideo = isVideoFile(src);
+  const isAudio = isAudioFile(src);
+
+  if (isVideo) {
+    return (
+      <video
+        src={getImageUrl(src)}
+        className={className}
+        style={style}
+        controls
+        onError={onError}
+        muted
+      >
+        Your browser does not support the video tag.
+      </video>
+    );
+  }
+
+  if (isAudio) {
+    return (
+      <div className={className} style={style}>
+        <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light rounded">
+          <i className="bi bi-music-note fs-1 text-muted mb-2"></i>
+          <audio
+            src={getImageUrl(src)}
+            controls
+            onError={onError}
+            className="w-100"
+          >
+            Your browser does not support the audio tag.
+          </audio>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={getImageUrl(src)}
+      className={className}
+      alt={alt}
+      style={style}
+      onError={(e) => {
+        e.target.src = getImageUrl('');
+        if (onError) onError(e);
+      }}
+    />
+  );
+};
 
 export default function ExercisePage() {
   const [workoutPlans, setWorkoutPlans] = useState([]);
@@ -29,7 +81,9 @@ export default function ExercisePage() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-
+  // File error states
+  const [addFileError, setAddFileError] = useState('');
+  const [editFileError, setEditFileError] = useState('');
 
   // New workout form data
   const [formData, setFormData] = useState({
@@ -103,12 +157,69 @@ export default function ExercisePage() {
   const handleInputChange = (e) => {
     const { name, value, type, files } = e.target;
     if (type === 'file') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: files[0],
-      }));
+      const file = files[0];
+      if (file) {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const isAudio = file.type.startsWith('audio/');
+        if (isImage && file.size > 1024 * 1024) {
+          setAddFileError('Image size must be below 1MB');
+          return;
+        }
+        if ((isVideo || isAudio) && file.size > 10 * 1024 * 1024) {
+          setAddFileError('Video/Audio size must be below 10MB');
+          return;
+        }
+        setAddFileError('');
+        setFormData((prev) => ({
+          ...prev,
+          [name]: file,
+        }));
+      } else {
+        setAddFileError('');
+        setFormData((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
     } else {
       setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, files } = e.target;
+    if (type === 'file') {
+      const file = files[0];
+      if (file) {
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const isAudio = file.type.startsWith('audio/');
+        if (isImage && file.size > 1024 * 1024) {
+          setEditFileError('Image size must be below 1MB');
+          return;
+        }
+        if ((isVideo || isAudio) && file.size > 10 * 1024 * 1024) {
+          setEditFileError('Video/Audio size must be below 10MB');
+          return;
+        }
+        setEditFileError('');
+        setCurrentWorkout((prev) => ({
+          ...prev,
+          [name]: file,
+        }));
+      } else {
+        setEditFileError('');
+        setCurrentWorkout((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
+    } else {
+      setCurrentWorkout((prev) => ({
         ...prev,
         [name]: value,
       }));
@@ -153,48 +264,53 @@ export default function ExercisePage() {
   };
 
   const handleEditWorkout = async (e) => {
-    e.preventDefault();
-    const form = e.target;
+  e.preventDefault();
 
-    let updatedTime = form.Time.value.trim();
-    if (/^\d+$/.test(updatedTime)) {
-      updatedTime += " min";
-    }
+  let updatedTime = currentWorkout.Time?.trim() || "";
+  if (/^\d+$/.test(updatedTime)) {
+    updatedTime += " min";
+  }
 
-    const updatedData = {
-      Name: form.Name.value.trim(),
-      Description: form.Description.value.trim(),
-      Time: updatedTime,
-      Category: form.Category.value.trim(),
-      Intensity: form.Intensity.value,
-    };
-
-    if (form.Image.files?.length > 0) {
-      updatedData.Image = form.Image.files[0];
-    }
-
-    if (!updatedData.Name) {
-      showAlert("error", "Workout name cannot be empty");
-      return;
-    }
-
-    try {
-      const response = await updateWorkoutPlan(currentWorkout.Id, updatedData);
-      if (response?.status === true && response.data) {
-        setWorkoutPlans((prev) =>
-          prev.map((plan) =>
-            plan.Id === currentWorkout.Id ? { ...plan, ...response.data } : plan
-          )
-        );
-        showAlert("success", "Workout plan updated successfully!");
-        setShowEditModal(false);
-      } else {
-        throw new Error(response?.message || "Invalid response from server");
-      }
-    } catch (error) {
-      showAlert("error", error.message || "Failed to update workout plan");
-    }
+  const updatedData = {
+    Name: currentWorkout.Name?.trim(),
+    Description: currentWorkout.Description?.trim(),
+    Time: updatedTime,
+    Category: currentWorkout.Category,
+    Intensity: currentWorkout.Intensity,
   };
+
+  if (currentWorkout.Image instanceof File) {
+    updatedData.Image = currentWorkout.Image;
+  }
+
+  if (!updatedData.Name) {
+    showAlert("error", "Workout name cannot be empty");
+    return;
+  }
+
+  try {
+    const response = await updateWorkoutPlan(
+      currentWorkout.Id,
+      updatedData
+    );
+
+    if (response?.status === true) {
+      setWorkoutPlans((prev) =>
+        prev.map((plan) =>
+          plan.Id === currentWorkout.Id ? response.data : plan
+        )
+      );
+
+      showAlert("success", response.message || "Workout plan updated!");
+      setShowEditModal(false);
+    } else {
+      throw new Error(response?.message || "Update failed");
+    }
+  } catch (error) {
+    showAlert("error", error.message || "Failed to update workout plan");
+  }
+};
+
 
   const handleDeleteWorkout = (workoutId) => {
     showConfirm(
@@ -366,13 +482,13 @@ export default function ExercisePage() {
                       <li key={workout.Id} className="list-group-item p-5 bg-white">
                         <div className="d-flex gap-4">
                           <div className="flex-shrink-0">
-                            <img
-                              src={getImageUrl(workout.Image)}
+                            <MediaDisplay
+                              src={workout.Image}
                               alt={workout.Name}
                               className="rounded"
                               style={{ width: '80px', height: '80px', objectFit: 'cover' }}
                               onError={(e) => {
-                                e.target.src = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmOGY5ZmEiLz48cmVjdCB4PSIyMCIgeT0iMjAiIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIiBmaWxsPSIjZTllY2VmIiBzdHJva2U9IiNkZWUyZTYiIHN0cm9rZS13aWR0aD0iMiIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSIyMCIgZmlsbD0iI2FkYjViZCIvPjxwYXRoIGQ9Ik03MCAxMjAgUTEwMCAxMDAgMTMwIDEyMCBRMTMwIDE0MCAxMDAgMTUwIFE3MCAxNDAgNzAgMTIwIFoiIGZpbGw9IiNhZGI1YmQiLz48dGV4dCB4PSIxMDAiIHk9IjE4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZjNzU3ZCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=";
+                                e.target.src = "/placeholder.jpg";
                               }}
                             />
                           </div>
@@ -558,9 +674,12 @@ export default function ExercisePage() {
                       </select>
                     </div>
                     <div className="mb-3">
-                      <label className="form-label">Image</label>
+                      <label className="form-label">Workout Image/Video/Audio</label>
                       <div className="card">
-                        <div className="card-body">
+                        <div className="card-body text-center">
+                          <div className="mb-2">
+                            <i className="bi bi-image fs-1 text-muted"></i>
+                          </div>
                           <input
                             type="file"
                             className="form-control"
@@ -568,15 +687,19 @@ export default function ExercisePage() {
                             name="Image"
                             onChange={handleInputChange}
                             disabled={addingWorkout}
-                            accept="image/*"
+                            accept="image/*,video/*,audio/*"
                           />
+                          <div className="form-text mt-2">
+                            Upload an image (max 1MB), video (max 10MB), or audio (max 10MB) for this workout.
+                          </div>
                         </div>
                       </div>
+                      {addFileError && <div className="alert alert-danger mt-2">{addFileError}</div>}
                     </div>
                     <button
                       type="submit"
                       className="btn btn-primary w-100"
-                      disabled={addingWorkout}
+                      disabled={addingWorkout || !!addFileError}
                     >
                       {addingWorkout ? (
                         <>
@@ -624,7 +747,8 @@ export default function ExercisePage() {
                         className="form-control"
                         id="editName"
                         name="Name"
-                        defaultValue={currentWorkout.Name}
+                        value={currentWorkout.Name || ""}
+                        onChange={handleEditInputChange}
                         required
                       />
                     </div>
@@ -634,7 +758,8 @@ export default function ExercisePage() {
                         className="form-select"
                         id="editIntensity"
                         name="Intensity"
-                        defaultValue={currentWorkout.Intensity || "None"}
+                        value={currentWorkout.Intensity || "None"}
+                        onChange={handleEditInputChange}
                       >
                         <option value="None">None</option>
                         <option value="Low">Low</option>
@@ -650,7 +775,8 @@ export default function ExercisePage() {
                       id="editDescription"
                       name="Description"
                       rows="3"
-                      defaultValue={currentWorkout.Description || ""}
+                      value={currentWorkout.Description || ""}
+                      onChange={handleEditInputChange}
                     />
                   </div>
                   <div className="row">
@@ -660,7 +786,8 @@ export default function ExercisePage() {
                         className="form-select"
                         id="editCategory"
                         name="Category"
-                        defaultValue={currentWorkout.Category || ""}
+                        value={currentWorkout.Category || ""}
+                        onChange={handleEditInputChange}
                         required
                       >
                         <option value="">Select Category</option>
@@ -676,7 +803,8 @@ export default function ExercisePage() {
                           className="form-control"
                           id="editTime"
                           name="Time"
-                          defaultValue={currentWorkout.Time || ""}
+                          value={currentWorkout.Time || ""}
+                          onChange={handleEditInputChange}
                           placeholder="e.g., 30 minutes, 1 hour"
                         />
                         <span className="input-group-text"><i className="ri-time-line"></i></span>

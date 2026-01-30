@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { fetchAllWorkoutUserAssignments } from "./utils/api";
 import { useAlert } from "./utils/alertcontxt";
+import authenticatedFetch from "./utils/authenticatedFetch";
 
 export default function WorkoutPlanAssignmentModal({ 
   isOpen, 
@@ -26,9 +27,7 @@ export default function WorkoutPlanAssignmentModal({
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
+      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
       let allUsers = data.Data || [];
 
       try {
@@ -52,25 +51,16 @@ export default function WorkoutPlanAssignmentModal({
 
   const assignPlanToUser = async (userId) => {
     try {
-      const response = await fetch(
+      const result = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/users/${userId}/assign-plan`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            accept: "*/*",
-          },
           body: JSON.stringify({
             PlanId: planId,
             Phase: "string"
           }),
         }
       );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-      }
-      const result = await response.json();
       if (!result.status) {
         throw new Error(result.message || "Failed to assign plan");
       }

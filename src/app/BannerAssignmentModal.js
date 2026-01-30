@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import authenticatedFetch from "./utils/authenticatedFetch";
 import { fetchAllUsers, assignBanner } from "./utils/api";
 
 export default function BannerAssignmentModal({ isOpen, onClose, bannerId, bannerName, onAssignmentSuccess }) {
@@ -22,9 +23,7 @@ export default function BannerAssignmentModal({ isOpen, onClose, bannerId, banne
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
-      if (!response.ok) throw new Error("Failed to fetch users");
-      const data = await response.json();
+      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
       setUsers(data.Data || []);
     } catch (error) {
       setAssignError(error.message || "Failed to load users");

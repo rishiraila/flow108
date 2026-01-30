@@ -1,20 +1,36 @@
 "use client";
 import React, { useState } from "react";
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 const API_BASE_URL = 'https://flow108.coinagesoft.com/api';
 
+// Get admin ID from localStorage (assuming it's stored there)
+const getAdminId = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('adminId') || localStorage.getItem('userId');
+  }
+  return null;
+};
+
 // API function
 const createAdminQuestion = async (questionData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/community/questions/admin`, {
+  const adminId = getAdminId();
+  if (!adminId) {
+    throw new Error('Admin ID not found. Please log in again.');
+  }
+
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/community/questions/admin`, {
     method: 'POST',
     headers: {
       'accept': '*/*',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(questionData),
+    body: JSON.stringify({
+      ...questionData,
+      AdminId: adminId
+    }),
   });
-  if (!response.ok) throw new Error('Failed to create admin question');
-  return response.json();
+  return data;
 };
 
 export default function AdminQuestionModal({ onQuestionCreated }) {

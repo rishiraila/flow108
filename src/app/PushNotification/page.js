@@ -125,10 +125,24 @@ export default function PushNotificationPage() {
 
   const fetchDietPlans = async () => {
     try {
+      // Check if user is authenticated
+      const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') || localStorage.getItem('token') : null;
+      if (!token) {
+        console.warn('No authentication token found, redirecting to login');
+        // You might want to redirect to login page here
+        // router.push('/AdminLogin');
+        return;
+      }
+
       const plans = await dietPlanApi.getAll();
       setDietPlans(plans);
     } catch (error) {
       console.error('Error fetching diet plans:', error);
+      if (error.message.includes('401')) {
+        console.warn('Authentication failed, token may be expired');
+        // You might want to redirect to login page here
+        // router.push('/AdminLogin');
+      }
     }
   };
 
@@ -556,7 +570,7 @@ export default function PushNotificationPage() {
                                 Recipients: {notification.Recipients ? notification.Recipients.map(recipient => users[recipient.UserId]?.name || recipient.UserId).join(', ') : (users[notification.TargetUserId]?.name || notification.TargetUserId)}
                               </small>
                             </div>
-                            <div className="d-flex gap-2">
+                            {/* <div className="d-flex gap-2">
                               <button
                                 className="btn btn-sm btn-outline-primary"
                                 onClick={() => handleEditNotification(notification)}
@@ -571,7 +585,7 @@ export default function PushNotificationPage() {
                               >
                                 <i className="ri-delete-bin-line"></i>
                               </button>
-                            </div>
+                            </div> */}
                           </div>
                         </div>
                       </div>

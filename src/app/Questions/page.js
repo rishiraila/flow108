@@ -1,24 +1,23 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import AdminQuestionModal from "./AdminQuestionModal";
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 const API_BASE_URL = "https://flow108.coinagesoft.com/api";
 
 // API functions for questions
 const fetchQuestions = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/community/questions`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/community/questions`, {
     method: "GET",
     headers: {
       accept: "*/*",
     },
   });
-  if (!response.ok) throw new Error("Failed to fetch questions");
-  const data = await response.json();
   return data.data || [];
 };
 
 const answerQuestion = async (questionId, answerText) => {
-  const response = await fetch(
+  const data = await authenticatedFetch(
     `${API_BASE_URL}/admin/community/questions/${questionId}/answer`,
     {
       method: "POST",
@@ -29,12 +28,11 @@ const answerQuestion = async (questionId, answerText) => {
       body: JSON.stringify(answerText),
     }
   );
-  if (!response.ok) throw new Error("Failed to answer question");
-  return response.json();
+  return data;
 };
 
 const createQuestion = async (questionData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/community/questions`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/community/questions`, {
     method: "POST",
     headers: {
       accept: "*/*",
@@ -42,12 +40,11 @@ const createQuestion = async (questionData) => {
     },
     body: JSON.stringify(questionData),
   });
-  if (!response.ok) throw new Error("Failed to create question");
-  return response.json();
+  return data;
 };
 
 const fetchQuestionById = async (id) => {
-  const response = await fetch(
+  const data = await authenticatedFetch(
     `${API_BASE_URL}/admin/community/questions/${id}`,
     {
       method: "GET",
@@ -56,13 +53,11 @@ const fetchQuestionById = async (id) => {
       },
     }
   );
-  if (!response.ok) throw new Error("Failed to fetch question");
-  const data = await response.json();
   return data.data || null;
 };
 
 const updateQuestion = async (id, questionData) => {
-  const response = await fetch(
+  const data = await authenticatedFetch(
     `${API_BASE_URL}/admin/community/questions/${id}`,
     {
       method: "PUT",
@@ -73,12 +68,11 @@ const updateQuestion = async (id, questionData) => {
       body: JSON.stringify(questionData),
     }
   );
-  if (!response.ok) throw new Error("Failed to update question");
-  return response.json();
+  return data;
 };
 
 const deleteQuestion = async (id) => {
-  const response = await fetch(
+  const data = await authenticatedFetch(
     `${API_BASE_URL}/admin/community/questions/delete/${id}`,
     {
       method: "DELETE",
@@ -87,8 +81,7 @@ const deleteQuestion = async (id) => {
       },
     }
   );
-  if (!response.ok) throw new Error("Failed to delete question");
-  return response.json();
+  return data;
 };
 
 export default function QuestionsPage() {
@@ -141,29 +134,25 @@ export default function QuestionsPage() {
       let data = [];
 
       if (filterType === "public") {
-        const response = await fetch(
+        const response = await authenticatedFetch(
           `${API_BASE_URL}/admin/community/questions/public/all`
         );
-        const json = await response.json();
-        data = json.data || [];
+        data = response.data || [];
       } else if (filterType === "private") {
-        const response = await fetch(
+        const response = await authenticatedFetch(
           `${API_BASE_URL}/admin/community/questions/private/all`
         );
-        const json = await response.json();
-        data = json.data || [];
+        data = response.data || [];
       } else if (filterType === "unanswered") {
-        const response = await fetch(
+        const response = await authenticatedFetch(
           `${API_BASE_URL}/admin/community/questions/unanswered`
         );
-        const json = await response.json();
-        data = json.data || [];
+        data = response.data || [];
       } else {
-        const response = await fetch(
+        const response = await authenticatedFetch(
           `${API_BASE_URL}/admin/community/questions`
         );
-        const json = await response.json();
-        data = json.data || [];
+        data = response.data || [];
       }
 
       setQuestions(data);

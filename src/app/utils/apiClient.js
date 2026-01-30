@@ -1,28 +1,33 @@
+import authenticatedFetch from "./authenticatedFetch";
+
 // Enhanced API client with robust error handling, timeouts, and retry logic
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://flow108.coinagesoft.com/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://flow108.coinagesoft.com/api";
 
 // Configuration
 const CONFIG = {
   timeout: 10000, // 10 seconds
   maxRetries: 3,
   retryDelay: 1000, // 1 second between retries
-  enableLogging: process.env.NODE_ENV === 'development'
+  enableLogging: process.env.NODE_ENV === "development",
 };
 
 // Logger utility
 const logger = {
-  log: (...args) => CONFIG.enableLogging && console.log('[API]', ...args),
-  error: (...args) => CONFIG.enableLogging && console.warn('[API] ERROR:', ...args),
-  warn: (...args) => CONFIG.enableLogging && console.warn('[API] WARN:', ...args)
+  log: (...args) => CONFIG.enableLogging && console.log("[API]", ...args),
+  error: (...args) =>
+    CONFIG.enableLogging && console.warn("[API] ERROR:", ...args),
+  warn: (...args) =>
+    CONFIG.enableLogging && console.warn("[API] WARN:", ...args),
 };
 
 // Network connectivity check
 const checkNetworkConnectivity = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000)
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
     });
     return response.ok;
   } catch {
@@ -30,113 +35,89 @@ const checkNetworkConnectivity = async () => {
   }
 };
 
-// Enhanced fetch with timeout, retry, and error handling
+// Enhanced fetch with timeout, retry, and error handling using authenticatedFetch
 const enhancedFetch = async (url, options = {}, customConfig = {}) => {
   const config = { ...CONFIG, ...customConfig };
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-  
+
+  // 🔒 Force safe default
+  const safeOptions = {
+    method: options.method || "GET",
+    ...options,
+  };
+
   let lastError;
-  
+
   for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
     try {
-      logger.log(`Attempt ${attempt}/${config.maxRetries}: ${url}`);
-      
-      const defaultHeaders = options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' };
-
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          ...defaultHeaders,
-          ...options.headers,
-        },
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
-      }
-      
-      const data = await response.json();
-      logger.log(`Success: ${url}`);
-      return data;
-      
+      logger.log(
+        `Attempt ${attempt}/${config.maxRetries}: ${safeOptions.method} ${url}`,
+      );
+      return await authenticatedFetch(url, safeOptions, config);
     } catch (error) {
       lastError = error;
-      
-      if (error.name === 'AbortError') {
-        logger.warn(`Timeout on attempt ${attempt}: ${url}`);
-        lastError = new Error('Request timeout - please check your connection');
-      } else if (error.message.includes('Failed to fetch')) {
-        logger.warn(`Network error on attempt ${attempt}: ${url}`);
-        lastError = new Error('Network error - please check your connection');
-      } else {
-        logger.warn(`API error on attempt ${attempt}: ${error.message}`);
+
+      if (error.message?.includes("HTTP 4")) {
+        throw error; // ❌ do not retry client errors
       }
-      
-      // Don't retry for 4xx errors (client errors)
-      if (error.message.includes('HTTP 4')) {
-        throw lastError;
-      }
-      
-      // Wait before retry (except on last attempt)
+
       if (attempt < config.maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, config.retryDelay * attempt));
+        await new Promise((r) => setTimeout(r, config.retryDelay * attempt));
       }
     }
   }
-  
-  logger.error(`All attempts failed: ${url}`, lastError);
+
   throw lastError;
 };
 
 // Safe API response handler
 const handleApiResponse = (response) => {
   if (!response || typeof response !== 'object') {
-    throw new Error('Invalid API response format');
+    throw new Error('Invalid API response');
   }
-  
-  // Handle different response structures
-  const data = response.Data || response.data?.Data || response.data || response;
-  
-  if (Array.isArray(data)) {
-    return data;
+
+  // If API explicitly returns status
+  if (response.Status === false || response.status === false) {
+    throw new Error(response.Message || response.message || 'API Error');
   }
-  
-  if (data && typeof data === 'object') {
-    return data;
-  }
-  
-  throw new Error('Unexpected API response structure');
+
+  // Prefer Data
+  if (response.Data !== undefined) return response.Data;
+  if (response.data !== undefined) return response.data;
+
+  // DELETE / PATCH often return status only
+  return response;
 };
+
 
 // Optimized user count for diet plan (single API call)
 export const fetchUserCountForPlan = async (planId) => {
   try {
     logger.log(`Fetching user count for plan: ${planId}`);
-    
+
     // Try optimized endpoint first
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/user-count`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/user-count`,
+    );
     return response.Data || 0;
-    
   } catch (error) {
     logger.warn(`Optimized endpoint failed, trying fallback: ${error.message}`);
-    
+
     try {
       // Fallback to user mappings
       const response = await enhancedFetch(`${API_BASE_URL}/UserDietPlanMap`);
       const mappings = handleApiResponse(response);
-      
+
       if (Array.isArray(mappings)) {
-        return mappings.filter(mapping => mapping.DietPlanId === planId).length;
+        return mappings.filter((mapping) => mapping.DietPlanId === planId)
+          .length;
       }
-      
+
       return 0;
     } catch (fallbackError) {
-      logger.error(`All user count methods failed for plan ${planId}:`, fallbackError);
+      logger.error(
+        `All user count methods failed for plan ${planId}:`,
+        fallbackError,
+      );
       return 0; // Graceful degradation
     }
   }
@@ -145,11 +126,11 @@ export const fetchUserCountForPlan = async (planId) => {
 // Safe user count fetch
 export const fetchUserCount = async () => {
   try {
-    logger.log('Fetching total user count');
+    logger.log("Fetching total user count");
     const response = await enhancedFetch(`${API_BASE_URL}/Users/count`);
     return response.Data || response.data || 0;
   } catch (error) {
-    logger.error('Failed to fetch user count:', error);
+    logger.error("Failed to fetch user count:", error);
     return 0; // Always return 0 instead of throwing
   }
 };
@@ -160,13 +141,13 @@ export const checkApiHealth = async () => {
     const isConnected = await checkNetworkConnectivity();
     return {
       connected: isConnected,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   } catch (error) {
     return {
       connected: false,
       error: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 };
@@ -174,93 +155,117 @@ export const checkApiHealth = async () => {
 // Diet plan related APIs
 export const dietPlanApi = {
   getAll: async () => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan`);
-    return handleApiResponse(response);
+    const data = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan`);
+    return data.Data || data || [];
   },
-  
+
   getById: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}`);
-    return handleApiResponse(response);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`,
+    );
+    return response;
   },
-  
+
   create: async (planData) => {
     // Use local API route for create
-    const response = await enhancedFetch('/api/AdminDietPlan/Dietplan/Create', {
-      method: 'POST',
-      body: JSON.stringify(planData)
+    const response = await enhancedFetch("/api/AdminDietPlan/Dietplan/Create", {
+      method: "POST",
+      body: JSON.stringify(planData),
     });
     // Return the full response for create operations (includes Status, Message, Data)
     return response;
   },
-  
+
   update: async (planData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/update-diet-plan`, {
-      method: 'PUT',
-      body: JSON.stringify(planData)
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/update-diet-plan`,
+      {
+        method: "PUT",
+        body: JSON.stringify(planData),
+      },
+    );
     return handleApiResponse(response);
   },
-  
+
   delete: async (planId) => {
     console.log("🧹 Deleting plan:", planId);
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`, {
-      method: 'DELETE'
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/dietplan/${planId}`,
+      {
+        method: "DELETE",
+      },
+    );
     console.log("🧹 Delete raw response:", response);
 
     // For delete operations, the API returns the response directly (not wrapped in Data)
-    if (response && typeof response === 'object' && response.Status !== undefined) {
+    if (
+      response &&
+      typeof response === "object" &&
+      response.Status !== undefined
+    ) {
       return response; // Return the response as-is since it has Status and Message
     }
 
     // Fallback for unexpected responses
     if (response === null || response === undefined) {
-      return { Status: true, Message: 'Diet plan deleted successfully' };
+      return { Status: true, Message: "Diet plan deleted successfully" };
     }
 
     // Try handleApiResponse as last resort
     return handleApiResponse(response);
-  }
-
+  },
 };
 
 export const mealApi = {
   getByPlan: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/meals`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/meals`,
+    );
     return handleApiResponse(response);
   },
 
   addToPlan: async (planId, mealData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/meals`, {
-      method: 'POST',
-      body: JSON.stringify(mealData)
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/meals`,
+      {
+        method: "POST",
+        body: JSON.stringify(mealData),
+      },
+    );
     return handleApiResponse(response);
   },
 
   delete: async (mealId) => {
     const response = await enhancedFetch(`${API_BASE_URL}/meals/${mealId}`, {
-      method: 'DELETE'
+      method: "DELETE",
     });
     return handleApiResponse(response);
   },
 
   getAllMeals: async () => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/GetAllMeals`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/GetAllMeals`,
+    );
     return handleApiResponse(response);
   },
 
   recommendMeal: async (recommendationData) => {
     const formData = new FormData();
-    formData.append('MealItemId', recommendationData.MealItemId);
-    formData.append('MealType', recommendationData.MealType);
-    formData.append('RecommendedQuantity', recommendationData.RecommendedQuantity);
-    formData.append('DietPlanId', recommendationData.DietPlanId);
+    formData.append("MealItemId", recommendationData.MealItemId);
+    formData.append("MealType", recommendationData.MealType);
+    formData.append(
+      "RecommendedQuantity",
+      recommendationData.RecommendedQuantity,
+    );
+    formData.append("DietPlanId", recommendationData.DietPlanId);
 
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/recommendations/meal`, {
-      method: 'POST',
-      body: formData
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/admin/recommendations/meal`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
     return handleApiResponse(response);
   },
 
@@ -275,26 +280,35 @@ export const mealApi = {
 
   updateRecommendation: async (recommendationId, recommendationData) => {
     const formData = new FormData();
-    Object.keys(recommendationData).forEach(key => {
-      if (recommendationData[key] !== undefined && recommendationData[key] !== null) {
+    Object.keys(recommendationData).forEach((key) => {
+      if (
+        recommendationData[key] !== undefined &&
+        recommendationData[key] !== null
+      ) {
         formData.append(key, recommendationData[key]);
       }
     });
 
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/recommendations/${recommendationId}`, {
-      method: 'PATCH',
-      body: formData
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/admin/recommendations/${recommendationId}`,
+      {
+        method: "PATCH",
+        body: formData,
+      },
+    );
     return handleApiResponse(response);
   },
 
   deleteRecommendation: async (recommendationId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/GlobalUsers/${recommendationId}`, {
-      method: 'DELETE',
-      headers: { accept: '*/*' }
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/admin/recommendations/${recommendationId}`,
+      {
+        method: "DELETE",
+        headers: { accept: "*/*" },
+      },
+    );
     return handleApiResponse(response);
-  }
+  },
 };
 
 // Recipe related APIs
@@ -303,32 +317,41 @@ export const recipeApi = {
     const response = await enhancedFetch(`${API_BASE_URL}/recipes`);
     return handleApiResponse(response);
   },
-  
+
   getByMeal: async (mealId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/meals/${mealId}/recipes`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/meals/${mealId}/recipes`,
+    );
     return handleApiResponse(response);
   },
-  
+
   assignToMeal: async (mealId, recipeId, recipeData) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/meals/${mealId}/recipes/${recipeId}`, {
-      method: 'POST',
-      body: JSON.stringify(recipeData)
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/meals/${mealId}/recipes/${recipeId}`,
+      {
+        method: "POST",
+        body: JSON.stringify(recipeData),
+      },
+    );
     return handleApiResponse(response);
-  }
+  },
 };
 
 // Diet Plan Assignment related APIs
 export const dietAssignmentApi = {
   // Get all diet plan assignments for all users
   getAllAssignments: async () => {
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/AllDietUserAssignments`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/AllDietUserAssignments`,
+    );
     return handleApiResponse(response);
   },
-  
+
   // Get diet plan assignments for a specific user
   getUserAssignments: async (userId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/diet-assignments`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/admin/users/${userId}/diet-assignments`,
+    );
     return handleApiResponse(response);
   },
 
@@ -338,51 +361,68 @@ export const dietAssignmentApi = {
       // Check API health before making the request
       const healthCheck = await checkApiHealth();
       if (!healthCheck.connected) {
-        logger.warn(`API health check failed: ${healthCheck.error || 'Unknown error'}`);
+        logger.warn(
+          `API health check failed: ${healthCheck.error || "Unknown error"}`,
+        );
         return []; // Return empty array for offline/network issues
       }
 
-      // Use fallback endpoint primarily due to primary endpoint network issues
-      const response = await enhancedFetch(`${API_BASE_URL}/admin/AllDietUserAssignments`);
-      const allAssignments = handleApiResponse(response);
+      // Fetch all diet plans with users and filter for the specific plan
+      const response = await enhancedFetch(
+        `${API_BASE_URL}/AdminDietPlan/with-users`,
+      );
+      const allPlans = handleApiResponse(response);
 
-      // Filter assignments for this specific plan
-      if (Array.isArray(allAssignments)) {
-        const filteredAssignments = allAssignments.filter(assignment => assignment.DietPlanId === planId);
-        logger.log(`Found ${filteredAssignments.length} assignments for plan ${planId}`);
-        return filteredAssignments;
+      if (Array.isArray(allPlans)) {
+        const plan = allPlans.find(p => p.DietPlanId === planId);
+        const assignments = plan ? plan.AssignedUsers || [] : [];
+
+        logger.log(
+          `Found ${assignments.length} assignments for plan ${planId}`,
+        );
+        return assignments;
       }
 
       logger.warn(`No assignments found for plan ${planId}`);
       return [];
     } catch (error) {
-      logger.error(`Failed to get assignments for plan ${planId}:`, error.message || error);
+      logger.error(
+        `Failed to get assignments for plan ${planId}:`,
+        error.message || error,
+      );
       // Return empty array instead of throwing to prevent UI crash
       return [];
     }
   },
-  
+
   // Assign diet plan to user
-  assignToUser: async (userId, planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`, {
-      method: 'POST',
-      body: JSON.stringify({})
-    });
-    return handleApiResponse(response);
-  },
-  
+ assignToUser: async (userId, planId) => {
+  const response = await enhancedFetch(
+    `${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`,
+    {
+      method: 'POST'
+    }
+  );
+  return handleApiResponse(response);
+},
+
   // Remove diet plan assignment from user
   removeAssignment: async (userId, planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/admin/users/${userId}/diet-plans/${planId}`, {
-      method: 'DELETE'
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/admin/users/${userId}/diet-plans/${planId}`,
+      {
+        method: "DELETE",
+      },
+    );
     return handleApiResponse(response);
   },
-  
+
   // Get user count for a specific diet plan
   getUserCountForPlan: async (planId) => {
     try {
-      const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/user-count`);
+      const response = await enhancedFetch(
+        `${API_BASE_URL}/AdminDietPlan/${planId}/user-count`,
+      );
       return response.Data || 0;
     } catch (error) {
       logger.warn(`Failed to get user count for diet plan ${planId}:`, error);
@@ -392,38 +432,49 @@ export const dietAssignmentApi = {
 
   // Assign diet plan to all users
   assignAllToPlan: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign-all`, {
-      method: 'POST',
-      body: JSON.stringify({})
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/assign-all`,
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    );
     return handleApiResponse(response);
   },
 
   // Unassign diet plan from all users
   unassignAllFromPlan: async (planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/unassign-all`, {
-      method: 'DELETE'
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/unassign-all`,
+      {
+        method: "DELETE",
+      },
+    );
     return handleApiResponse(response);
-  }
+  },
 };
 
 // User related APIs
 export const userApi = {
   getAll: async () => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminAccount/all-users`);
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminAccount/all-users`,
+    );
     return handleApiResponse(response);
   },
-  
+
   getCount: async () => fetchUserCount(),
-  
+
   assignPlan: async (userId, planId) => {
-    const response = await enhancedFetch(`${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`, {
-      method: 'POST',
-      body: JSON.stringify({})
-    });
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`,
+      {
+        method: "POST",
+        body: JSON.stringify({}),
+      },
+    );
     return handleApiResponse(response);
-  }
+  },
 };
 
 // Export all APIs
@@ -435,5 +486,5 @@ export default {
   userApi,
   fetchUserCountForPlan,
   fetchUserCount,
-  checkApiHealth
+  checkApiHealth,
 };
