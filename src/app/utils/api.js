@@ -666,7 +666,8 @@ export const fetchAllWorkoutUserAssignments = async () => {
     const data = await handleApiResponse(response);
 
     // The API returns data in the format: { status, message, data: [...] }
-    const userAssignments = data.data || [];
+    // handleApiResponse returns json.data, which is the array of users
+    const userAssignments = data || [];
 
     // Transform the nested structure into a flat list of assignments
     const flatAssignments = [];

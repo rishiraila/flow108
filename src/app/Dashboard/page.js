@@ -1,27 +1,31 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { fetchForumPosts, fetchQuestions, fetchUserCount } from "../utils/api";
+import { fetchForumPosts, fetchUserCount } from "../utils/api";
 import { userApi } from "../utils/apiClient";
 import Link from "next/link";
-
+import authenticatedFetch from "../utils/authenticatedFetch";
 
 
 // API function to answer a question
 const answerQuestion = async (questionId, answerText) => {
-  const API_BASE_URL = "https://flow108.coinagesoft.com/api";
-  const response = await fetch(
+  return authenticatedFetch(
     `${API_BASE_URL}/admin/community/questions/${questionId}/answer`,
     {
       method: "POST",
       headers: {
-        accept: "*/*",
         "Content-Type": "application/json",
       },
       body: JSON.stringify(answerText),
     }
   );
-  if (!response.ok) throw new Error("Failed to answer question");
-  return response.json();
+};
+
+const fetchQuestions = async () => {
+  const data = await authenticatedFetch(
+    "https://flow108.coinagesoft.com/api/admin/community/questions",
+    { method: "GET" }
+  );
+  return data.data || [];
 };
 
 export default function Page() {
@@ -45,7 +49,14 @@ export default function Page() {
     const loadPosts = async () => {
       try {
         const allPosts = await fetchForumPosts();
-        const latestPosts = allPosts
+        const baseUrl = "https://flow108.coinagesoft.com";
+        const normalizedPosts = allPosts.map(post => ({
+          ...post,
+          Media: post.Media?.Url
+            ? { ...post.Media, Url: baseUrl + post.Media.Url }
+            : null,
+        }));
+        const latestPosts = normalizedPosts
           .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt))
           .slice(0, 5);
         setPosts(latestPosts);
@@ -476,6 +487,37 @@ export default function Page() {
                               {/* <small className="text-muted">
                                 {question.UserType}
                               </small> */}
+                              {question.Media && question.Media.Url && (
+                                isVideo(question.Media.Url) ? (
+                                  <video
+                                    src={question.Media.Url}
+                                    controls
+                                    style={{
+                                      width: "100%",
+                                      borderRadius: "8px",
+                                      objectFit: "contain",
+                                      maxHeight: "fit-content",
+                                    }}
+                                    onError={(e) => {
+                                      e.target.style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <img
+                                    src={question.Media.Url}
+                                    alt="Question Media"
+                                    style={{
+                                      width: "100%",
+                                      borderRadius: "8px",
+                                      objectFit: "contain",
+                                      maxHeight: "fit-content",
+                                    }}
+                                    onError={(e) => {
+                                      e.target.style.display = "none";
+                                    }}
+                                  />
+                                )
+                              )}
 
                               {/* Show existing answer if available */}
                               {question.AnswerByExpert && (

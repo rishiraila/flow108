@@ -10,6 +10,7 @@ import {
   updateWorkout,
 } from "../utils/api";
 import { getImageUrl, isVideoFile } from "../utils/imageUtils";
+import authenticatedFetch from "../utils/authenticatedFetch";
 import {
   DndContext,
   closestCenter,
@@ -313,6 +314,8 @@ function WorkoutDetailsContent() {
     } catch (err) {
       console.error("Failed to save workout order:", err);
       alert("Failed to save workout order: " + err.message);
+      // Revert the UI change if save failed
+      setEditableWorkouts(editableWorkouts);
     }
   };
 
@@ -324,19 +327,9 @@ function WorkoutDetailsContent() {
 
   const fetchWorkoutDetails = async () => {
     try {
-      const response = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-          },
-        }
+      const data = await authenticatedFetch(
+        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`
       );
-
-      if (!response.ok) throw new Error("Failed to fetch workout details");
-
-      const data = await response.json();
 
       setWorkoutPlan(data.data);
 
@@ -400,21 +393,13 @@ function WorkoutDetailsContent() {
       Order: index + 1, // << important: backend expects "Order"
     }));
 
-    const response = await fetch(
+    await authenticatedFetch(
       `https://flow108.coinagesoft.com/api/admin/workout-plans/${workoutId}/assign-workout`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          accept: "*/*",
-        },
         body: JSON.stringify({ Workouts: payload }),
       }
     );
-
-    if (!response.ok) {
-      throw new Error("Failed to save workout sequence");
-    }
   };
 
   const handleDeleteWorkout = async (workoutId) => {
@@ -422,19 +407,13 @@ function WorkoutDetailsContent() {
       return;
 
     try {
-      const response = await fetch(
+      const result = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/workout/${workoutId}`,
         {
           method: "DELETE",
-          headers: {
-            accept: "*/*",
-          },
         }
       );
 
-      if (!response.ok) throw new Error("Failed to delete workout");
-
-      const result = await response.json();
       alert(result.message || "Workout deleted successfully");
 
       const updatedWorkouts = editableWorkouts.filter(
@@ -456,14 +435,10 @@ function WorkoutDetailsContent() {
         processedTime = processedTime + " min";
       }
 
-      const response = await fetch(
+      await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            accept: "*/*",
-          },
           body: JSON.stringify({
             WorkoutName: workout.WorkoutName,
             Time: processedTime,
@@ -472,8 +447,6 @@ function WorkoutDetailsContent() {
           }),
         }
       );
-
-      if (!response.ok) throw new Error("Failed to add workout");
 
       alert("Workout added successfully!");
       fetchWorkoutDetails();
@@ -494,21 +467,11 @@ function WorkoutDetailsContent() {
   const fetchAllWorkouts = async () => {
     try {
       setWorkoutsLoading(true);
-      const response = await fetch(
-        "https://flow108.coinagesoft.com/api/admin/workouts",
-        {
-          method: "GET",
-          headers: {
-            accept: "*/*",
-          },
-        }
+      const data = await authenticatedFetch(
+        "https://flow108.coinagesoft.com/api/admin/workouts"
       );
 
-      if (!response.ok) throw new Error("Failed to fetch workouts");
-
-      const data = await response.json();
       const workouts = data.data || data.Data || [];
-
       setAllWorkouts(workouts);
     } catch (err) {
       console.error("Error fetching workouts:", err);
@@ -591,19 +554,13 @@ function WorkoutDetailsContent() {
       return;
 
     try {
-      const response = await fetch(
+      const result = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${planId}`,
         {
           method: "DELETE",
-          headers: {
-            accept: "*/*",
-          },
         }
       );
 
-      if (!response.ok) throw new Error("Failed to unassign user");
-
-      const result = await response.json();
       alert(result.message || "User unassigned successfully");
 
       // Remove the user from the assignedUsers state to update UI immediately
@@ -646,19 +603,12 @@ function WorkoutDetailsContent() {
     setUnassignLoading(true);
     try {
       for (const userId of selectedUsers) {
-        const response = await fetch(
+        await authenticatedFetch(
           `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${workoutId}`,
           {
             method: "DELETE",
-            headers: {
-              accept: "*/*",
-            },
           }
         );
-
-        if (!response.ok) {
-          throw new Error(`Failed to unassign user ${userId}`);
-        }
       }
 
       alert(`${selectedUsers.length} user(s) unassigned successfully`);

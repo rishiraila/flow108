@@ -81,6 +81,12 @@ const authenticatedFetch = async (url, options = {}, customConfig = {}) => {
       }
 
       const data = await response.json();
+
+      // Check for API error status
+      if (data && typeof data === 'object' && (data.status === false || data.Status === false)) {
+        throw new Error(data.message || data.Message || "API Error");
+      }
+
       logger.log(`Success: ${url}`);
       return data;
     } catch (error) {

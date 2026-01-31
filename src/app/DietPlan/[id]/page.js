@@ -200,35 +200,29 @@ export default function DietPlanDetails() {
   );
 
   const fetchDietPlanDetails = async () => {
-    try {
-      setLoading(true);
-      const res = await dietPlanApi.getById(planId);
+  try {
+    setLoading(true);
 
-      if (res?.Status === true && res.Data) {
-        setDietPlan(res.Data);
-        setMeals(res.Data.Meals || []);
-      } else {
-        throw new Error(res?.Message || "Invalid diet plan data");
-      }
+    const res = await dietPlanApi.getById(planId);
 
-      // Fetch assigned users for this diet plan
-      try {
-        const assignedUsersRes = await dietAssignmentApi.getPlanAssignments(planId);
-        if (Array.isArray(assignedUsersRes)) {
-          setAssignedUsers(assignedUsersRes);
-        } else {
-          setAssignedUsers([]);
-        }
-      } catch (assignedUsersErr) {
-        console.error("Error fetching assigned users:", assignedUsersErr);
-        setAssignedUsers([]);
-      }
-    } catch (err) {
-      setError(err.message || "Failed to load diet plan");
-    } finally {
-      setLoading(false);
+    if (res?.Status === true && res.Data) {
+      setDietPlan(res.Data);
+      setMeals(res.Data.Meals || []);
+    } else {
+      throw new Error(res?.Message || "Invalid diet plan data");
     }
-  };
+
+    // ✅ IMPORTANT: getPlanAssignments already returns users
+    const users = await dietAssignmentApi.getPlanAssignments(planId);
+    setAssignedUsers(users);
+
+  } catch (err) {
+    setError(err.message || "Failed to load diet plan");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const unassignUser = async (userId) => {
     try {
@@ -263,39 +257,26 @@ export default function DietPlanDetails() {
       setAllMeals([]);
     }
   };
+  const fetchRecommendedMeals = async () => {
+    try {
+      setRecommendMealLoading(true);
 
-const fetchRecommendedMeals = async () => {
-  try {
-    setRecommendMealLoading(true);
+      const json = await mealApi.getRecommendations();
 
-    const json = await mealApi.getRecommendations();
+      const list = Array.isArray(json) ? json : [];
 
-    // API returns ALL recommendations
-    const list = json?.data ?? json?.Data ?? [];
+      const filtered = list.filter(
+        (r) => r.DietPlanId?.trim() === planId?.trim(),
+      );
 
-    if (!Array.isArray(list)) {
+      setRecommendedMeals(filtered);
+    } catch (err) {
+      console.error("Error fetching recommended meals:", err);
       setRecommendedMeals([]);
-      return;
+    } finally {
+      setRecommendMealLoading(false);
     }
-
-    // ✅ FILTER by current diet plan
-    const filtered = list.filter(
-      (r) =>
-        String(r.DietPlanId).toLowerCase() ===
-        String(planId).toLowerCase(),
-    );
-
-    setRecommendedMeals(filtered);
-  } catch (err) {
-    console.error("Error fetching recommended meals:", err);
-    setRecommendedMeals([]);
-  } finally {
-    setRecommendMealLoading(false);
-  }
-};
-
-
-
+  };
 
   // Open modal in EDIT mode with pre-filled data
   const handleEditRecommendationClick = (rec) => {
@@ -489,25 +470,19 @@ const fetchRecommendedMeals = async () => {
           updateData.Category = recommendMealForm.Category;
         }
 
-        const result = await mealApi.updateRecommendation(
+        const response = await mealApi.updateRecommendation(
           editingRecommendationId,
           updateData,
         );
 
-        if (result && (result.status === true || result.Status === true)) {
+        if (response?.status === true || response?.Status === true) {
+          const updated = response.data ?? response.Data;
+
+          setRecommendedMeals((prev) =>
+            prev.map((r) => (r.Id === updated.Id ? { ...r, ...updated } : r)),
+          );
+
           showAlert("Recommendation updated successfully!", "success");
-
-          const updated = result.data || result.Data;
-          if (updated) {
-            setRecommendedMeals((prev) =>
-              prev.map((r) =>
-                (r.Id || r.id) === updated.Id ? { ...r, ...updated } : r,
-              ),
-            );
-          } else {
-            await fetchRecommendedMeals();
-          }
-
           setEditingRecommendationId(null);
           setShowRecommendMealModal(false);
         } else {
@@ -529,11 +504,7 @@ const fetchRecommendedMeals = async () => {
   };
   // 🔹 Unique meal types for this plan (from dietPlan.Meals), trimmed
   const dietMealTypes = [
-    ...new Set(
-      [
-        ...(meals || []).map((m) => (m.Name || "").trim()).filter(Boolean),
-      ].filter(Boolean),
-    ),
+    ...new Set(meals.map((m) => m.MealType).filter(Boolean)),
   ];
 
   // 🔹 Filter, sort, and paginate Recommended Meals
@@ -1000,10 +971,12 @@ const fetchRecommendedMeals = async () => {
                             <td>{r.MealType ?? r.mealType ?? "—"}</td>
                             <td>{r.Category ?? r.category ?? "—"}</td>
                             <td>
-                              {r.RecommendedQuantity ??
-                                r.recommendedQuantity ??
+                              {r.RecommendedQuantity?.trim() ||
+                                r.recommendedQuantity?.trim() ||
+                                r.BaseQuantity ||
                                 "—"}
                             </td>
+
                             <td>
                               <button
                                 className="btn btn-sm btn-warning me-2"

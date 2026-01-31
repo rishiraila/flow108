@@ -278,26 +278,24 @@ export const mealApi = {
     return handleApiResponse(response);
   },
 
-  updateRecommendation: async (recommendationId, recommendationData) => {
-    const formData = new FormData();
-    Object.keys(recommendationData).forEach((key) => {
-      if (
-        recommendationData[key] !== undefined &&
-        recommendationData[key] !== null
-      ) {
-        formData.append(key, recommendationData[key]);
-      }
-    });
+  updateRecommendation: async (id, payload) => {
+  const formData = new FormData();
 
-    const response = await enhancedFetch(
-      `${API_BASE_URL}/admin/recommendations/${recommendationId}`,
-      {
-        method: "PATCH",
-        body: formData,
-      },
-    );
-    return handleApiResponse(response);
-  },
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      formData.append(key, value);
+    }
+  });
+
+  return authenticatedFetch(
+    `${API_BASE_URL}/admin/recommendations/${id}`,
+    {
+      method: "PATCH",
+      body: formData,
+    }
+  );
+}
+  ,
 
   deleteRecommendation: async (recommendationId) => {
     const response = await enhancedFetch(
