@@ -63,6 +63,11 @@ export default function Page() {
 
   const [availableAdditionalMeals, setAvailableAdditionalMeals] = useState([]);
 
+  // State for assigned users modal
+  const [showAssignedUsersModal, setShowAssignedUsersModal] = useState(false);
+  const [assignedUsers, setAssignedUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
   const [stats, setStats] = useState({
     totalPlans: 0,
     totalMeals: 0,
@@ -487,6 +492,27 @@ const handleMealSubmit = async (e) => {
     setSelectedPlanForAssignment(plan);
     setModalMode(mode);
     setShowAssignModal(true);
+  };
+
+  // Function to fetch assigned users for a specific diet plan
+  const fetchAssignedUsers = async (planId) => {
+    try {
+      setUsersLoading(true);
+      const { dietAssignmentApi } = await import("../utils/apiClient");
+      const users = await dietAssignmentApi.getPlanAssignments(planId);
+      setAssignedUsers(users);
+    } catch (error) {
+      console.error("Error fetching assigned users:", error);
+      alert("Failed to fetch assigned users: " + error.message);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Function to open the assigned users modal
+  const handleShowAssignedUsers = async (plan) => {
+    setShowAssignedUsersModal(true);
+    await fetchAssignedUsers(plan.Id);
   };
 
   const handleDeletePlan = async (planId) => {

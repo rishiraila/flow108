@@ -7,37 +7,44 @@ const API_BASE_URL = "https://flow108.coinagesoft.com/api";
 const createForumPost = async (postData) => {
   const formData = new FormData();
   formData.append("Title", postData.Title);
-  formData.append("IsAnonymous", postData.IsAnonymous.toString());
 
-  // Attach media file if present
-  if (postData.Media && postData.Media.file) {
-    formData.append("Media.Url", postData.Media.file);
+  if (postData.SessionLink) {
+    formData.append("SessionLink", postData.SessionLink);
   }
 
-  const response = await fetch(`${API_BASE_URL}/admin/community/forum/posts?adminId=17de4552-dbcc-44cc-92e6-71eff2078364`, {
-    method: "POST",
-    headers: {
-      accept: "*/*",
-      Authorization: `Bearer ${localStorage.getItem("token")}`
-    }, // DO NOT set Content-Type (FormData sets it)
-    body: formData,
-  });
-
-  if (!response.ok) throw new Error("Failed to create forum post");
-
-  const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    return response.json();
-  } else {
-    return response.text();
+  if (postData.Media?.file) {
+    formData.append("Media.Url", postData.Media.file); // ✅ correct
   }
+
+  const response = await fetch(
+    "https://flow108.coinagesoft.com/api/admin/community/forum/posts",
+    {
+      method: "POST",
+      headers: {
+        accept: "*/*",
+        Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+      },
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(err || "Failed to create forum post");
+  }
+
+  return response.json();
 };
+
+
+
+
 
 export default function AddPostModal({ onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     Title: "",
-    IsAnonymous: false,
+    SessionLink: "",
     Media: null,
   });
 
@@ -55,7 +62,7 @@ export default function AddPostModal({ onPostCreated }) {
 
       setFormData({
         Title: "",
-        IsAnonymous: false,
+        SessionLink: "",
         Media: null,
       });
 
@@ -122,24 +129,18 @@ export default function AddPostModal({ onPostCreated }) {
                 />
               </div>
 
-
-
-              {/* Anonymous toggle */}
+              {/* SessionLink */}
               <div className="mb-3">
-                <div className="form-check">
-                  <input
-                    className="form-check-input"
-                    type="checkbox"
-                    checked={formData.IsAnonymous}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        IsAnonymous: e.target.checked,
-                      })
-                    }
-                  />
-                  <label className="form-check-label">Post Anonymously</label>
-                </div>
+                <label className="form-label">Session Link</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={formData.SessionLink}
+                  onChange={(e) =>
+                    setFormData({ ...formData, SessionLink: e.target.value })
+                  }
+                  placeholder="Enter session link..."
+                />
               </div>
 
 

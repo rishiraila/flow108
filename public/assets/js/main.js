@@ -67,11 +67,9 @@ if (document.getElementById('layout-menu')) {
       orientation: isHorizontalLayout ? 'horizontal' : 'vertical',
       closeChildren: isHorizontalLayout ? true : false,
       // ? This option only works with Horizontal menu
-      showDropdownOnHover: localStorage.getItem('templateCustomizer-' + templateName + '--ShowDropdownOnHover') // If value(showDropdownOnHover) is set in local storage
-        ? localStorage.getItem('templateCustomizer-' + templateName + '--ShowDropdownOnHover') === 'true' // Use the local storage value
-        : window.templateCustomizer !== undefined // If value is set in config.js
-          ? window.templateCustomizer.settings.defaultShowDropdownOnHover // Use the config.js value
-          : true // Use this if you are not using the config.js and want to set value directly from here
+      showDropdownOnHover: localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--ShowDropdownOnHover') // If value(showDropdownOnHover) is set in local storage
+        ? localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--ShowDropdownOnHover') === 'true' // Use the local storage value
+        : window.templateCustomizer?.settings?.defaultShowDropdownOnHover ?? true // Use the config.js value or default to true
     });
     // Change parameter to true if you want scroll animation
     window.Helpers.scrollToActive((animate = false));
@@ -88,7 +86,7 @@ if (document.getElementById('layout-menu')) {
       if (config.enableMenuLocalStorage && !window.Helpers.isSmallScreen()) {
         try {
           localStorage.setItem(
-            'templateCustomizer-' + templateName + '--LayoutCollapsed',
+            'templateCustomizer-' + (templateName || 'material') + '--LayoutCollapsed',
             String(window.Helpers.isCollapsed())
           );
           // Update customizer checkbox state on click of menu toggler
@@ -151,7 +149,7 @@ if (document.getElementById('layout-menu')) {
 
   // Get style from local storage or use 'system' as default
   let storedStyle =
-    localStorage.getItem('templateCustomizer-' + templateName + '--Style') || //if no template style then use Customizer style
+    localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--Style') || //if no template style then use Customizer style
     (window.templateCustomizer?.settings?.defaultStyle ?? 'light'); //!if there is no Customizer then use default style as light
 
   // Set style on click of style switcher item if template customizer is enabled
@@ -256,10 +254,10 @@ if (document.getElementById('layout-menu')) {
     }
     function directionChange(textDirection) {
       if (textDirection === 'rtl') {
-        if (localStorage.getItem('templateCustomizer-' + templateName + '--Rtl') !== 'true')
+        if (localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--Rtl') !== 'true')
           window.templateCustomizer ? window.templateCustomizer.setRtl(true) : '';
       } else {
-        if (localStorage.getItem('templateCustomizer-' + templateName + '--Rtl') === 'true')
+        if (localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--Rtl') === 'true')
           window.templateCustomizer ? window.templateCustomizer.setRtl(false) : '';
       }
     }
@@ -418,7 +416,7 @@ if (document.getElementById('layout-menu')) {
   // If current layout is vertical and current window screen is > small
 
   // Auto update menu collapsed/expanded based on the themeConfig
-  if (typeof TemplateCustomizer !== 'undefined') {
+  if (window.templateCustomizer && window.templateCustomizer.settings) {
     if (window.templateCustomizer.settings.defaultMenuCollapsed) {
       window.Helpers.setCollapsed(true, false);
     } else {
@@ -430,9 +428,9 @@ if (document.getElementById('layout-menu')) {
   if (typeof config !== 'undefined') {
     if (config.enableMenuLocalStorage) {
       try {
-        if (localStorage.getItem('templateCustomizer-' + templateName + '--LayoutCollapsed') !== null)
+        if (localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--LayoutCollapsed') !== null)
           window.Helpers.setCollapsed(
-            localStorage.getItem('templateCustomizer-' + templateName + '--LayoutCollapsed') === 'true',
+            localStorage.getItem('templateCustomizer-' + (templateName || 'material') + '--LayoutCollapsed') === 'true',
             false
           );
       } catch (e) {}

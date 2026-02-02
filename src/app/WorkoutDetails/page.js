@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import WorkoutAssignmentModal from "../WorkoutAssignmentModal";
 import {
   removeWorkoutFromPlan,
-  fetchAllWorkoutUserAssignments,
+  fetchWorkoutUserAssignments,
   fetchUserProfile,
   updateWorkout,
 } from "../utils/api";
@@ -278,6 +278,7 @@ function WorkoutDetailsContent() {
   const [showUsersModal, setShowUsersModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [unassignLoading, setUnassignLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
 
   const searchParams = useSearchParams();
   const workoutId = searchParams.get("workoutId");
@@ -497,16 +498,11 @@ function WorkoutDetailsContent() {
   const fetchAssignedUsers = async () => {
     try {
       setUsersLoading(true);
-      const assignments = await fetchAllWorkoutUserAssignments();
-
-      // Filter assignments for this specific workout plan
-      const planAssignments = assignments.filter(
-        (assignment) => assignment.WorkoutPlanId === workoutId
-      );
+      const assignments = await fetchWorkoutUserAssignments(workoutId);
 
       // Fetch user profiles for each assignment
       const usersWithProfiles = await Promise.all(
-        planAssignments.map(async (assignment) => {
+        assignments.map(async (assignment) => {
           try {
             const profile = await fetchUserProfile(assignment.UserId);
             return {
@@ -629,6 +625,13 @@ function WorkoutDetailsContent() {
       setUnassignLoading(false);
     }
   };
+
+  // Filter assigned users based on search
+  const filteredAssignedUsers = assignedUsers.filter((user) =>
+    `${user.userName} ${user.userEmail || user.UserId}`
+      .toLowerCase()
+      .includes(userSearch.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -889,102 +892,123 @@ function WorkoutDetailsContent() {
                       </p>
                     </div>
                   ) : (
-                    <div className="table-responsive">
-                      <table className="table table-hover">
-                        <thead>
-                          <tr>
-                            <th>
-                              <input
-                                type="checkbox"
-                                checked={
-                                  selectedUsers.length ===
-                                    assignedUsers.length &&
-                                  assignedUsers.length > 0
-                                }
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedUsers(
-                                      assignedUsers.map((u) => u.UserId)
-                                    );
-                                  } else {
-                                    setSelectedUsers([]);
-                                  }
-                                }}
-                              />
-                            </th>
-                            <th>User</th>
-                            <th>Assigned Date</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {assignedUsers.map((user) => (
-                            <tr key={user.AssignmentId}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedUsers.includes(user.UserId)}
-                                  onChange={() =>
-                                    toggleUserSelection(user.UserId)
-                                  }
-                                />
-                              </td>
-                              <td>
-                                <div className="d-flex align-items-center">
-                                  <img
-                                    src={getImageUrl(user.userAvatar)}
-                                    alt={user.userName}
-                                    className="rounded-circle me-2"
-                                    style={{
-                                      width: "32px",
-                                      height: "32px",
-                                      objectFit: "cover",
+                    <>
+                      <div className="d-flex justify-content-between mb-3">
+                        <input
+                          type="text"
+                          className="form-control w-50"
+                          placeholder="Search users..."
+                          value={userSearch}
+                          onChange={(e) => setUserSearch(e.target.value)}
+                        />
+                      </div>
+                      {filteredAssignedUsers.length === 0 ? (
+                        <div className="text-center text-muted">
+                          <i
+                            className="ri-search-line"
+                            style={{ fontSize: "3rem" }}
+                          ></i>
+                          <p className="mt-2">No users found.</p>
+                        </div>
+                      ) : (
+                        <div className="table-responsive">
+                          <table className="table table-hover">
+                            <thead>
+                              <tr>
+                                <th>
+                                  <input
+                                    type="checkbox"
+                                    checked={
+                                      selectedUsers.length ===
+                                        filteredAssignedUsers.length &&
+                                      filteredAssignedUsers.length > 0
+                                    }
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedUsers(
+                                          filteredAssignedUsers.map((u) => u.UserId)
+                                        );
+                                      } else {
+                                        setSelectedUsers([]);
+                                      }
                                     }}
                                   />
-                                  <div>
-                                    <div className="fw-semibold">
-                                      {user.userName}
+                                </th>
+                                <th>User</th>
+                                <th>Assigned Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAssignedUsers.map((user) => (
+                                <tr key={user.AssignmentId}>
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedUsers.includes(user.UserId)}
+                                      onChange={() =>
+                                        toggleUserSelection(user.UserId)
+                                      }
+                                    />
+                                  </td>
+                                  <td>
+                                    <div className="d-flex align-items-center">
+                                      <img
+                                        src={getImageUrl(user.userAvatar)}
+                                        alt={user.userName}
+                                        className="rounded-circle me-2"
+                                        style={{
+                                          width: "32px",
+                                          height: "32px",
+                                          objectFit: "cover",
+                                        }}
+                                      />
+                                      <div>
+                                        <div className="fw-semibold">
+                                          {user.userName}
+                                        </div>
+                                        <small className="text-muted">
+                                          Email: {user.userEmail || user.UserId}
+                                        </small>
+                                      </div>
                                     </div>
-                                    <small className="text-muted">
-                                      Email: {user.userEmail || user.UserId}
-                                    </small>
-                                  </div>
-                                </div>
-                              </td>
-                              <td>
-                                {new Date(
-                                  user.AssignedDate
-                                ).toLocaleDateString()}
-                              </td>
-                              <td>
-                                <span
-                                  className={`badge bg-${
-                                    user.Status === "Active"
-                                      ? "success"
-                                      : user.Status === "Completed"
-                                      ? "primary"
-                                      : "secondary"
-                                  }`}
-                                >
-                                  {user.Status || "Active"}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  className="btn btn-sm btn-danger"
-                                  onClick={() =>
-                                    handleUnassignUser(user.UserId, workoutId)
-                                  }
-                                >
-                                  Unassign
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                  </td>
+                                  <td>
+                                    {new Date(
+                                      user.AssignedDate
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={`badge bg-${
+                                        user.Status === "Active"
+                                          ? "success"
+                                          : user.Status === "Completed"
+                                          ? "primary"
+                                          : "secondary"
+                                      }`}
+                                    >
+                                      {user.Status || "Active"}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-sm btn-danger"
+                                      onClick={() =>
+                                        handleUnassignUser(user.UserId, workoutId)
+                                      }
+                                    >
+                                      Unassign
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="modal-footer">

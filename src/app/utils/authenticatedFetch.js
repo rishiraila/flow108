@@ -45,6 +45,7 @@ const authenticatedFetch = async (url, options = {}, customConfig = {}) => {
       logger.log(`Attempt ${attempt}/${config.maxRetries}: ${url}`);
 
       const token = getAuthToken();
+      logger.log(`Token found: ${!!token}`);
 
       const defaultHeaders =
         options.body instanceof FormData
@@ -69,6 +70,16 @@ const authenticatedFetch = async (url, options = {}, customConfig = {}) => {
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
+
+        // Handle 401 Unauthorized - clear token and redirect to login
+        if (response.status === 401) {
+          if (typeof window !== "undefined") {
+            localStorage.clear();
+            window.location.href = "/AdminLogin";
+            return; // Prevent further execution
+          }
+        }
+
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 

@@ -504,7 +504,7 @@ export default function DietPlanDetails() {
   };
   // 🔹 Unique meal types for this plan (from dietPlan.Meals), trimmed
   const dietMealTypes = [
-    ...new Set(meals.map((m) => m.MealType).filter(Boolean)),
+    ...new Set(meals.map((m) => m.Name).filter(Boolean)),
   ];
 
   // 🔹 Filter, sort, and paginate Recommended Meals

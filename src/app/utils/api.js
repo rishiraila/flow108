@@ -72,13 +72,27 @@ export const fetchAllDietUserAssignments = async () => {
       `${API_BASE_URL}/admin/AllDietUserAssignments`
     );
     const data = await handleApiResponse(response);
-    
+
     // The API should return data in the same format as workout assignments
     // { status: true, message: "Assignments fetched successfully", data: [...] }
     return data;
   } catch (error) {
     console.error("Error fetching diet plan assignments:", error);
     throw new Error(`Failed to fetch diet plan assignments: ${error.message}`);
+  }
+};
+
+// Fetch diet plans with assigned users
+export const fetchDietPlansWithUsers = async () => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/AdminDietPlan/with-users`
+    );
+    const data = await handleApiResponse(response);
+    return data.Data || [];
+  } catch (error) {
+    console.error("Error fetching diet plans with users:", error);
+    throw new Error(`Failed to fetch diet plans with users: ${error.message}`);
   }
 };
 
@@ -665,31 +679,71 @@ export const fetchAllWorkoutUserAssignments = async () => {
     );
     const data = await handleApiResponse(response);
 
-    // The API returns data in the format: { status, message, data: [...] }
-    // handleApiResponse returns json.data, which is the array of users
-    const userAssignments = data || [];
+    // The API returns an array of users with their assigned plans
+    if (Array.isArray(data)) {
+      const assignments = [];
 
-    // Transform the nested structure into a flat list of assignments
-    const flatAssignments = [];
-
-    userAssignments.forEach(user => {
-      if (user.Plans && Array.isArray(user.Plans)) {
-        user.Plans.forEach(plan => {
-          flatAssignments.push({
-            AssignmentId: `${user.UserId}-${plan.PlanId}`, // Create a unique ID
-            UserId: user.UserId,
-            WorkoutPlanId: plan.PlanId,
-            PlanName: plan.PlanName,
-            AssignedDate: plan.AssignedOn,
-            Status: 'Active', // Default status since API doesn't provide it
-            userName: user.Name,
-            userEmail: user.Email
+      data.forEach(user => {
+        if (user.Plans && Array.isArray(user.Plans)) {
+          user.Plans.forEach(plan => {
+            assignments.push({
+              AssignmentId: `${user.UserId}-${plan.PlanId}`, // Create a unique ID
+              UserId: user.UserId,
+              WorkoutPlanId: plan.PlanId,
+              PlanName: plan.PlanName,
+              AssignedDate: plan.AssignedOn,
+              Status: 'Active', // Default status since API doesn't provide it
+              userName: user.Name,
+              userEmail: user.Email
+            });
           });
-        });
-      }
-    });
+        }
+      });
 
-    return flatAssignments;
+      return assignments;
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching all workout user assignments:", error);
+    throw new Error(`Failed to fetch all workout user assignments: ${error.message}`);
+  }
+};
+
+// Fetch workout user assignments for a specific plan
+export const fetchWorkoutUserAssignments = async (planId) => {
+  try {
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/admin/AllUserAssignments`
+    );
+    const data = await handleApiResponse(response);
+
+    // The API returns an array of users with their assigned plans
+    if (Array.isArray(data)) {
+      const assignments = [];
+
+      data.forEach(user => {
+        if (user.Plans && Array.isArray(user.Plans)) {
+          const matchingPlan = user.Plans.find(plan => plan.PlanId === planId);
+          if (matchingPlan) {
+            assignments.push({
+              AssignmentId: `${user.UserId}-${planId}`, // Create a unique ID
+              UserId: user.UserId,
+              WorkoutPlanId: planId,
+              PlanName: matchingPlan.PlanName,
+              AssignedDate: matchingPlan.AssignedOn,
+              Status: 'Active', // Default status since API doesn't provide it
+              userName: user.Name,
+              userEmail: user.Email
+            });
+          }
+        }
+      });
+
+      return assignments;
+    }
+
+    return [];
   } catch (error) {
     console.error("Error fetching workout user assignments:", error);
     throw new Error(`Failed to fetch workout user assignments: ${error.message}`);
