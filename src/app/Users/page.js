@@ -13,7 +13,13 @@ export default function Page() {
   const [editUserId, setEditUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [subAdminEmail, setSubAdminEmail] = useState("");
-const [addingAdmin, setAddingAdmin] = useState(false);
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [subAdmins, setSubAdmins] = useState([]);
+
+
+  const [confirmSubAdminEmail, setConfirmSubAdminEmail] = useState("");
+
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
 
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -34,44 +40,80 @@ const [addingAdmin, setAddingAdmin] = useState(false);
     IsEmailVerified: false,
     IsApproved: true,
   });
-  
-  const handleAddSubAdmin = async (e) => {
-  e.preventDefault();
 
-  if (!subAdminEmail.trim()) {
-    alert("Email is required");
-    return;
-  }
+  const fetchSubAdmins = async () => {
+    try {
+      setLoadingAdmins(true);
 
-  try {
-    setAddingAdmin(true);
-
-    const res = await fetch(
-      `https://flow108.coinagesoft.com/api/AdminAccount/sub-admin?email=${encodeURIComponent(subAdminEmail.trim())}`,
-      {
-        method: "POST",
-        headers: {
-          accept: "*/*",
-          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+      const res = await fetch(
+        "https://flow108.coinagesoft.com/api/AdminAccount/sub-admins",
+        {
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
         },
+      );
+
+      const data = await res.json();
+
+      if (res.ok && data.Status === true) {
+        setSubAdmins(data.Data || []);
+      } else {
+        alert(data.Message || "Failed to fetch sub-admins");
       }
-    );
-
-    const data = await res.json();
-
-    if (res.ok && data.Status === true) {
-      alert("Sub-admin added successfully");
-      setSubAdminEmail("");
-    } else {
-      alert(data.Message || "Failed to add sub-admin");
+    } catch (err) {
+      console.error(err);
+      alert("Error fetching sub-admins");
+    } finally {
+      setLoadingAdmins(false);
     }
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong");
-  } finally {
-    setAddingAdmin(false);
-  }
-};
+  };
+  const handleAddSubAdmin = async () => {
+    const email = subAdminEmail.trim().toLowerCase();
+    const confirmEmail = confirmSubAdminEmail.trim().toLowerCase();
+
+    if (!email || !confirmEmail) {
+      alert("Both email fields are required");
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      alert("Email and Confirm Email do not match");
+      return;
+    }
+
+    try {
+      setAddingAdmin(true);
+
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
+        {
+          method: "POST",
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (res.ok && data.Status === true) {
+        alert("Sub-admin added successfully");
+        setSubAdminEmail("");
+        setConfirmSubAdminEmail("");
+        fetchSubAdmins();
+      } else {
+        alert(data.Message || "Failed to add sub-admin");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error adding sub-admin");
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
 
   const handleDeleteUser = async (email) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
@@ -142,13 +184,15 @@ const [addingAdmin, setAddingAdmin] = useState(false);
   };
 
   const fetchUsers = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
     try {
       const usersArray = await userApi.getAll();
-      console.log("Fetched Users:", usersArray);
       setUsers(usersArray);
     } catch (error) {
       console.error("Error fetching users:", error);
-      setUsers([]); // Fallback to empty array
+      setUsers([]);
     }
   };
 
@@ -176,10 +220,31 @@ const [addingAdmin, setAddingAdmin] = useState(false);
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
     fetchUsers();
     loadStats();
   }, []);
+
+  useEffect(() => {
+    if (users.length > 0) {
+      setCurrentPage(1);
+    }
+  }, [users, view]);
+
+  useEffect(() => {
+    setSearchTerm("");
+    setCurrentPage(1);
+    if (view === "manageAdmins") {
+      fetchSubAdmins();
+    }
+  }, [view]);
   const isBlank = (value) => !value || value.trim() === "";
+  const resetAddAdminForm = () => {
+    setSubAdminEmail("");
+    setConfirmSubAdminEmail("");
+  };
 
   const handleSubmitUser = async (e) => {
     e.preventDefault();
@@ -296,6 +361,34 @@ const [addingAdmin, setAddingAdmin] = useState(false);
       alert("An error occurred.");
     }
   };
+  const handleDeleteSubAdmin = async (email) => {
+    if (!confirm(`Remove sub-admin: ${email}?`)) return;
+
+    try {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        },
+      );
+
+      const data = await res.json();
+
+      if (res.ok && data.Status === true) {
+        alert("Sub-admin deleted successfully");
+        fetchSubAdmins(); // 🔄 refresh list
+      } else {
+        alert(data.Message || "Failed to delete sub-admin");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting sub-admin");
+    }
+  };
 
   const handleStatusChange = async (userId, isApproved) => {
     try {
@@ -325,9 +418,12 @@ const [addingAdmin, setAddingAdmin] = useState(false);
 
   const sortedUsers = Array.isArray(users)
     ? [...users]
-        .filter((user) =>
-          view === "userList" ? user.IsApproved : !user.IsApproved,
-        )
+        .filter((user) => {
+          if (view === "userList") return user.IsApproved === true;
+          if (view === "requestApproval") return user.IsApproved === false;
+          return true;
+        })
+
         .filter((user) => {
           const term = searchTerm.toLowerCase();
           return (
@@ -461,18 +557,35 @@ const [addingAdmin, setAddingAdmin] = useState(false);
               <input
                 type="text"
                 className="form-control form-control-sm"
-                placeholder="Search by Name or Email"
+                placeholder={
+                  view === "manageAdmins"
+                    ? "Search by Email"
+                    : "Search by Name or Email"
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <button
-                className="btn btn-sm btn-primary w-75"
-                data-bs-toggle="modal"
-                data-bs-target="#addUserModal"
-              >
-                <i className="ri-add-line"></i>{" "}
-                {view === "userList" ? "Add User" : "Add Request"}
-              </button>
+
+              {view !== "manageAdmins" && (
+                <button
+                  className="btn btn-sm btn-primary w-75"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addUserModal"
+                >
+                  <i className="ri-add-line"></i>{" "}
+                  {view === "userList" ? "Add User" : "Add Request"}
+                </button>
+              )}
+
+              {view === "manageAdmins" && (
+                <button
+                  className="btn btn-sm btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addAdminModal"
+                >
+                  <i className="ri-user-add-line"></i> Add Admin
+                </button>
+              )}
             </div>
           </div>
 
@@ -482,108 +595,120 @@ const [addingAdmin, setAddingAdmin] = useState(false);
                 <thead className="table-primary">
                   <tr>
                     <th>Sr No</th>
-                    <th
-                      onClick={() => handleSort("Name")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      User{getSortArrow("Name")}
-                    </th>
-                    <th
-                      onClick={() => handleSort("Email")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Email{getSortArrow("Email")}
-                    </th>
-                    {/* <th
-                        onClick={() => handleSort("Plan")}
-                        style={{ cursor: "pointer" }}
-                      >
-                        Plan{getSortArrow("Plan")}
-                      </th> */}
-                    {/* <th
-                        onClick={() => handleSort("IsApproved")}
-                        style={{ cursor: "pointer" }}
-                      >
-                        Status{getSortArrow("IsApproved")}
-                      </th> */}
-                    <th>Actions</th>
+
+                    {view === "manageAdmins" ? (
+                      <>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </>
+                    ) : (
+                      <>
+                        <th
+                          onClick={() => handleSort("Name")}
+                          style={{ cursor: "pointer" }}
+                        >
+                          User{getSortArrow("Name")}
+                        </th>
+                        <th
+                          onClick={() => handleSort("Email")}
+                          style={{ cursor: "pointer" }}
+                        >
+                          Email{getSortArrow("Email")}
+                        </th>
+                        <th>Actions</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
+
                 <tbody>
-                  {currentUsers.map((user, index) => (
-                    <tr key={index}>
-                      <td>{indexOfFirstUser + index + 1}</td>
-                      <td>{user.Name}</td>
-                      <td>{user.Email}</td>
-                      {/* <td>{user.Plan || "Flow Plan"}</td> */}
-                      {/* <td>
-                          {view === "requestApproval" ? (
-                            <select
-                              className="form-select form-select-sm"
-                              value={user.IsApproved ? "Approved" : "Pending"}
-                              onChange={
-                                (e) =>
-                                  handleStatusChange(
-                                    user.Id,
-                                    e.target.value === "Approved"
-                                  ) // ✅ Correct ID
-                              }
-                            >
-                              <option>Pending</option>
-                              <option>Approved</option>
-                            </select>
-                          ) : (
+                  {view === "manageAdmins" ? (
+                    loadingAdmins ? (
+                      <tr>
+                        <td colSpan="4" className="text-center">
+                          Loading...
+                        </td>
+                      </tr>
+                    ) : subAdmins.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="text-center">
+                          No sub-admins found
+                        </td>
+                      </tr>
+                    ) : (
+                      subAdmins.map((admin, index) => (
+                        <tr key={admin.Id}>
+                          <td>{index + 1}</td>
+                          <td>{admin.Email}</td>
+                          <td>{admin.Role}</td>
+                          <td>
                             <span
-                              className={`badge ${
-                                user.IsApproved ? "bg-success" : "bg-warning"
-                              }`}
+                              className={`badge ${admin.IsActive ? "bg-success" : "bg-secondary"}`}
                             >
-                              {user.IsApproved ? "Active" : "Pending"}
+                              {admin.IsActive ? "Active" : "Inactive"}
                             </span>
-                          )}
-                        </td> */}
-                      <td>
-                        {view !== "requestApproval" && (
-                          <a href={`/UserDetails?id=${user.Id}`}>
-                            <button className="btn btn-sm btn-outline-success me-1">
-                              <i className="bi bi-bar-chart-fill"></i>
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => handleDeleteSubAdmin(admin.Email)}
+                            >
+                              <i className="bi bi-trash"></i>
                             </button>
-                          </a>
-                        )}
+                          </td>
+                        </tr>
+                      ))
+                    )
+                  ) : (
+                    currentUsers.map((user, index) => (
+                      <tr key={user.Id}>
+                        <td>{indexOfFirstUser + index + 1}</td>
+                        <td>{user.Name}</td>
+                        <td>{user.Email}</td>
+                        <td>
+                          {view !== "requestApproval" && (
+                            <a href={`/UserDetails?id=${user.Id}`}>
+                              <button className="btn btn-sm btn-outline-success me-1">
+                                <i className="bi bi-bar-chart-fill"></i>
+                              </button>
+                            </a>
+                          )}
 
-                        <button
-                          className="btn btn-sm btn-outline-primary me-1"
-                          onClick={() => {
-                            setNewUser({
-                              OID: "1",
-                              Email: user.Email,
-                              Name: user.Name,
-                              GivenName: user.GivenName,
-                              FamilyName: user.FamilyName,
-                              // ProfilePictureUrl: user.ProfilePictureUrl,
-                              IsEmailVerified: user.IsEmailVerified,
-                              IsApproved: user.IsApproved,
-                            });
-                            setIsEditing(true);
-                            setEditUserId(user.Id);
-                            const modalEl =
-                              document.getElementById("addUserModal");
-                            const modal = new bootstrap.Modal(modalEl);
-                            modal.show();
-                          }}
-                        >
-                          <i className="bi bi-pencil"></i>
-                        </button>
+                          <button
+                            className="btn btn-sm btn-outline-primary me-1"
+                            onClick={() => {
+                              setNewUser({
+                                OID: "1",
+                                Email: user.Email,
+                                Name: user.Name,
+                                GivenName: user.GivenName,
+                                FamilyName: user.FamilyName,
+                                IsEmailVerified: user.IsEmailVerified,
+                                IsApproved: user.IsApproved,
+                              });
+                              setIsEditing(true);
+                              setEditUserId(user.Id);
+                              const modalEl =
+                                document.getElementById("addUserModal");
+                              const modal = new bootstrap.Modal(modalEl);
+                              modal.show();
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </button>
 
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeleteUser(user.Email)}
-                        >
-                          <i className="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleDeleteUser(user.Email)}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
               <nav className="mt-3">
@@ -773,6 +898,81 @@ const [addingAdmin, setAddingAdmin] = useState(false);
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          className="modal fade"
+          id="addAdminModal"
+          tabIndex="-1"
+          aria-hidden="true"
+          data-bs-backdrop="static"
+        >
+          <div className="modal-dialog modal-dialog-centered modal-sm">
+            <div className="modal-content rounded-4">
+              <div className="modal-header">
+                <h5 className="modal-title">Add Sub-Admin</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  data-bs-dismiss="modal"
+                ></button>
+              </div>
+
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Admin Email</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="Enter admin email"
+                    value={subAdminEmail}
+                    onChange={(e) => setSubAdminEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="mb-2">
+                  <label className="form-label fw-semibold">
+                    Confirm Email
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Re-enter admin email"
+                    value={confirmSubAdminEmail}
+                    onChange={(e) => setConfirmSubAdminEmail(e.target.value)}
+                  />
+                </div>
+
+                {confirmSubAdminEmail &&
+                  subAdminEmail !== confirmSubAdminEmail && (
+                    <small className="text-danger">Emails do not match</small>
+                  )}
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                  onClick={resetAddAdminForm}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  disabled={addingAdmin}
+                  onClick={async () => {
+                    await handleAddSubAdmin();
+                    const modal = bootstrap.Modal.getInstance(
+                      document.getElementById("addAdminModal"),
+                    );
+                    modal.hide();
+                  }}
+                >
+                  {addingAdmin ? "Adding..." : "Add Admin"}
+                </button>
               </div>
             </div>
           </div>

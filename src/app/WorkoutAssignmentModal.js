@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import authenticatedFetch from "./utils/authenticatedFetch";
 
 export default function WorkoutAssignmentModal({
   isOpen,
@@ -57,13 +58,10 @@ export default function WorkoutAssignmentModal({
     }
 
     try {
-      const response = await fetch(
+      const result = await authenticatedFetch(
         `https://flow108.coinagesoft.com/api/admin/workout-plans/${planId}/assign-workout`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
             Workouts: [
               {
@@ -75,12 +73,6 @@ export default function WorkoutAssignmentModal({
           }),
         }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
 
       if (result.status) {
         setSuccess(true);

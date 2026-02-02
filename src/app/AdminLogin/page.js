@@ -6,6 +6,7 @@ import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../utils/firebase';
 
 export default function Page() {
+  console.log('firebase');
   const router = useRouter();
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -19,6 +20,7 @@ export default function Page() {
 
       // Get Firebase ID token
       const idToken = await user.getIdToken();
+      console.log('Firebase ID Token:', idToken);
 
       // Call the API with the token
       const response = await fetch('https://flow108.coinagesoft.com/api/AdminAccount/firebase-login', {
