@@ -33,6 +33,8 @@ export default function UserDetailsClient() {
   const [currentPage, setCurrentPage] = useState(1);
   const [estimatedDate, setEstimatedDate] = useState(null);
   const [periodCycles, setPeriodCycles] = useState([]);
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [detailsChecked, setDetailsChecked] = useState(false);
   // Period table pagination
   const periodsPerPage = 5;
 
@@ -63,6 +65,16 @@ export default function UserDetailsClient() {
   // Activity table states
   const [activityPage, setActivityPage] = useState(1);
   const activityPerPage = 5;
+
+  const hasAnyDetails = useMemo(() => {
+    return Boolean(profileData) ||
+      (Array.isArray(weightData) && weightData.length > 0) ||
+      (Array.isArray(periodData) && periodData.length > 0) ||
+      (Array.isArray(activityData) && activityData.length > 0) ||
+      (Array.isArray(dietLogs) && dietLogs.length > 0) ||
+      (Array.isArray(workouts) && workouts.length > 0) ||
+      (Array.isArray(periodCycles) && periodCycles.length > 0);
+  }, [profileData, weightData, periodData, activityData, dietLogs, workouts, periodCycles]);
 
   // Filtered and sorted diet data
   const filteredDietLogs = useMemo(() => {
@@ -418,15 +430,42 @@ export default function UserDetailsClient() {
     setCurrentPage(1);
   }, [periodCycles]);
 
-  useEffect(() => {
-    if (userId) {
-      fetchProfileData(userId);
-      // fetchPeriodData(userId);
-      fetchWeightData(userId);
-      fetchActivityData(userId);
-      fetchDietLogs(userId);
-      fetchWorkoutData(userId);
+  const loadUserDetails = async (uid) => {
+    try {
+      setDetailsLoading(true);
+      setDetailsChecked(false);
+
+      setProfileData(null);
+      setWeightData([]);
+      setPeriodData([]);
+      setActivityData([]);
+      setDietLogs([]);
+      setWorkouts([]);
+      setPeriodCycles([]);
+      setSelectedDate(null);
+      setEstimatedDate(null);
+
+      await Promise.allSettled([
+        fetchProfileData(uid),
+        fetchWeightData(uid),
+        fetchActivityData(uid),
+        fetchDietLogs(uid),
+        fetchWorkoutData(uid),
+      ]);
+    } finally {
+      setDetailsLoading(false);
+      setDetailsChecked(true);
     }
+  };
+
+  useEffect(() => {
+    if (!userId) {
+      setDetailsLoading(false);
+      setDetailsChecked(true);
+      return;
+    }
+
+    loadUserDetails(userId);
   }, [userId]);
 
   const fetchProfileData = async (uid) => {
@@ -570,6 +609,34 @@ export default function UserDetailsClient() {
   //   }
   //   return true;
   // }, [periodData]);
+
+  if (detailsLoading) {
+    return (
+      <div className="container-xxl flex-grow-1 container-p-y">
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Loading user details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (detailsChecked && !hasAnyDetails) {
+    return (
+      <div className="container-xxl flex-grow-1 container-p-y">
+        <div className="card border-0 shadow-sm">
+          <div className="card-body text-center py-5">
+            <h5 className="mb-2">No Details Found</h5>
+            <p className="text-muted mb-0">
+              This user does not have any details yet.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container-xxl flex-grow-1 container-p-y">

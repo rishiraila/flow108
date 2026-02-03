@@ -14,8 +14,9 @@ export default function Page() {
   const [editForm, setEditForm] = useState({
     Title: "",
     Description: "",
+    SessionLink: "",
     IsAnonymous: false,
-    Media: [],
+    Media: null,
   });
   const [showCommentsMap, setShowCommentsMap] = useState({});
   const [showReportsMap, setShowReportsMap] = useState({});
@@ -68,7 +69,7 @@ export default function Page() {
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("adminToken") || localStorage.getItem("token")}`,
           },
         }
       );
@@ -95,20 +96,19 @@ export default function Page() {
       const formData = new FormData();
       formData.append("Title", editForm.Title);
       formData.append("Description", editForm.Description);
+      formData.append("SessionLink", editForm.SessionLink || "");
       formData.append("IsAnonymous", editForm.IsAnonymous);
 
-      // If you want to handle media uploads, append them here:
-      // editForm.Media.forEach((m, i) => {
-      //   formData.append(`Media[${i}].Url`, m.Url);
-      //   formData.append(`Media[${i}].Type`, m.Type);
-      // });
+      if (editForm.Media?.file) {
+        formData.append("Media.Url", editForm.Media.file);
+      }
 
       const res = await fetch(
         `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${editingPost.Id}`,
         {
           method: "PATCH",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            Authorization: `Bearer ${localStorage.getItem("adminToken") || localStorage.getItem("token")}`,
             accept: "*/*",
           },
           body: formData,
@@ -262,6 +262,16 @@ export default function Page() {
     link.href = url;
     link.download = url.split('/').pop() || 'media';
     link.click();
+  };
+
+  const getSessionHref = (link) => {
+    if (!link) return "";
+    const trimmed = link.trim();
+    if (!trimmed || trimmed === "string") return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
   };
 
   const filteredPosts = useMemo(() => {
@@ -562,6 +572,27 @@ export default function Page() {
                     >
                       {post.Description}
                     </p>
+                    {post.SessionLink && post.SessionLink !== "string" && (
+                      <div
+                        style={{
+                          marginTop: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "13px",
+                        }}
+                      >
+                        <i className="ri-links-line" style={{ color: "#6c757d" }}></i>
+                        <a
+                          href={getSessionHref(post.SessionLink)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#0d6efd", wordBreak: "break-all" }}
+                        >
+                          {post.SessionLink}
+                        </a>
+                      </div>
+                    )}
                     {post.Media && post.Media.Url && (
                       <div style={{ position: "relative" }}>
                         {isVideo(post.Media.Url) ? (
@@ -649,15 +680,16 @@ export default function Page() {
                     </div>
 
                     <div className="d-flex justify-content-end gap-2">
-                      {/* <button
+                        <button
                         className="btn btn-outline-primary btn-sm"
                         onClick={() => {
                           setEditingPost(post);
                           setEditForm({
-                            Title: post.Title,
-                            Description: post.Description,
-                            IsAnonymous: post.IsAnonymous,
-                            Media: post.Media || [],
+                            Title: post.Title || "",
+                            Description: post.Description || "",
+                            SessionLink: post.SessionLink || "",
+                            IsAnonymous: !!post.IsAnonymous,
+                            Media: null,
                           });
                           new bootstrap.Modal(
                             document.getElementById("editPostModal")
@@ -665,7 +697,7 @@ export default function Page() {
                         }}
                       >
                         Edit
-                      </button> */}
+                      </button>
 
                       <button
                         className="btn btn-outline-danger btn-sm"
@@ -965,6 +997,41 @@ export default function Page() {
                       setEditForm({ ...editForm, Description: e.target.value })
                     }
                   ></textarea>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Session Link</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={editForm.SessionLink}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, SessionLink: e.target.value })
+                    }
+                    placeholder="Enter session link..."
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Replace Media (optional)</label>
+                  <input
+                    type="file"
+                    className="form-control"
+                    accept="image/*,video/*,.pdf,.doc,.docx"
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        Media: e.target.files && e.target.files[0]
+                          ? { file: e.target.files[0] }
+                          : null,
+                      })
+                    }
+                  />
+                  {editingPost?.Media?.Url && (
+                    <small className="text-muted d-block mt-2">
+                      Current media attached.
+                    </small>
+                  )}
                 </div>
 
                 <div className="form-check mb-3">

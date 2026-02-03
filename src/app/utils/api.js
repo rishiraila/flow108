@@ -218,11 +218,15 @@ export const fetchAllUsers = async () => {
     `${API_BASE_URL}/AdminAccount/all-users`
   );
 
-  if (!Array.isArray(res?.data)) return {};
+  const data = handleApiResponse(res);
+  const usersArray = Array.isArray(data) ? data : [];
 
   // Convert array to map keyed by UserId / Id
-  return res.data.reduce((acc, user) => {
-    acc[user.Id] = {
+  return usersArray.reduce((acc, user) => {
+    const key = user.Id || user.UserId || user.id || user.userId;
+    if (!key) return acc;
+
+    acc[key] = {
       name: user.Name || user.Email || "User",
       avatar: user.ProfilePictureUrl || null,
     };
