@@ -165,15 +165,21 @@ export const dietPlanApi = {
     return response;
   },
 
-  create: async (planData) => {
-    // Use local API route for create
-    const response = await enhancedFetch("/api/AdminDietPlan/Dietplan/Create", {
+ create: async (planData) => {
+  const response = await enhancedFetch(
+    `${API_BASE_URL}/AdminDietPlan/Dietplan/Create`,
+    {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify(planData),
-    });
-    // Return the full response for create operations (includes Status, Message, Data)
-    return response;
-  },
+    }
+  );
+
+  return response;
+},
+
 
   update: async (planData) => {
     const response = await enhancedFetch(

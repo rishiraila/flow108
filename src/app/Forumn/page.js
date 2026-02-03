@@ -131,33 +131,40 @@ export default function Page() {
     }
   };
 
-  const deletePost = async (id) => {
-    if (!confirm("Are you sure you want to delete this post?")) return;
+const deletePost = async (id) => {
+  if (!confirm("Are you sure you want to delete this post?")) return;
 
-    try {
-      const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            accept: "application/json",
-          },
-        }
-      );
+  try {
+    const token =
+      localStorage.getItem("adminToken") || localStorage.getItem("token");
 
-      const result = await res.json();
-
-      if (res.ok && result.status) {
-        alert("✅ " + result.message);
-        loadPosts(); // reload posts
-      } else {
-        alert("❌ " + (result.message || "Failed to delete post"));
+    const res = await fetch(
+      `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          accept: "*/*",
+        },
       }
-    } catch (err) {
-      console.error("Error deleting post:", err);
-      alert("Something went wrong while deleting");
+    );
+
+    const result = await res.json();
+
+    if (res.ok && result.status) {
+      alert("✅ " + result.message);
+
+      // 🔥 OPTIMISTIC UI UPDATE (no refetch required)
+      setPosts((prev) => prev.filter((p) => p.Id !== id));
+    } else {
+      alert("❌ " + (result.message || "Failed to delete post"));
     }
-  };
+  } catch (err) {
+    console.error("Error deleting post:", err);
+    alert("Something went wrong while deleting");
+  }
+};
+
   const postComment = async (postId) => {
     const content = commentInputs[postId];
     if (!content || content.trim() === "")

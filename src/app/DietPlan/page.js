@@ -198,16 +198,16 @@ export default function Page() {
         // Build map: DietPlanId -> userCount
         const userCountMap = {};
         usersData.Data.forEach((plan) => {
-          userCountMap[plan.DietPlanId] = plan.AssignedUsers
-            ? plan.AssignedUsers.length
-            : 0;
+          userCountMap[String(plan.DietPlanId).toLowerCase()] =
+            plan.AssignedUsers?.length || 0;
         });
 
         plansWithUserCounts = plans.map((plan) => {
-          const planId = plan.Id || plan.id;
+          const planId = String(plan.Id || plan.id).toLowerCase();
+
           return {
             ...plan,
-            userCount: userCountMap[planId] || 0,
+            userCount: userCountMap[planId] ?? 0,
           };
         });
       } catch (err) {
