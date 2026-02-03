@@ -174,7 +174,8 @@ export default function Page() {
 
       try {
         // Try optimized API (with users)
-        const token = localStorage.getItem("token"); // or wherever you store it
+        const token =
+          localStorage.getItem("adminToken") || localStorage.getItem("token");
 
         const usersResponse = await fetch(
           "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users",
@@ -196,18 +197,18 @@ export default function Page() {
         }
 
         // Build map: DietPlanId -> userCount
-        const userCountMap = {};
-        usersData.Data.forEach((plan) => {
-          userCountMap[String(plan.DietPlanId).toLowerCase()] =
-            plan.AssignedUsers?.length || 0;
+        const userCountMap = new Map();
+
+        usersData.Data.forEach((p) => {
+          userCountMap.set(p.DietPlanId, p.AssignedUsers?.length || 0);
         });
 
         plansWithUserCounts = plans.map((plan) => {
-          const planId = String(plan.Id || plan.id).toLowerCase();
+          const planId = plan.Id || plan.DietPlanId;
 
           return {
             ...plan,
-            userCount: userCountMap[planId] ?? 0,
+            userCount: userCountMap.get(planId) || 0,
           };
         });
       } catch (err) {
@@ -958,7 +959,10 @@ export default function Page() {
                 <div className="row">
                   {!apiLoading &&
                     filteredPlans.map((plan) => (
-                      <div className="col-12 col-sm-6 mb-3" key={plan.Id}>
+                      <div
+                        className="col-12 col-sm-6 mb-3"
+                        key={plan.Id || plan.DietPlanId}
+                      >
                         <div className="card h-100 my-2">
                           <div className="card-body row widget-separator">
                             <div className="col-sm-5 border-end">
@@ -991,7 +995,7 @@ export default function Page() {
 
                               <p className="my-2 d-flex align-items-center gap-2">
                                 <Link
-                                  href={`/DietPlan/${plan.Id}`}
+                                  href={`/DietPlan/${plan.Id || plan.DietPlanId}`}
                                   className="btn btn-sm btn-outline-primary"
                                 >
                                   View Plan
@@ -1212,7 +1216,10 @@ export default function Page() {
             <DietPlanAssignmentModal
               isOpen={showAssignModal}
               onClose={() => setShowAssignModal(false)}
-              planId={selectedPlanForAssignment.Id}
+              planId={
+                selectedPlanForAssignment.Id ||
+                selectedPlanForAssignment.DietPlanId
+              }
               onAssignmentSuccess={() => {
                 fetchDietPlans();
                 setShowAssignModal(false);
