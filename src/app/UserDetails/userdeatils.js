@@ -574,8 +574,8 @@ export default function UserDetailsClient() {
 
         let normalized = "Low";
         if (raw.includes("high")) normalized = "High";
-        else if (raw.includes("regular") || raw.includes("medium"))
-          normalized = "Medium";
+        else if (raw.includes("regular") || raw.includes("regular"))
+          normalized = "regular";
 
         severityMap[dateKey] = normalized;
       });
@@ -1120,7 +1120,7 @@ export default function UserDetailsClient() {
                         const badgeClass =
                           severity === "High"
                             ? "bg-danger"
-                            : severity === "Medium"
+                            : severity === "regular"
                               ? "bg-warning text-dark"
                               : "bg-success";
 
