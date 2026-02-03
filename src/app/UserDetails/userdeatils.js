@@ -26,6 +26,8 @@ export default function UserDetailsClient() {
   const [periodData, setPeriodData] = useState([]);
   const [profileData, setProfileData] = useState(null);
   const [activityData, setActivityData] = useState([]);
+  const [periodSeverityMap, setPeriodSeverityMap] = useState({});
+
   const [dietLogs, setDietLogs] = useState([]);
   const [workouts, setWorkouts] = useState([]);
   const [combinedActivityData, setCombinedActivityData] = useState([]);
@@ -461,6 +463,7 @@ export default function UserDetailsClient() {
         fetchActivityData(uid),
         fetchDietLogs(uid),
         fetchWorkoutData(uid),
+        fetchPeriodSeverity(uid),
       ]);
     } finally {
       setDetailsLoading(false);
@@ -555,6 +558,33 @@ export default function UserDetailsClient() {
     setActivityData(data.Events || []);
     setPeriodCycles(extractPeriodCycles(data.Events || []));
   };
+  const fetchPeriodSeverity = async (uid) => {
+    try {
+      const data = await authenticatedFetch(
+        `https://flow108.coinagesoft.com/api/admin-activity/period/${uid}`,
+      );
+
+      const severityMap = {};
+
+      data.forEach((item) => {
+        const dateKey = new Date(item.StartDate).toISOString().split("T")[0];
+
+        // Normalize severity
+        const raw = item.Severity?.[0]?.toLowerCase() || "";
+
+        let normalized = "Low";
+        if (raw.includes("high")) normalized = "High";
+        else if (raw.includes("regular") || raw.includes("medium"))
+          normalized = "Medium";
+
+        severityMap[dateKey] = normalized;
+      });
+
+      setPeriodSeverityMap(severityMap);
+    } catch (err) {
+      console.error("Failed to fetch period severity", err);
+    }
+  };
 
   useEffect(() => {
     if (periodCycles.length === 0) return;
@@ -563,7 +593,8 @@ export default function UserDetailsClient() {
     const lastPeriod = new Date(last.startDate);
 
     // ✅ Estimated next period using user-provided cycle duration
-    const cycleDuration = profileData?.Stage2?.CycleDurationDays || last.cycleLength;
+    const cycleDuration =
+      profileData?.Stage2?.CycleDurationDays || last.cycleLength;
     const estimated = new Date(lastPeriod);
     estimated.setDate(estimated.getDate() + cycleDuration);
     setEstimatedDate(estimated);
@@ -1079,14 +1110,28 @@ export default function UserDetailsClient() {
                     </td>
                     <td>{cycle.cycleLength}</td>
                     <td>
-                      {profileData?.Stage2?.Severity?.length > 0
-                        ? profileData.Stage2.Severity.map((s, i) => (
-                            <span key={i} className="badge bg-danger me-1">
-                              {s}
-                            </span>
-                          ))
-                        : "N/A"}
+                      {(() => {
+                        const key = new Date(cycle.startDate)
+                          .toISOString()
+                          .split("T")[0];
+
+                        const severity = periodSeverityMap[key] || "N/A";
+
+                        const badgeClass =
+                          severity === "High"
+                            ? "bg-danger"
+                            : severity === "Medium"
+                              ? "bg-warning text-dark"
+                              : "bg-success";
+
+                        return (
+                          <span className={`badge ${badgeClass}`}>
+                            {severity}
+                          </span>
+                        );
+                      })()}
                     </td>
+
                     <td>
                       <span
                         className={`badge ${
