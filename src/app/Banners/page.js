@@ -95,18 +95,15 @@ export default function BannersPage() {
     setValidationErrors({});
 
     try {
-      const result = await addBanner(newBanner.name, newBanner.title, newBanner.content, newBanner.redirectUrl, newBanner.imageFile);
-      if (result.status) {
-        // Reload banners after successful addition
-        await loadBanners();
-        setShowAddBannerModal(false);
-        setNewBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
-      } else {
-        alert('Failed to add banner: ' + (result.message || 'Unknown error'));
-      }
+      await addBanner(newBanner.name, newBanner.title, newBanner.content, newBanner.redirectUrl, newBanner.imageFile);
+      // If we reach here, the API call was successful
+      await loadBanners();
+      setShowAddBannerModal(false);
+      setNewBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
+      alert('✅ Banner added successfully!');
     } catch (error) {
       console.error('Error adding banner:', error);
-      alert('Failed to add banner. Please try again.');
+      alert('Failed to add banner: ' + error.message);
     }
   };
 
@@ -123,20 +120,16 @@ export default function BannersPage() {
     setValidationErrors({});
 
     try {
-      const result = await updateBanner(editingBanner.id, editBanner.name, editBanner.title, editBanner.content, editBanner.redirectUrl, editBanner.imageFile);
-      if (result.status) {
-        alert("✅ Banner updated successfully!");
-        // Reload banners after successful update
-        await loadBanners();
-        setShowEditBannerModal(false);
-        setEditingBanner(null);
-        setEditBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
-      } else {
-        alert('Failed to update banner: ' + (result.message || 'Unknown error'));
-      }
+      await updateBanner(editingBanner.id, editBanner.name, editBanner.title, editBanner.content, editBanner.redirectUrl, editBanner.imageFile);
+      // If we reach here, the API call was successful
+      alert("✅ Banner updated successfully!");
+      await loadBanners();
+      setShowEditBannerModal(false);
+      setEditingBanner(null);
+      setEditBanner({ name: '', title: '', content: '', redirectUrl: '', imageFile: null });
     } catch (error) {
       console.error('Error updating banner:', error);
-      alert('Failed to update banner. Please try again.');
+      alert('Failed to update banner: ' + error.message);
     }
   };
 
@@ -144,16 +137,13 @@ export default function BannersPage() {
     if (!confirm("Are you sure you want to delete this banner?")) return;
 
     try {
-      const result = await deleteBanner(bannerId);
-      if (result.status) {
-        alert("✅ Banner deleted successfully!");
-        await loadBanners();
-      } else {
-        alert("❌ Failed to delete banner: " + (result.message || 'Unknown error'));
-      }
+      await deleteBanner(bannerId);
+      // If we reach here, the API call was successful
+      alert("✅ Banner deleted successfully!");
+      await loadBanners();
     } catch (error) {
       console.error("Error deleting banner:", error);
-      alert("Something went wrong while deleting");
+      alert("Failed to delete banner: " + error.message);
     }
   };
 

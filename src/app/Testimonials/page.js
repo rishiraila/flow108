@@ -1,55 +1,49 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import TestimonialAssignmentModal from "../TestimonialAssignmentModal";
-
-const API_BASE_URL = "https://flow108.coinagesoft.com/api";
+import authenticatedFetch, { API_BASE_URL } from "../utils/authenticatedFetch";
 
 // API functions for testimonials
 const fetchTestimonials = async () => {
-  const response = await fetch(`${API_BASE_URL}/admin/testimonials`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/testimonials`, {
     method: "GET",
     headers: {
       accept: "*/*",
     },
   });
-  if (!response.ok) throw new Error("Failed to fetch testimonials");
-  const data = await response.json();
   return data.data || [];
 };
 
 const createTestimonial = async (formData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/testimonials`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/testimonials`, {
     method: "POST",
     headers: {
       accept: "*/*",
     },
     body: formData,
   });
-  if (!response.ok) throw new Error("Failed to create testimonial");
-  return response.json();
+  return data;
 };
 
 const updateTestimonial = async (id, formData) => {
-  const response = await fetch(`${API_BASE_URL}/admin/testimonials/${id}`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/testimonials/${id}`, {
     method: "PATCH",
     headers: {
       accept: "*/*",
     },
     body: formData,
   });
-  if (!response.ok) throw new Error("Failed to update testimonial");
-  return response.json();
+  return data;
 };
 
 const deleteTestimonial = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/admin/testimonials/${id}`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/testimonials/${id}`, {
     method: "DELETE",
     headers: {
       accept: "*/*",
     },
   });
-  if (!response.ok) throw new Error("Failed to delete testimonial");
-  return response.json();
+  return data;
 };
 
 const assignTestimonial = async (testimonialId, userIds, assignToAll = false) => {
@@ -65,15 +59,14 @@ const assignTestimonial = async (testimonialId, userIds, assignToAll = false) =>
     formData.append('AssignToAll', 'true');
   }
 
-  const response = await fetch(`${API_BASE_URL}/admin/testimonials/assign`, {
+  const data = await authenticatedFetch(`${API_BASE_URL}/admin/testimonials/assign`, {
     method: "POST",
     headers: {
       accept: "*/*",
     },
     body: formData,
   });
-  if (!response.ok) throw new Error("Failed to assign testimonial");
-  return response.json();
+  return data;
 };
 
 export default function TestimonialsPage() {

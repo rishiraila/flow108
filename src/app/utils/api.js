@@ -429,11 +429,9 @@ export const fetchWorkoutPlans = async () => {
 // Add new workout plan
 export const addWorkoutPlan = async (workoutData) => {
   try {
-    // Create FormData object for multipart/form-data
     const formData = new FormData();
 
-    // Append all fields to formData
-    Object.keys(workoutData).forEach(key => {
+    Object.keys(workoutData).forEach((key) => {
       if (workoutData[key] !== undefined && workoutData[key] !== null) {
         formData.append(key, workoutData[key]);
       }
@@ -449,12 +447,15 @@ export const addWorkoutPlan = async (workoutData) => {
         body: formData,
       }
     );
-    return await handleApiResponse(response);
+
+    // 🔴 DO NOT STRIP STATUS & MESSAGE
+    return response; // <-- FULL RESPONSE
   } catch (error) {
     console.error("Error adding workout plan:", error);
     throw new Error(`Failed to add workout plan: ${error.message}`);
   }
 };
+
 
 /**
  * Update an existing workout plan

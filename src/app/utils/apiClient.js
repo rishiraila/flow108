@@ -258,13 +258,11 @@ export const mealApi = {
     );
     formData.append("DietPlanId", recommendationData.DietPlanId);
 
-    const response = await enhancedFetch(
-      `${API_BASE_URL}/admin/recommendations/meal`,
-      {
-        method: "POST",
-        body: formData,
-      },
-    );
+    // Use local API route instead of calling external API directly
+    const response = await enhancedFetch("/api/admin/recommendations/meal", {
+      method: "POST",
+      body: formData,
+    });
     return handleApiResponse(response);
   },
 
