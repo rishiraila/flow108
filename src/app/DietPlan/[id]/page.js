@@ -305,7 +305,7 @@ export default function DietPlanDetails() {
 
   // Delete a recommendation
   const handleDeleteRecommendation = async (id) => {
-    // ✅ Native browser confirmation
+    // ? Native browser confirmation
     const confirmed =
       typeof window !== "undefined"
         ? window.confirm("Are you sure you want to delete this recommendation?")
@@ -314,13 +314,29 @@ export default function DietPlanDetails() {
     if (!confirmed) return;
 
     try {
-      const result = await mealApi.deleteRecommendation(id);
-      if (result && (result.status === true || result.Status === true)) {
+      const res = await fetch(
+        `https://flow108.coinagesoft.com/GlobalUsers/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            accept: "*/*",
+            Authorization: `Bearer ${
+              localStorage.getItem("adminToken") ||
+              localStorage.getItem("token") ||
+              ""
+            }`,
+          },
+        },
+      );
+
+      const result = await res.json().catch(() => ({}));
+
+      if (res.ok && (result.status === true || result.Status === true)) {
         showAlert("Recommendation deleted successfully.", "success");
         fetchRecommendedMeals(); // refresh list
       } else {
         showAlert(
-          result?.message || "Failed to delete recommendation.",
+          result?.message || result?.Message || "Failed to delete recommendation.",
           "error",
         );
       }

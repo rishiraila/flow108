@@ -83,6 +83,7 @@ export default function ExercisePage() {
 
   // File error states
   const [addFileError, setAddFileError] = useState('');
+  const [addTimeError, setAddTimeError] = useState('');
   const [editFileError, setEditFileError] = useState('');
 
   // New workout form data
@@ -187,6 +188,10 @@ export default function ExercisePage() {
         ...prev,
         [name]: value,
       }));
+
+      if (name === 'Time' && value.trim()) {
+        setAddTimeError('');
+      }
     }
   };
 
@@ -234,7 +239,14 @@ export default function ExercisePage() {
       return;
     }
 
-    let processedTime = formData.Time.trim();
+    const trimmedTime = formData.Time.trim();
+    if (!trimmedTime) {
+      setAddTimeError("Time is required");
+      showAlert("error", "Time is required");
+      return;
+    }
+
+    let processedTime = trimmedTime;
     if (/^\d+$/.test(processedTime)) {
       processedTime += " min";
     }
@@ -652,9 +664,13 @@ export default function ExercisePage() {
                             onChange={handleInputChange}
                             placeholder="e.g., 30 minutes, 1 hour"
                             disabled={addingWorkout}
+                            required
                           />
                           <span className="input-group-text"><i className="ri-time-line"></i></span>
                         </div>
+                        {addTimeError && (
+                          <div className="text-danger small mt-1">{addTimeError}</div>
+                        )}
                       </div>
                     </div>
                     <div className="mb-3">

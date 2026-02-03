@@ -35,6 +35,9 @@ export default function UserDetailsClient() {
   const [periodCycles, setPeriodCycles] = useState([]);
   const [detailsLoading, setDetailsLoading] = useState(true);
   const [detailsChecked, setDetailsChecked] = useState(false);
+  const [fertileStart, setFertileStart] = useState(null);
+  const [fertileEnd, setFertileEnd] = useState(null);
+
   // Period table pagination
   const periodsPerPage = 5;
 
@@ -67,14 +70,24 @@ export default function UserDetailsClient() {
   const activityPerPage = 5;
 
   const hasAnyDetails = useMemo(() => {
-    return Boolean(profileData) ||
+    return (
+      Boolean(profileData) ||
       (Array.isArray(weightData) && weightData.length > 0) ||
       (Array.isArray(periodData) && periodData.length > 0) ||
       (Array.isArray(activityData) && activityData.length > 0) ||
       (Array.isArray(dietLogs) && dietLogs.length > 0) ||
       (Array.isArray(workouts) && workouts.length > 0) ||
-      (Array.isArray(periodCycles) && periodCycles.length > 0);
-  }, [profileData, weightData, periodData, activityData, dietLogs, workouts, periodCycles]);
+      (Array.isArray(periodCycles) && periodCycles.length > 0)
+    );
+  }, [
+    profileData,
+    weightData,
+    periodData,
+    activityData,
+    dietLogs,
+    workouts,
+    periodCycles,
+  ]);
 
   // Filtered and sorted diet data
   const filteredDietLogs = useMemo(() => {
@@ -88,7 +101,7 @@ export default function UserDetailsClient() {
           (log.MealName || "").toLowerCase().includes(lowerSearch) ||
           (log.Quantity || "").toString().includes(lowerSearch) ||
           (log.TotalCalories || "").toString().includes(lowerSearch) ||
-          log.LogDate.toLowerCase().includes(lowerSearch)
+          log.LogDate.toLowerCase().includes(lowerSearch),
       );
     }
 
@@ -132,7 +145,7 @@ export default function UserDetailsClient() {
   const totalDietPages = Math.ceil(filteredDietLogs.length / dietPerPage);
   const paginatedDietLogs = filteredDietLogs.slice(
     (dietPage - 1) * dietPerPage,
-    dietPage * dietPerPage
+    dietPage * dietPerPage,
   );
 
   // Filtered and sorted workout data
@@ -148,7 +161,7 @@ export default function UserDetailsClient() {
             .toLowerCase()
             .includes(lowerSearch) ||
           workout.LoggedDate.toLowerCase().includes(lowerSearch) ||
-          workout.DurationInMinutes.toString().includes(lowerSearch)
+          workout.DurationInMinutes.toString().includes(lowerSearch),
       );
     }
 
@@ -188,7 +201,7 @@ export default function UserDetailsClient() {
   const totalWorkoutPages = Math.ceil(filteredWorkouts.length / workoutPerPage);
   const paginatedWorkouts = filteredWorkouts.slice(
     (workoutPage - 1) * workoutPerPage,
-    workoutPage * workoutPerPage
+    workoutPage * workoutPerPage,
   );
 
   const itemsPerPage = 5;
@@ -209,7 +222,7 @@ export default function UserDetailsClient() {
       data = data.filter(
         (item) =>
           item.StartDate.toLowerCase().includes(lowerSearch) ||
-          (item.Severity && item.Severity.toLowerCase().includes(lowerSearch))
+          (item.Severity && item.Severity.toLowerCase().includes(lowerSearch)),
       );
     }
 
@@ -241,7 +254,7 @@ export default function UserDetailsClient() {
   const totalPages = Math.ceil(filteredPeriodData.length / itemsPerPage);
   const paginatedData = filteredPeriodData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
   const [weightPage, setWeightPage] = useState(1);
   const weightPerPage = 5;
@@ -256,7 +269,7 @@ export default function UserDetailsClient() {
         (entry) =>
           entry.Date.toLowerCase().includes(lowerSearch) ||
           entry.Weight.toString().includes(lowerSearch) ||
-          entry.BMI.toString().includes(lowerSearch)
+          entry.BMI.toString().includes(lowerSearch),
       );
     }
 
@@ -292,7 +305,7 @@ export default function UserDetailsClient() {
   const totalWeightPages = Math.ceil(filteredWeightData.length / weightPerPage);
   const paginatedWeightData = filteredWeightData.slice(
     (weightPage - 1) * weightPerPage,
-    weightPage * weightPerPage
+    weightPage * weightPerPage,
   );
 
   // Activities for table
@@ -305,7 +318,7 @@ export default function UserDetailsClient() {
           date: new Date(event.Date),
           title: entry.Title,
           description: entry.Description,
-        }))
+        })),
       )
       .sort((a, b) => b.date - a.date);
   }, [combinedActivityData]);
@@ -313,7 +326,7 @@ export default function UserDetailsClient() {
   const totalActivityPages = Math.ceil(activities.length / activityPerPage);
   const paginatedActivities = activities.slice(
     (activityPage - 1) * activityPerPage,
-    activityPage * activityPerPage
+    activityPage * activityPerPage,
   );
 
   useEffect(() => {
@@ -323,10 +336,10 @@ export default function UserDetailsClient() {
         Entries: [
           {
             Title: `Workout: ${workout.ActivityName}`,
-            Description: `${workout.ActivityCategory && workout.ActivityCategory !== 'undefined' ? `Category: ${workout.ActivityCategory}, ` : ''}Duration: ${workout.DurationInMinutes} minutes`,
+            Description: `${workout.ActivityCategory && workout.ActivityCategory !== "undefined" ? `Category: ${workout.ActivityCategory}, ` : ""}Duration: ${workout.DurationInMinutes} minutes`,
           },
         ],
-      })
+      }),
     );
     const dietEntries = (Array.isArray(dietLogs) ? dietLogs : []).map(
       (diet) => ({
@@ -337,7 +350,7 @@ export default function UserDetailsClient() {
             Description: `Meal: ${diet.MealName}, Quantity: ${diet.Quantity}, Calories: ${diet.TotalCalories}`,
           },
         ],
-      })
+      }),
     );
     setCombinedActivityData([
       ...(Array.isArray(activityData) ? activityData : []),
@@ -381,51 +394,48 @@ export default function UserDetailsClient() {
   const tileContent = ({ date }) => {
     const dateStr = date.toISOString().split("T")[0];
     const marker = markersByDate[dateStr];
+
     const isEstimated =
       estimatedDate && dateStr === estimatedDate.toISOString().split("T")[0];
 
-    if (!marker && !isEstimated) return null;
+    const isFertile =
+      fertileStart && fertileEnd && date >= fertileStart && date <= fertileEnd;
+
+    if (!marker && !isEstimated && !isFertile) return null;
 
     return (
-      <div className="d-flex flex-column align-items-center ">
-        <div className="d-flex ">
-          {marker?.diet && (
-            <img
-              src="/dietfollow.svg"
-              alt="Diet Followed"
-              width={10}
-              height={10}
-            />
-          )}
+      <div className="d-flex flex-column align-items-center">
+        {/* Diet / Exercise */}
+        <div className="d-flex">
+          {marker?.diet && <img src="/dietfollow.svg" width={10} height={10} />}
           {marker?.exercise && (
-            <img src="/Exercised.svg" alt="Exercise" width={10} height={10} />
+            <img src="/Exercised.svg" width={10} height={10} />
           )}
         </div>
 
-        {/* For actual period */}
-        {marker?.period && (
+        {/* 🟢 Fertility (highest priority) */}
+        {isFertile && (
           <img
-            src="/perioddate.svg"
-            alt="Period"
-            width={20}
-            height={20}
-            className=""
+            src="/fertility.svg"
+            alt="Fertility Window"
+            width={18}
+            height={18}
           />
         )}
 
-        {/* For estimated period */}
-        {isEstimated && (
-          <img
-            src="/estimateperioddate.svg"
-            alt="Estimated Period"
-            width={20}
-            height={20}
-            className=""
-          />
+        {/* 🔴 Actual period */}
+        {!isFertile && marker?.period && (
+          <img src="/perioddate.svg" width={18} height={18} />
+        )}
+
+        {/* 🟣 Estimated period */}
+        {!isFertile && isEstimated && (
+          <img src="/estimateperioddate.svg" width={18} height={18} />
         )}
       </div>
     );
   };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [periodCycles]);
@@ -471,7 +481,7 @@ export default function UserDetailsClient() {
   const fetchProfileData = async (uid) => {
     try {
       const allUsers = await authenticatedFetch(
-        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users"
+        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users",
       );
       const profile = allUsers.find((user) => user.UserId === uid);
       setProfileData(profile || null);
@@ -539,7 +549,7 @@ export default function UserDetailsClient() {
 
   const fetchActivityData = async (uid) => {
     const data = await authenticatedFetch(
-      `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`
+      `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`,
     );
 
     setActivityData(data.Events || []);
@@ -547,18 +557,31 @@ export default function UserDetailsClient() {
   };
 
   useEffect(() => {
-    if (periodCycles.length > 0) {
-      const last = periodCycles[periodCycles.length - 1];
-      const estimated = new Date(last.startDate);
-      estimated.setDate(estimated.getDate() + last.cycleLength);
-      setEstimatedDate(estimated);
-    }
+    if (periodCycles.length === 0) return;
+
+    const last = periodCycles[periodCycles.length - 1];
+    const lastPeriod = new Date(last.startDate);
+
+    // ✅ Estimated next period
+    const estimated = new Date(lastPeriod);
+    estimated.setDate(estimated.getDate() + last.cycleLength);
+    setEstimatedDate(estimated);
+
+    // ✅ Fertility window (same logic as Flutter)
+    const fertileStartDate = new Date(estimated);
+    fertileStartDate.setDate(fertileStartDate.getDate() - 14);
+
+    const fertileEndDate = new Date(fertileStartDate);
+    fertileEndDate.setDate(fertileEndDate.getDate() + 2);
+
+    setFertileStart(fertileStartDate);
+    setFertileEnd(fertileEndDate);
   }, [periodCycles]);
 
   const fetchWeightData = async (uid) => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`
+        `https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`,
       );
       setWeightData(data);
     } catch (error) {
@@ -569,7 +592,7 @@ export default function UserDetailsClient() {
   const fetchDietLogs = async (uid) => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/allLogs/${uid}`
+        `https://flow108.coinagesoft.com/api/AdminDietPlan/allLogs/${uid}`,
       );
       setDietLogs(data);
     } catch (error) {
@@ -580,7 +603,7 @@ export default function UserDetailsClient() {
   const fetchWorkoutData = async (uid) => {
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/user/activity/user/${uid}/activities`
+        `https://flow108.coinagesoft.com/api/user/activity/user/${uid}/activities`,
       );
       const data = await res.json();
       setWorkouts(data.Data.Workouts || []);
@@ -730,7 +753,7 @@ export default function UserDetailsClient() {
                   <p className="mb-0 text-muted">
                     {profileData.Stage2?.LastPeriodDate
                       ? new Date(
-                          profileData.Stage2.LastPeriodDate
+                          profileData.Stage2.LastPeriodDate,
                         ).toLocaleDateString("en-GB")
                       : "N/A"}
                   </p>
@@ -880,6 +903,15 @@ export default function UserDetailsClient() {
                 />
                 <span className="text-muted small">Estimated Period Date</span>
               </div>
+              <div className="d-flex align-items-center gap-2">
+                <img
+                  src="/fertility.svg"
+                  alt="Fertility"
+                  width={14}
+                  height={14}
+                />
+                <span className="text-muted small">Fertility Window</span>
+              </div>
             </div>
           </div>
         </div>
@@ -911,6 +943,28 @@ export default function UserDetailsClient() {
                 {/* Activity Log */}
                 <h6 className="fw-bold text-secondary mb-3">Activity Log</h6>
                 <div className="d-flex flex-column gap-3">
+                  {/* 🟢 Fertility window info */}
+                  {fertileStart &&
+                    fertileEnd &&
+                    selectedDate >= fertileStart &&
+                    selectedDate <= fertileEnd && (
+                      <div
+                        style={{
+                          backgroundColor: "#e6fff5",
+                          borderLeft: "4px solid #2ecc71",
+                          padding: "10px",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        <strong className="text-success">
+                          Fertility Window
+                        </strong>
+                        <p className="text-muted mb-0 small">
+                          High fertility period based on predicted cycle.
+                        </p>
+                      </div>
+                    )}
+
                   {/* Show estimated period if date matches */}
                   {estimatedDate &&
                     selectedDate.toISOString().split("T")[0] ===
@@ -1127,7 +1181,7 @@ export default function UserDetailsClient() {
               {paginatedWeightData.length > 0 ? (
                 paginatedWeightData.map((entry, index) => {
                   const formattedDate = new Date(entry.Date).toLocaleDateString(
-                    "en-GB"
+                    "en-GB",
                   );
                   const firstWeight = weightData[0].Weight;
                   const currentWeight = entry.Weight;
@@ -1228,7 +1282,7 @@ export default function UserDetailsClient() {
               {paginatedDietLogs.length > 0 ? (
                 paginatedDietLogs.map((log, index) => {
                   const formattedDate = new Date(
-                    log.LogDate
+                    log.LogDate,
                   ).toLocaleDateString("en-GB");
                   return (
                     <tr key={index}>
@@ -1384,7 +1438,6 @@ export default function UserDetailsClient() {
       </div>
 
       {/* <!-- workout insight table --> */}
-     
     </div>
   );
 }
