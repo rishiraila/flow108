@@ -541,10 +541,18 @@ export default function UserDetailsClient() {
     }
 
     // last (current) cycle
+    // last (current) cycle — exclude today (ongoing day)
     const lastStart = groups[groups.length - 1][0];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const start = new Date(lastStart);
+    start.setHours(0, 0, 0, 0);
+
     cycles.push({
-      startDate: lastStart,
-      cycleLength: Math.round((new Date() - lastStart) / (1000 * 60 * 60 * 24)),
+      startDate: start,
+      cycleLength: Math.floor((today - start) / (1000 * 60 * 60 * 24)),
     });
 
     return cycles;
