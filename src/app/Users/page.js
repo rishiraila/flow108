@@ -12,10 +12,11 @@ export default function Page() {
   const [isEditing, setIsEditing] = useState(false);
   const [editUserId, setEditUserId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
   const [subAdminEmail, setSubAdminEmail] = useState("");
   const [addingAdmin, setAddingAdmin] = useState(false);
   const [subAdmins, setSubAdmins] = useState([]);
-
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const [confirmSubAdminEmail, setConfirmSubAdminEmail] = useState("");
 
@@ -142,9 +143,10 @@ export default function Page() {
         // Check if current page is now empty and adjust pagination
         const filteredUsers = Array.isArray(users)
           ? [...users]
-              .filter((user) =>
-                view === "userList" ? user.IsApproved : !user.IsApproved,
-              )
+              .filter((user) => {
+                const approved = normalizeApproved(user.IsApproved);
+                return view === "userList" ? approved : !approved;
+              })
               .filter((user) => {
                 const term = searchTerm.toLowerCase();
                 return (
@@ -188,11 +190,13 @@ export default function Page() {
     if (!token) return;
 
     try {
+      setLoadingUsers(true);
       const usersArray = await userApi.getAll();
-      setUsers(usersArray);
+      setUsers((prev) => (Array.isArray(usersArray) ? usersArray : prev));
     } catch (error) {
       console.error("Error fetching users:", error);
-      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -200,8 +204,11 @@ export default function Page() {
     try {
       // Fetch all users from API using apiClient (includes JWT token)
       const usersArray = await userApi.getAll();
-      const totalUsers = usersArray.length;
-      const paidMembers = usersArray.filter((user) => user.IsApproved).length;
+      const normalizedUsers = Array.isArray(usersArray) ? usersArray : [];
+      const totalUsers = normalizedUsers.length;
+      const paidMembers = normalizedUsers.filter((user) =>
+        normalizeApproved(user.IsApproved),
+      ).length;
 
       // Get total questions and posts for the other stats
       const allQuestions = await fetchQuestions();
@@ -220,6 +227,9 @@ export default function Page() {
   };
 
   useEffect(() => {
+    setSearchTerm("");
+    setAppliedSearchTerm("");
+
     const token = localStorage.getItem("adminToken");
     if (!token) return;
 
@@ -235,15 +245,39 @@ export default function Page() {
 
   useEffect(() => {
     setSearchTerm("");
+    setAppliedSearchTerm("");
     setCurrentPage(1);
     if (view === "manageAdmins") {
       fetchSubAdmins();
     }
   }, [view]);
   const isBlank = (value) => !value || value.trim() === "";
+  const normalizeApproved = (value) => {
+    if (value === true) return true;
+    if (value === false) return false;
+
+    if (typeof value === "number") return value === 1;
+
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "true" || normalized === "1") return true;
+      if (normalized === "false" || normalized === "0") return false;
+    }
+
+    return false;
+  };
   const resetAddAdminForm = () => {
     setSubAdminEmail("");
     setConfirmSubAdminEmail("");
+  };
+  const applySearch = () => {
+    setAppliedSearchTerm(searchTerm.trim());
+    setCurrentPage(1);
+  };
+  const clearSearch = () => {
+    setSearchTerm("");
+    setAppliedSearchTerm("");
+    setCurrentPage(1);
   };
 
   const handleSubmitUser = async (e) => {
@@ -335,7 +369,11 @@ export default function Page() {
           isEditing ? "User updated successfully." : "User added successfully.",
         );
 
-        fetchUsers();
+        await fetchUsers();
+
+        setSearchTerm("");
+        setAppliedSearchTerm("");
+        setCurrentPage(1);
 
         setNewUser({
           OID: "1",
@@ -351,8 +389,7 @@ export default function Page() {
         setEditUserId(null);
 
         const modalEl = document.getElementById("addUserModal");
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
+        bootstrap.Modal.getInstance(modalEl)?.hide();
       } else {
         alert(data.Message || "Failed to save user.");
       }
@@ -416,16 +453,34 @@ export default function Page() {
     }
   };
 
+  const normalizedSearchTerm = appliedSearchTerm.trim().toLowerCase();
+
+  const approvedUsersCount = Array.isArray(users)
+    ? users.reduce(
+        (count, user) => count + (normalizeApproved(user.IsApproved) ? 1 : 0),
+        0,
+      )
+    : 0;
+  const pendingUsersCount = Array.isArray(users)
+    ? users.reduce(
+        (count, user) => count + (!normalizeApproved(user.IsApproved) ? 1 : 0),
+        0,
+      )
+    : 0;
+
   const sortedUsers = Array.isArray(users)
     ? [...users]
         .filter((user) => {
-          if (view === "userList") return user.IsApproved === true;
-          if (view === "requestApproval") return user.IsApproved === false;
+          const approved = normalizeApproved(user.IsApproved);
+
+          if (view === "userList") return approved;
+          if (view === "requestApproval") return !approved;
           return true;
         })
 
         .filter((user) => {
-          const term = searchTerm.toLowerCase();
+          const term = normalizedSearchTerm;
+          if (!term) return true;
           return (
             user.Name?.toLowerCase().includes(term) ||
             user.Email?.toLowerCase().includes(term)
@@ -438,8 +493,8 @@ export default function Page() {
           let valB = b[sortColumn] ?? "";
 
           if (sortColumn === "IsApproved") {
-            valA = a.IsApproved ? 1 : 0;
-            valB = b.IsApproved ? 1 : 0;
+            valA = normalizeApproved(a.IsApproved) ? 1 : 0;
+            valB = normalizeApproved(b.IsApproved) ? 1 : 0;
           } else if (sortColumn === "Plan") {
             valA = a.Plan || "";
             valB = b.Plan || "";
@@ -528,7 +583,7 @@ export default function Page() {
             className={`btn ${view === "userList" ? "btn-primary" : "btn-outline-primary"}`}
             onClick={() => setView("userList")}
           >
-            User List
+            User List{loadingUsers ? " (...)" : ` (${approvedUsersCount})`}
           </button>
 
           <button
@@ -536,6 +591,7 @@ export default function Page() {
             onClick={() => setView("requestApproval")}
           >
             User Request Approval
+            {loadingUsers ? " (...)" : ` (${pendingUsersCount})`}
           </button>
 
           <button
@@ -562,9 +618,36 @@ export default function Page() {
                     ? "Search by Email"
                     : "Search by Name or Email"
                 }
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    applySearch();
+                  }
+                }}
               />
+              {view !== "manageAdmins" && (
+                <>
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={applySearch}
+                  >
+                    Search
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={clearSearch}
+                    disabled={!searchTerm && !appliedSearchTerm}
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
 
               {view !== "manageAdmins" && (
                 <button
@@ -661,6 +744,18 @@ export default function Page() {
                         </tr>
                       ))
                     )
+                  ) : loadingUsers ? (
+                    <tr>
+                      <td colSpan="4" className="text-center">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : currentUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="text-center">
+                        No users found
+                      </td>
+                    </tr>
                   ) : (
                     currentUsers.map((user, index) => (
                       <tr key={user.Id}>
