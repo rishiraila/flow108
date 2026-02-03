@@ -93,7 +93,7 @@ export default function Page() {
     const totalPlans = plans.length;
     const totalMeals = plans.reduce(
       (sum, plan) => sum + (plan.Meals?.length || 0),
-      0
+      0,
     );
 
     const totalCalories = plans.reduce((sum, plan) => {
@@ -158,91 +158,95 @@ export default function Page() {
     }));
   }, [formData.selectedMeals]);
 
- const fetchDietPlans = async () => {
-  try {
-    setApiLoading(true);
-    setApiError(null);
-
-    // dietPlanApi.getAll() RETURNS ARRAY DIRECTLY
-    const plans = await dietPlanApi.getAll();
-
-    if (!Array.isArray(plans)) {
-      throw new Error("Invalid diet plans response");
-    }
-
-    let plansWithUserCounts = [];
-
+  const fetchDietPlans = async () => {
     try {
-      // Try optimized API (with users)
-      const usersResponse = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users"
-      );
+      setApiLoading(true);
+      setApiError(null);
 
-      if (!usersResponse.ok) {
-        throw new Error("Failed to fetch users data");
+      // dietPlanApi.getAll() RETURNS ARRAY DIRECTLY
+      const plans = await dietPlanApi.getAll();
+
+      if (!Array.isArray(plans)) {
+        throw new Error("Invalid diet plans response");
       }
 
-      const usersData = await usersResponse.json();
+      let plansWithUserCounts = [];
 
-      if (!usersData.Status || !Array.isArray(usersData.Data)) {
-        throw new Error("Invalid users data structure");
+      try {
+        // Try optimized API (with users)
+        const token = localStorage.getItem("token"); // or wherever you store it
+
+        const usersResponse = await fetch(
+          "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (!usersResponse.ok) {
+          throw new Error("Failed to fetch users data");
+        }
+
+        const usersData = await usersResponse.json();
+
+        if (!usersData.Status || !Array.isArray(usersData.Data)) {
+          throw new Error("Invalid users data structure");
+        }
+
+        // Build map: DietPlanId -> userCount
+        const userCountMap = {};
+        usersData.Data.forEach((plan) => {
+          userCountMap[plan.DietPlanId] = plan.AssignedUsers
+            ? plan.AssignedUsers.length
+            : 0;
+        });
+
+        plansWithUserCounts = plans.map((plan) => {
+          const planId = plan.Id || plan.id;
+          return {
+            ...plan,
+            userCount: userCountMap[planId] || 0,
+          };
+        });
+      } catch (err) {
+        console.warn(
+          "⚠️ Bulk user fetch failed, falling back to individual calls:",
+          err,
+        );
+
+        // Fallback: fetch user count per plan
+        plansWithUserCounts = await Promise.all(
+          plans.map(async (plan) => {
+            try {
+              const userCount = await fetchUserCountForPlan(plan.Id || plan.id);
+              return {
+                ...plan,
+                userCount,
+              };
+            } catch (err) {
+              console.error(
+                `Error fetching user count for plan ${plan.Id}:`,
+                err,
+              );
+              return {
+                ...plan,
+                userCount: 0,
+              };
+            }
+          }),
+        );
       }
 
-      // Build map: DietPlanId -> userCount
-      const userCountMap = {};
-      usersData.Data.forEach((plan) => {
-        userCountMap[plan.DietPlanId] = plan.AssignedUsers
-          ? plan.AssignedUsers.length
-          : 0;
-      });
-
-      plansWithUserCounts = plans.map((plan) => {
-        const planId = plan.Id || plan.id;
-        return {
-          ...plan,
-          userCount: userCountMap[planId] || 0,
-        };
-      });
+      setDietPlans(plansWithUserCounts);
     } catch (err) {
-      console.warn(
-        "⚠️ Bulk user fetch failed, falling back to individual calls:",
-        err
-      );
-
-      // Fallback: fetch user count per plan
-      plansWithUserCounts = await Promise.all(
-        plans.map(async (plan) => {
-          try {
-            const userCount = await fetchUserCountForPlan(
-              plan.Id || plan.id
-            );
-            return {
-              ...plan,
-              userCount,
-            };
-          } catch (err) {
-            console.error(
-              `Error fetching user count for plan ${plan.Id}:`,
-              err
-            );
-            return {
-              ...plan,
-              userCount: 0,
-            };
-          }
-        })
-      );
+      console.error("❌ Error fetching diet plans:", err);
+      setApiError(err.message || "Failed to fetch diet plans");
+    } finally {
+      setApiLoading(false);
     }
-
-    setDietPlans(plansWithUserCounts);
-  } catch (err) {
-    console.error("❌ Error fetching diet plans:", err);
-    setApiError(err.message || "Failed to fetch diet plans");
-  } finally {
-    setApiLoading(false);
-  }
-};
-
+  };
 
   const fetchUserCountForPlan = async (planId) => {
     try {
@@ -295,7 +299,7 @@ export default function Page() {
                 ? parseInt(value) || 0
                 : value,
             }
-          : meal
+          : meal,
       ),
     }));
   };
@@ -342,7 +346,7 @@ export default function Page() {
     const uniqueMealNames = new Set(mealNames);
     if (mealNames.length !== uniqueMealNames.size) {
       setError(
-        "Meal type already exists. Please ensure all meal types are unique."
+        "Meal type already exists. Please ensure all meal types are unique.",
       );
       setLoading(false);
       return;
@@ -422,71 +426,66 @@ export default function Page() {
     }));
   };
 
-const handleMealSubmit = async (e) => {
-  e.preventDefault();
+  const handleMealSubmit = async (e) => {
+    e.preventDefault();
 
-  const plan = dietPlans.find(p => p.Id === selectedPlanId);
-  const existingMealTypes =
-    plan?.Meals?.map(meal => meal.Name) || [];
+    const plan = dietPlans.find((p) => p.Id === selectedPlanId);
+    const existingMealTypes = plan?.Meals?.map((meal) => meal.Name) || [];
 
-  if (existingMealTypes.includes(mealFormData.MealType)) {
-    setAddMealError("This meal type already exists in the plan.");
-    return;
-  }
+    if (existingMealTypes.includes(mealFormData.MealType)) {
+      setAddMealError("This meal type already exists in the plan.");
+      return;
+    }
 
-  if (!EXTRA_MEALS.includes(mealFormData.MealType)) {
-    setAddMealError("This meal type cannot be added manually.");
-    return;
-  }
+    if (!EXTRA_MEALS.includes(mealFormData.MealType)) {
+      setAddMealError("This meal type cannot be added manually.");
+      return;
+    }
 
-  const mealData = {
-    MealType: mealFormData.MealType,
-    Features: mealFormData.Features,
-    Calories: mealFormData.Calories,
-    Fats: mealFormData.Fats,
-    Carbs: mealFormData.Carbs,
-    Protein: mealFormData.Protein,
+    const mealData = {
+      MealType: mealFormData.MealType,
+      Features: mealFormData.Features,
+      Calories: mealFormData.Calories,
+      Fats: mealFormData.Fats,
+      Carbs: mealFormData.Carbs,
+      Protein: mealFormData.Protein,
+    };
+
+    await addMealToPlan(selectedPlanId, mealData);
   };
 
-  await addMealToPlan(selectedPlanId, mealData);
-};
+  const openAddMealModal = (planId) => {
+    const plan = dietPlans.find((p) => p.Id === planId);
 
+    // Meals already present in plan
+    const existingMealTypes = plan?.Meals?.map((meal) => meal.Name) || [];
 
- const openAddMealModal = (planId) => {
-  const plan = dietPlans.find(p => p.Id === planId);
+    // Meals selected during plan creation (checkbox meals)
+    const baseMealTypes =
+      plan?.Meals?.map((meal) => meal.Name).filter((name) =>
+        BASE_MEALS.includes(name),
+      ) || [];
 
-  // Meals already present in plan
-  const existingMealTypes =
-    plan?.Meals?.map(meal => meal.Name) || [];
+    // Allow ONLY extra meals that are not already used
+    const allowedMeals = EXTRA_MEALS.filter(
+      (meal) =>
+        !existingMealTypes.includes(meal) && !baseMealTypes.includes(meal),
+    );
 
-  // Meals selected during plan creation (checkbox meals)
-  const baseMealTypes =
-    plan?.Meals
-      ?.map(meal => meal.Name)
-      .filter(name => BASE_MEALS.includes(name)) || [];
-
-  // Allow ONLY extra meals that are not already used
-  const allowedMeals = EXTRA_MEALS.filter(
-    meal =>
-      !existingMealTypes.includes(meal) &&
-      !baseMealTypes.includes(meal)
-  );
-
-  setAvailableAdditionalMeals(allowedMeals);
-  setSelectedPlanId(planId);
-  setShowAddMealModal(true);
-  setMealFormData({
-    MealType: "",
-    Features: "",
-    Calories: 0,
-    Fats: 0,
-    Carbs: 0,
-    Protein: 0,
-  });
-  setAddMealError(null);
-  setAddMealSuccess(false);
-};
-
+    setAvailableAdditionalMeals(allowedMeals);
+    setSelectedPlanId(planId);
+    setShowAddMealModal(true);
+    setMealFormData({
+      MealType: "",
+      Features: "",
+      Calories: 0,
+      Fats: 0,
+      Carbs: 0,
+      Protein: 0,
+    });
+    setAddMealError(null);
+    setAddMealSuccess(false);
+  };
 
   const openAssignModal = async (plan, mode = "assign") => {
     setSelectedPlanForAssignment(plan);
@@ -523,7 +522,7 @@ const handleMealSubmit = async (e) => {
       showConfirm(
         "Are you sure you want to delete this diet plan? This action cannot be undone.",
         () => resolve(true), // onConfirm
-        () => resolve(false) // onCancel
+        () => resolve(false), // onCancel
       );
     });
 
@@ -547,7 +546,7 @@ const handleMealSubmit = async (e) => {
         console.log("🗑️ Delete successful, updating UI...");
         // Optimistically update UI
         setDietPlans((prevPlans) =>
-          prevPlans.filter((plan) => plan.Id !== planId)
+          prevPlans.filter((plan) => plan.Id !== planId),
         );
         console.log("🗑️ Showing success alert...");
         alert("Diet plan deleted successfully.");
@@ -615,7 +614,7 @@ const handleMealSubmit = async (e) => {
                 ? parseInt(value) || 0
                 : value,
             }
-          : meal
+          : meal,
       ),
     }));
   };
@@ -662,7 +661,7 @@ const handleMealSubmit = async (e) => {
     const uniqueMealNames = new Set(mealNames);
     if (mealNames.length !== uniqueMealNames.size) {
       setEditError(
-        "Meal type already exists. Please ensure all meal types are unique."
+        "Meal type already exists. Please ensure all meal types are unique.",
       );
       setEditLoading(false);
       return;
@@ -700,7 +699,7 @@ const handleMealSubmit = async (e) => {
     (plan) =>
       (plan.Name && plan.Name.toLowerCase().includes(search.toLowerCase())) ||
       (plan.Description &&
-        plan.Description.toLowerCase().includes(search.toLowerCase()))
+        plan.Description.toLowerCase().includes(search.toLowerCase())),
   );
 
   const getMealTypes = (meals) => {
@@ -762,7 +761,7 @@ const handleMealSubmit = async (e) => {
 
     showAlert(
       `Successfully exported ${allMeals.length} meals to Excel.`,
-      "success"
+      "success",
     );
   };
 
@@ -1296,7 +1295,7 @@ const handleMealSubmit = async (e) => {
                                   handleEditMealChange(
                                     index,
                                     "Name",
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 required

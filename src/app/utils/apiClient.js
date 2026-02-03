@@ -71,13 +71,13 @@ const enhancedFetch = async (url, options = {}, customConfig = {}) => {
 
 // Safe API response handler
 const handleApiResponse = (response) => {
-  if (!response || typeof response !== 'object') {
-    throw new Error('Invalid API response');
+  if (!response || typeof response !== "object") {
+    throw new Error("Invalid API response");
   }
 
   // If API explicitly returns status
   if (response.Status === false || response.status === false) {
-    throw new Error(response.Message || response.message || 'API Error');
+    throw new Error(response.Message || response.message || "API Error");
   }
 
   // Prefer Data
@@ -87,7 +87,6 @@ const handleApiResponse = (response) => {
   // DELETE / PATCH often return status only
   return response;
 };
-
 
 // Optimized user count for diet plan (single API call)
 export const fetchUserCountForPlan = async (planId) => {
@@ -279,24 +278,19 @@ export const mealApi = {
   },
 
   updateRecommendation: async (id, payload) => {
-  const formData = new FormData();
+    const formData = new FormData();
 
-  Object.entries(payload).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      formData.append(key, value);
-    }
-  });
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        formData.append(key, value);
+      }
+    });
 
-  return authenticatedFetch(
-    `${API_BASE_URL}/admin/recommendations/${id}`,
-    {
+    return authenticatedFetch(`${API_BASE_URL}/admin/recommendations/${id}`, {
       method: "PATCH",
       body: formData,
-    }
-  );
-}
-  ,
-
+    });
+  },
   deleteRecommendation: async (recommendationId) => {
     const response = await enhancedFetch(
       `${API_BASE_URL}/admin/recommendations/${recommendationId}`,
@@ -354,55 +348,38 @@ export const dietAssignmentApi = {
   },
 
   // Get users assigned to a specific diet plan
-  getPlanAssignments: async (planId) => {
-    try {
-      // Check API health before making the request
-      const healthCheck = await checkApiHealth();
-      if (!healthCheck.connected) {
-        logger.warn(
-          `API health check failed: ${healthCheck.error || "Unknown error"}`,
-        );
-        return []; // Return empty array for offline/network issues
-      }
+ getPlanAssignments: async (planId) => {
+  try {
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/with-users`
+    );
 
-      // Fetch all diet plans with users and filter for the specific plan
-      const response = await enhancedFetch(
-        `${API_BASE_URL}/AdminDietPlan/with-users`,
-      );
-      const allPlans = handleApiResponse(response);
+    const allPlans = handleApiResponse(response);
 
-      if (Array.isArray(allPlans)) {
-        const plan = allPlans.find(p => p.DietPlanId === planId);
-        const assignments = plan ? plan.AssignedUsers || [] : [];
+    if (!Array.isArray(allPlans)) return [];
 
-        logger.log(
-          `Found ${assignments.length} assignments for plan ${planId}`,
-        );
-        return assignments;
-      }
+    const plan = allPlans.find(
+      (p) => p.DietPlanId?.trim() === planId?.trim()
+    );
 
-      logger.warn(`No assignments found for plan ${planId}`);
-      return [];
-    } catch (error) {
-      logger.error(
-        `Failed to get assignments for plan ${planId}:`,
-        error.message || error,
-      );
-      // Return empty array instead of throwing to prevent UI crash
-      return [];
-    }
-  },
+    return plan?.AssignedUsers || [];
+  } catch (error) {
+    console.error("Failed to get plan assignments:", error);
+    return [];
+  }
+},
+
 
   // Assign diet plan to user
- assignToUser: async (userId, planId) => {
-  const response = await enhancedFetch(
-    `${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`,
-    {
-      method: 'POST'
-    }
-  );
-  return handleApiResponse(response);
-},
+  assignToUser: async (userId, planId) => {
+    const response = await enhancedFetch(
+      `${API_BASE_URL}/AdminDietPlan/${planId}/assign/${userId}`,
+      {
+        method: "POST",
+      },
+    );
+    return handleApiResponse(response);
+  },
 
   // Remove diet plan assignment from user
   removeAssignment: async (userId, planId) => {
@@ -414,6 +391,15 @@ export const dietAssignmentApi = {
     );
     return handleApiResponse(response);
   },
+unassignFromPlan: async (planId, userId) => {
+  const response = await enhancedFetch(
+    `${API_BASE_URL}/AdminDietPlan/${planId}/unassign/${userId}`,
+    {
+      method: "DELETE",
+    }
+  );
+  return handleApiResponse(response);
+},
 
   // Get user count for a specific diet plan
   getUserCountForPlan: async (planId) => {

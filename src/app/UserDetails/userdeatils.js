@@ -562,9 +562,10 @@ export default function UserDetailsClient() {
     const last = periodCycles[periodCycles.length - 1];
     const lastPeriod = new Date(last.startDate);
 
-    // ✅ Estimated next period
+    // ✅ Estimated next period using user-provided cycle duration
+    const cycleDuration = profileData?.Stage2?.CycleDurationDays || last.cycleLength;
     const estimated = new Date(lastPeriod);
-    estimated.setDate(estimated.getDate() + last.cycleLength);
+    estimated.setDate(estimated.getDate() + cycleDuration);
     setEstimatedDate(estimated);
 
     // ✅ Fertility window (same logic as Flutter)
@@ -576,7 +577,7 @@ export default function UserDetailsClient() {
 
     setFertileStart(fertileStartDate);
     setFertileEnd(fertileEndDate);
-  }, [periodCycles]);
+  }, [periodCycles, profileData]);
 
   const fetchWeightData = async (uid) => {
     try {

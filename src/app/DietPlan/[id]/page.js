@@ -200,48 +200,51 @@ export default function DietPlanDetails() {
   );
 
   const fetchDietPlanDetails = async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const res = await dietPlanApi.getById(planId);
+      const res = await dietPlanApi.getById(planId);
 
-    if (res?.Status === true && res.Data) {
-      setDietPlan(res.Data);
-      setMeals(res.Data.Meals || []);
-    } else {
-      throw new Error(res?.Message || "Invalid diet plan data");
+      if (res?.Status === true && res.Data) {
+        setDietPlan(res.Data);
+        setMeals(res.Data.Meals || []);
+      } else {
+        throw new Error(res?.Message || "Invalid diet plan data");
+      }
+
+      // ✅ IMPORTANT: getPlanAssignments already returns users
+      const users = await dietAssignmentApi.getPlanAssignments(planId);
+      setAssignedUsers(users);
+    } catch (err) {
+      setError(err.message || "Failed to load diet plan");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // ✅ IMPORTANT: getPlanAssignments already returns users
-    const users = await dietAssignmentApi.getPlanAssignments(planId);
-    setAssignedUsers(users);
+  const unassignUser = async (userId) => {
+  try {
+    const result = await dietAssignmentApi.unassignFromPlan(planId, userId);
 
+    if (result && result.Status === true) {
+      showAlert("User unassigned successfully.", "success");
+
+      // ✅ Optimistic UI update (FAST & CORRECT)
+      setAssignedUsers((prev) =>
+        prev.filter((u) => u.UserId !== userId)
+      );
+    } else {
+      showAlert(
+        "Failed to unassign user: " + (result?.Message || "Unknown error"),
+        "error"
+      );
+    }
   } catch (err) {
-    setError(err.message || "Failed to load diet plan");
-  } finally {
-    setLoading(false);
+    console.error("Error unassigning user:", err);
+    showAlert("Error unassigning user: " + err.message, "error");
   }
 };
 
-
-  const unassignUser = async (userId) => {
-    try {
-      const result = await dietAssignmentApi.removeAssignment(userId, planId);
-      if (result && result.Status === true) {
-        showAlert("User unassigned successfully.", "success");
-        // Refetch assigned users
-        fetchDietPlanDetails();
-      } else {
-        showAlert(
-          "Failed to unassign user: " + (result?.Message || "Unknown error"),
-          "error",
-        );
-      }
-    } catch (err) {
-      console.error("Error unassigning user:", err);
-      showAlert("Error unassigning user: " + err.message, "error");
-    }
-  };
 
   const fetchAllMealsData = async () => {
     try {
@@ -276,6 +279,11 @@ export default function DietPlanDetails() {
     } finally {
       setRecommendMealLoading(false);
     }
+  };
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("en-GB");
   };
 
   // Open modal in EDIT mode with pre-filled data
@@ -336,7 +344,9 @@ export default function DietPlanDetails() {
         fetchRecommendedMeals(); // refresh list
       } else {
         showAlert(
-          result?.message || result?.Message || "Failed to delete recommendation.",
+          result?.message ||
+            result?.Message ||
+            "Failed to delete recommendation.",
           "error",
         );
       }
@@ -519,9 +529,7 @@ export default function DietPlanDetails() {
     }
   };
   // 🔹 Unique meal types for this plan (from dietPlan.Meals), trimmed
-  const dietMealTypes = [
-    ...new Set(meals.map((m) => m.Name).filter(Boolean)),
-  ];
+  const dietMealTypes = [...new Set(meals.map((m) => m.Name).filter(Boolean))];
 
   // 🔹 Filter, sort, and paginate Recommended Meals
   const filteredRecommendedMeals = recommendedMeals.filter((r) => {
@@ -789,9 +797,8 @@ export default function DietPlanDetails() {
                           <tr key={user.UserId}>
                             <td>{user.Name}</td>
                             <td>{user.Email}</td>
-                            <td>
-                              {new Date(user.AssignedDate).toLocaleDateString()}
-                            </td>
+                            <td>{formatDate(user.AssignedDate)}</td>
+
                             <td>
                               <button
                                 className="btn btn-danger btn-sm"
