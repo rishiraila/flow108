@@ -8,6 +8,7 @@ import { useAlert } from "../../utils/alertcontxt";
 import { useConfirm } from "../../utils/confirmContext";
 import { dietPlanApi, mealApi, dietAssignmentApi } from "../../utils/apiClient";
 import { fetchAllMeals } from "../../utils/api";
+import { adjustPaginationAfterRemoval } from "../../utils/paginationHelper";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -21,6 +22,11 @@ export default function DietPlanDetails() {
   const [deleteError, setDeleteError] = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [editingRecommendationId, setEditingRecommendationId] = useState(null);
+
+  // Unassign all state
+  const [unassignAllLoading, setUnassignAllLoading] = useState(false);
+  const [unassignAllError, setUnassignAllError] = useState(null);
+  const [unassignAllSuccess, setUnassignAllSuccess] = useState(false);
 
   // Assigned Users table controls
   const [userSearch, setUserSearch] = useState("");
@@ -230,9 +236,25 @@ export default function DietPlanDetails() {
       showAlert("User unassigned successfully.", "success");
 
       // ✅ Optimistic UI update (FAST & CORRECT)
-      setAssignedUsers((prev) =>
-        prev.filter((u) => u.UserId !== userId)
-      );
+      setAssignedUsers((prev) => {
+        const updatedUsers = prev.filter((u) => u.UserId !== userId);
+
+        // Calculate new total pages after user removal
+        const newTotalPages = Math.ceil(updatedUsers.length / usersPerPage);
+
+        // Adjust page if current page is now empty or out of bounds
+        setUserPage((currentPage) => {
+          if (newTotalPages === 0) {
+            return 1; // Reset to page 1 if no users left
+          }
+          if (currentPage > newTotalPages) {
+            return newTotalPages; // Go to last available page
+          }
+          return currentPage; // Stay on current page if still valid
+        });
+
+        return updatedUsers;
+      });
     } else {
       showAlert(
         "Failed to unassign user: " + (result?.Message || "Unknown error"),
@@ -244,6 +266,38 @@ export default function DietPlanDetails() {
     showAlert("Error unassigning user: " + err.message, "error");
   }
 };
+
+  const unassignAllUsers = async () => {
+    const confirmed = await showConfirm(
+      "Are you sure you want to unassign all users from this diet plan? This action cannot be undone.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setUnassignAllLoading(true);
+      setUnassignAllError(null);
+
+      const result = await dietAssignmentApi.unassignAllFromPlan(planId);
+
+      if (result && result.Status === true) {
+        showAlert("All users unassigned successfully.", "success");
+
+        // ✅ Optimistic UI update
+        setAssignedUsers([]);
+        setUserPage(1); // Reset to first page
+      } else {
+        setUnassignAllError(result?.Message || "Failed to unassign all users.");
+      }
+    } catch (err) {
+      console.error("Error unassigning all users:", err);
+      setUnassignAllError(err.message || "Failed to unassign all users");
+    } finally {
+      setUnassignAllLoading(false);
+    }
+  };
 
 
   const fetchAllMealsData = async () => {
@@ -341,7 +395,27 @@ export default function DietPlanDetails() {
 
       if (res.ok && (result.status === true || result.Status === true)) {
         showAlert("Recommendation deleted successfully.", "success");
-        fetchRecommendedMeals(); // refresh list
+
+        // Optimistic UI update with page adjustment
+        setRecommendedMeals((prev) => {
+          const updatedMeals = prev.filter((r) => r.Id !== id);
+
+          // Calculate new total pages after deletion
+          const newTotalPages = Math.ceil(updatedMeals.length / recPerPage);
+
+          // Adjust page if current page is now empty or out of bounds
+          setRecPage((currentPage) => {
+            if (newTotalPages === 0) {
+              return 1; // Reset to page 1 if no recommendations left
+            }
+            if (currentPage > newTotalPages) {
+              return newTotalPages; // Go to last available page
+            }
+            return currentPage; // Stay on current page if still valid
+          });
+
+          return updatedMeals;
+        });
       } else {
         showAlert(
           result?.message ||
@@ -725,15 +799,38 @@ export default function DietPlanDetails() {
             <div className="card mb-4">
               <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Assigned Users</h5>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => {
-                    setAssignmentModalMode("assign");
-                    setShowDietPlanAssignmentModal(true);
-                  }}
-                >
-                  Assign Users
-                </button>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={unassignAllUsers}
+                    disabled={unassignAllLoading || assignedUsers.length === 0}
+                  >
+                    {unassignAllLoading ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        Unassigning...
+                      </>
+                    ) : (
+                      <>
+                        <i className="ri-user-unfollow-line me-1"></i>
+                        Unassign All
+                      </>
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => {
+                      setAssignmentModalMode("assign");
+                      setShowDietPlanAssignmentModal(true);
+                    }}
+                  >
+                    Assign Users
+                  </button>
+                </div>
               </div>
               <div className="card-body">
                 <div className="d-flex justify-content-between mb-3">
@@ -1152,46 +1249,55 @@ export default function DietPlanDetails() {
                             {/* 🔻 Dropdown shows only until a meal is selected */}
                             {!editingRecommendationId &&
                               !recommendMealForm.MealItemId && (
-                                <select
-                                  className="form-select"
-                                  id="MealItemId"
-                                  size={5}
-                                  value={recommendMealForm.MealItemId}
-                                  onChange={(e) => {
-                                    const mealId = e.target.value;
+                                <>
+                                  {mealSearchTerm.trim() !== "" &&
+                                  filteredDropdownMeals.length === 0 ? (
+                                    <div className="alert alert-info py-2 mb-0">
+                                      No meal found matching "{mealSearchTerm}"
+                                    </div>
+                                  ) : (
+                                    <select
+                                      className="form-select"
+                                      id="MealItemId"
+                                      size={5}
+                                      value={recommendMealForm.MealItemId}
+                                      onChange={(e) => {
+                                        const mealId = e.target.value;
 
-                                    // save selected meal id and pre-fill quantity with base quantity
-                                    setRecommendMealForm((prev) => ({
-                                      ...prev,
-                                      MealItemId: mealId,
-                                      RecommendedQuantity: "",
-                                    }));
+                                        // save selected meal id and pre-fill quantity with base quantity
+                                        setRecommendMealForm((prev) => ({
+                                          ...prev,
+                                          MealItemId: mealId,
+                                          RecommendedQuantity: "",
+                                        }));
 
-                                    // find selected meal & show in search box, and pre-fill quantity
-                                    const selected = dropdownMeals.find(
-                                      (m) => m.Id === mealId,
-                                    );
-                                    if (selected) {
-                                      setMealSearchTerm(
-                                        `${selected.FoodItem} (${selected.Quantity})`,
-                                      );
-                                      setRecommendMealForm((prev) => ({
-                                        ...prev,
-                                        RecommendedQuantity: String(
-                                          parseFloat(selected.Quantity) || "",
-                                        ),
-                                      }));
-                                    }
-                                  }}
-                                  required
-                                >
-                                  <option value="">Select a meal</option>
-                                  {filteredDropdownMeals.map((meal) => (
-                                    <option key={meal.Id} value={meal.Id}>
-                                      {meal.FoodItem} ({meal.Quantity})
-                                    </option>
-                                  ))}
-                                </select>
+                                        // find selected meal & show in search box, and pre-fill quantity
+                                        const selected = dropdownMeals.find(
+                                          (m) => m.Id === mealId,
+                                        );
+                                        if (selected) {
+                                          setMealSearchTerm(
+                                            `${selected.FoodItem} (${selected.Quantity})`,
+                                          );
+                                          setRecommendMealForm((prev) => ({
+                                            ...prev,
+                                            RecommendedQuantity: String(
+                                              parseFloat(selected.Quantity) || "",
+                                            ),
+                                          }));
+                                        }
+                                      }}
+                                      required
+                                    >
+                                      <option value="">Select a meal</option>
+                                      {filteredDropdownMeals.map((meal) => (
+                                        <option key={meal.Id} value={meal.Id}>
+                                          {meal.FoodItem} ({meal.Quantity})
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                </>
                               )}
                           </>
                         )}
