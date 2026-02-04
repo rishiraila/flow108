@@ -6,9 +6,10 @@ import DietPlanAssignmentModal from "../DietPlanAssignmentModal";
 import EditMealModal from "../EditMealModal";
 import { useAlert } from "../../utils/alertcontxt";
 import { useConfirm } from "../../utils/confirmContext";
-import { dietPlanApi, mealApi, dietAssignmentApi } from "../../utils/apiClient";
+import { dietPlanApi, mealApi, dietAssignmentApi, fetchUserProfile } from "../../utils/apiClient";
 import { fetchAllMeals } from "../../utils/api";
 import { adjustPaginationAfterRemoval } from "../../utils/paginationHelper";
+import { getImageUrl } from "../../utils/imageUtils";
 
 export default function DietPlanDetails() {
   const params = useParams();
@@ -43,6 +44,12 @@ export default function DietPlanDetails() {
   const [showDietPlanAssignmentModal, setShowDietPlanAssignmentModal] =
     useState(false);
   const [assignmentModalMode, setAssignmentModalMode] = useState("assign"); // 'assign' or 'view'
+
+  // State for assigned users functionality
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [showAssignedUsersModal, setShowAssignedUsersModal] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [unassignLoading, setUnassignLoading] = useState(false);
 
   // Meals state
   const [meals, setMeals] = useState([]);
@@ -267,37 +274,91 @@ export default function DietPlanDetails() {
   }
 };
 
-  const unassignAllUsers = async () => {
-    const confirmed = await showConfirm(
-      "Are you sure you want to unassign all users from this diet plan? This action cannot be undone.",
+// Function to toggle user selection for bulk unassignment
+const toggleUserSelection = (userId) => {
+  setSelectedUsers((prevSelected) => {
+    if (prevSelected.includes(userId)) {
+      return prevSelected.filter((id) => id !== userId);
+    } else {
+      return [...prevSelected, userId];
+    }
+  });
+};
+
+// Function to handle bulk unassignment
+const handleBulkUnassign = async () => {
+  if (selectedUsers.length === 0) {
+    showAlert("Please select at least one user to unassign.", "error");
+    return;
+  }
+
+  const confirmed = await showConfirm(
+    `Are you sure you want to unassign ${selectedUsers.length} user(s) from the diet plan?`
+  );
+
+  if (!confirmed) return;
+
+  setUnassignLoading(true);
+  try {
+    for (const userId of selectedUsers) {
+      await dietAssignmentApi.unassignFromPlan(planId, userId);
+    }
+
+    showAlert(`${selectedUsers.length} user(s) unassigned successfully`, "success");
+
+    // Remove the users from the assignedUsers state to update UI immediately
+    setAssignedUsers((prevUsers) =>
+      prevUsers.filter((user) => !selectedUsers.includes(user.UserId))
     );
 
-    if (!confirmed) {
-      return;
+    // Clear selection
+    setSelectedUsers([]);
+
+    // Refresh the assigned users list from server to ensure consistency
+    fetchDietPlanDetails();
+  } catch (err) {
+    showAlert("Error unassigning users: " + err.message, "error");
+  } finally {
+    setUnassignLoading(false);
+  }
+};
+
+// Filter assigned users based on search
+const filteredAssignedUsers = assignedUsers.filter((user) =>
+  `${user.Name} ${user.Email}`.toLowerCase().includes(userSearch.toLowerCase())
+);
+
+const unassignAllUsers = async () => {
+  const confirmed = window.confirm(
+    "Are you sure you want to unassign all users from this diet plan?\n\nThis action cannot be undone."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setUnassignAllLoading(true);
+
+    const result = await dietAssignmentApi.unassignAllFromPlan(planId);
+
+    if (result?.Status === true) {
+      showAlert(result.Message || "All users unassigned successfully.", "success");
+
+      // ✅ Update UI immediately
+      setAssignedUsers([]);
+      setSelectedUsers([]);
+      setUserPage(1);
+    } else {
+      showAlert(result?.Message || "Failed to unassign users.", "error");
     }
+  } catch (err) {
+    console.error("Unassign all failed:", err);
+    showAlert(err.message || "Failed to unassign all users", "error");
+  } finally {
+    setUnassignAllLoading(false);
+  }
+};
 
-    try {
-      setUnassignAllLoading(true);
-      setUnassignAllError(null);
 
-      const result = await dietAssignmentApi.unassignAllFromPlan(planId);
-
-      if (result && result.Status === true) {
-        showAlert("All users unassigned successfully.", "success");
-
-        // ✅ Optimistic UI update
-        setAssignedUsers([]);
-        setUserPage(1); // Reset to first page
-      } else {
-        setUnassignAllError(result?.Message || "Failed to unassign all users.");
-      }
-    } catch (err) {
-      console.error("Error unassigning all users:", err);
-      setUnassignAllError(err.message || "Failed to unassign all users");
-    } finally {
-      setUnassignAllLoading(false);
-    }
-  };
 
 
   const fetchAllMealsData = async () => {
@@ -800,27 +861,45 @@ export default function DietPlanDetails() {
               <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="mb-0">Assigned Users</h5>
                 <div className="d-flex gap-2">
+                  {/* <button
+                    className="btn btn-info btn-sm"
+                    onClick={() => setShowAssignedUsersModal(true)}
+                    disabled={usersLoading}
+                  >
+                    <i className="ri-user-line me-1"></i> View Assigned Users
+                  </button> */}
                   <button
                     className="btn btn-danger btn-sm"
                     onClick={unassignAllUsers}
-                    disabled={unassignAllLoading || assignedUsers.length === 0}
+                    disabled={unassignAllLoading}
                   >
                     {unassignAllLoading ? (
                       <>
-                        <span
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                          aria-hidden="true"
-                        ></span>
+                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                         Unassigning...
                       </>
                     ) : (
                       <>
-                        <i className="ri-user-unfollow-line me-1"></i>
-                        Unassign All
+                        <i className="ri-user-unfollow-line me-1"></i> Unassign All
                       </>
                     )}
                   </button>
+                  {/* <button
+                    className="btn btn-warning btn-sm"
+                    onClick={handleBulkUnassign}
+                    disabled={unassignLoading || selectedUsers.length === 0}
+                  >
+                    {unassignLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        Unassigning...
+                      </>
+                    ) : (
+                      <>
+                        <i className="ri-user-unfollow-line me-1"></i> Unassign Selected ({selectedUsers.length})
+                      </>
+                    )}
+                  </button> */}
                   <button
                     className="btn btn-primary btn-sm"
                     onClick={() => {
@@ -852,23 +931,39 @@ export default function DietPlanDetails() {
                   <div className="table-responsive">
                     <table className="table table-striped table-hover">
                       <thead>
-                        <tr>
-                          <th
-                            onClick={() => {
-                              setUserSortKey("Name");
-                              setUserSortOrder(
-                                userSortOrder === "asc" ? "desc" : "asc",
-                              );
-                            }}
-                            style={{ cursor: "pointer" }}
-                          >
-                            Name{" "}
-                            {userSortKey === "Name"
-                              ? userSortOrder === "asc"
-                                ? "↑"
-                                : "↓"
-                              : ""}
-                          </th>
+                      <tr>
+                        {/* <th>
+                          <input
+                            type="checkbox"
+                            checked={
+                              selectedUsers.length === filteredUsers.length &&
+                              filteredUsers.length > 0
+                            }
+                            onChange={(e) =>
+                              setSelectedUsers(
+                                e.target.checked
+                                  ? filteredUsers.map((u) => u.UserId)
+                                  : [],
+                              )
+                            }
+                          />
+                        </th> */}
+                        <th
+                          onClick={() => {
+                            setUserSortKey("Name");
+                            setUserSortOrder(
+                              userSortOrder === "asc" ? "desc" : "asc",
+                            );
+                          }}
+                          style={{ cursor: "pointer" }}
+                        >
+                          Name{" "}
+                          {userSortKey === "Name"
+                            ? userSortOrder === "asc"
+                              ? "↑"
+                              : "↓"
+                            : ""}
+                        </th>
                           <th
                             onClick={() => {
                               setUserSortKey("Email");
@@ -892,6 +987,13 @@ export default function DietPlanDetails() {
                       <tbody>
                         {paginatedUsers.map((user) => (
                           <tr key={user.UserId}>
+                            {/* <td>
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.includes(user.UserId)}
+                                onChange={() => toggleUserSelection(user.UserId)}
+                              />
+                            </td> */}
                             <td>{user.Name}</td>
                             <td>{user.Email}</td>
                             <td>{formatDate(user.AssignedDate)}</td>
