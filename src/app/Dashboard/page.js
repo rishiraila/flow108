@@ -9,7 +9,7 @@ import authenticatedFetch from "../utils/authenticatedFetch";
 // API function to answer a question
 const answerQuestion = async (questionId, answerText) => {
   return authenticatedFetch(
-    `${API_BASE_URL}/admin/community/questions/${questionId}/answer`,
+    `https://flow108.coinagesoft.com/api/admin/community/questions/${questionId}/answer`,
     {
       method: "POST",
       headers: {
