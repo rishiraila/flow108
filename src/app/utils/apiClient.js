@@ -255,22 +255,26 @@ export const mealApi = {
   },
 
   recommendMeal: async (recommendationData) => {
-    const formData = new FormData();
-    formData.append("MealItemId", recommendationData.MealItemId);
-    formData.append("MealType", recommendationData.MealType);
-    formData.append(
-      "RecommendedQuantity",
-      recommendationData.RecommendedQuantity,
-    );
-    formData.append("DietPlanId", recommendationData.DietPlanId);
+  const formData = new FormData();
+  formData.append("MealItemId", recommendationData.MealItemId);
+  formData.append("MealType", recommendationData.MealType);
+  formData.append(
+    "RecommendedQuantity",
+    recommendationData.RecommendedQuantity
+  );
+  formData.append("DietPlanId", recommendationData.DietPlanId);
 
-    // Use local API route instead of calling external API directly
-    const response = await enhancedFetch("/api/admin/recommendations/meal", {
+  // 🔴 IMPORTANT: return FULL response (do NOT use handleApiResponse)
+  const response = await enhancedFetch(
+    "/api/admin/recommendations/meal",
+    {
       method: "POST",
       body: formData,
-    });
-    return handleApiResponse(response);
-  },
+    }
+  );
+
+  return response;
+},
 
   getRecommendations: async (dietPlanId = null) => {
     const url = dietPlanId

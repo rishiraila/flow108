@@ -576,51 +576,50 @@ const unassignAllUsers = async () => {
       setSubmittingRecommendation(true);
 
       if (!isEditing) {
-        // ✅ ADD MODE using mealApi.recommendMeal
-        const recommendationData = {
-          MealItemId: recommendMealForm.MealItemId,
-          MealType: recommendMealForm.MealType,
-          RecommendedQuantity: recommendMealForm.RecommendedQuantity,
-          DietPlanId: recommendMealForm.DietPlanId,
-        };
+  const recommendationData = {
+    MealItemId: recommendMealForm.MealItemId,
+    MealType: recommendMealForm.MealType,
+    RecommendedQuantity: recommendMealForm.RecommendedQuantity,
+    DietPlanId: recommendMealForm.DietPlanId,
+  };
 
-        const result = await mealApi.recommendMeal(recommendationData);
+  const result = await mealApi.recommendMeal(recommendationData);
 
-        if (result && (result.status === true || result.Status === true)) {
-          showAlert("Recommendation added successfully!", "success");
+  // ✅ CORRECT success check
+  if (result?.status === true || result?.Status === true) {
+    showAlert(result.message || "Recommendation added successfully!", "success");
 
-          const dataArray = result.data || result.Data || [];
-          if (Array.isArray(dataArray) && dataArray.length > 0) {
-            setRecommendedMeals((prev) => {
-              const existingIds = new Set(
-                prev.map((r) => r.Id || r.id || r.mealId),
-              );
-              const merged = [...prev];
-              dataArray.forEach((item) => {
-                const id = item.Id || item.id || item.mealId;
-                if (!existingIds.has(id)) merged.push(item);
-              });
-              return merged;
-            });
-          } else {
-            await fetchRecommendedMeals();
-          }
+    const newItems = result.data || result.Data || [];
 
-          setRecommendMealForm({
-            MealItemId: "",
-            MealType: "",
-            RecommendedQuantity: "",
-            DietPlanId: planId,
-            Category: "",
-          });
-          setShowRecommendMealModal(false);
-        } else {
-          showAlert(
-            result?.message || "Failed to add recommendation.",
-            "error",
-          );
-        }
-      } else {
+    // ✅ Optimistic UI update
+    if (Array.isArray(newItems) && newItems.length > 0) {
+      setRecommendedMeals((prev) => {
+        const existingIds = new Set(prev.map((r) => r.Id));
+        return [
+          ...prev,
+          ...newItems.filter((i) => !existingIds.has(i.Id)),
+        ];
+      });
+    } else {
+      await fetchRecommendedMeals();
+    }
+
+    // reset & close
+    setRecommendMealForm({
+      MealItemId: "",
+      MealType: "",
+      RecommendedQuantity: "",
+      DietPlanId: planId,
+      Category: "",
+    });
+
+    setMealSearchTerm("");
+    setShowRecommendMealModal(false);
+  } else {
+    showAlert(result?.message || "Failed to add recommendation.", "error");
+  }
+}
+ else {
         // ✅ EDIT MODE using mealApi.updateRecommendation
         const updateData = {
           MealType: recommendMealForm.MealType,
@@ -647,10 +646,8 @@ const unassignAllUsers = async () => {
           setEditingRecommendationId(null);
           setShowRecommendMealModal(false);
         } else {
-          showAlert(
-            result?.message || "Failed to update recommendation.",
-            "error",
-          );
+          showAlert(response?.message || "Failed to update recommendation.", "error");
+
         }
       }
 
