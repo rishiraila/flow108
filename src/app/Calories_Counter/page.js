@@ -379,9 +379,9 @@ export default function CaloriesCounter() {
         name: newItem.name,
         quantity: newItem.quantity,
         calories: parseInt(newItem.calories),
-        carbs: parseInt(newItem.carbs) || 0,
-        protein: parseInt(newItem.protein) || 0,
-        fats: parseInt(newItem.fats) || 0,
+        carbs: parseFloat(newItem.carbs) || 0,
+        protein: parseFloat(newItem.protein) || 0,
+        fats: parseFloat(newItem.fats) || 0,
       };
 
       // Call API to add single meal
@@ -407,6 +407,7 @@ export default function CaloriesCounter() {
         }
 
         setSuccessMessage("Food item added successfully!");
+        alert("Food item added successfully!");
 
         // Close modal after 2 seconds
         setTimeout(() => {
