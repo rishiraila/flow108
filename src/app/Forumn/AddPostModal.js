@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
-const API_BASE_URL = "https://flow108.coinagesoft.com/api";
+const API_BASE_URL = "https://api.flow108.in/api";
 
 // API function to create a forum post
 const createForumPost = async (postData) => {
@@ -17,7 +17,7 @@ const createForumPost = async (postData) => {
   }
 
   const response = await fetch(
-    "https://flow108.coinagesoft.com/api/admin/community/forum/posts",
+    "https://api.flow108.in/api/admin/community/forum/posts",
     {
       method: "POST",
       headers: {

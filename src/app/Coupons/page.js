@@ -40,7 +40,7 @@ export default function BannersTestimonialsPage() {
           id: banner.Id || index + 1,
           title: banner.Name,
           description: '', // API doesn't have description
-          imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+          imageUrl: banner.ImagePath ? `https://api.flow108.in${banner.ImagePath}` : '',
         }));
         setBanners(transformedBanners);
         setError(null);
@@ -78,7 +78,7 @@ export default function BannersTestimonialsPage() {
           id: banner.Id || index + 1,
           title: banner.Name,
           description: '',
-          imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+          imageUrl: banner.ImagePath ? `https://api.flow108.in${banner.ImagePath}` : '',
         }));
         setBanners(transformedBanners);
         setShowAddBannerModal(false);

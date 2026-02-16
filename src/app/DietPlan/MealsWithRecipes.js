@@ -16,7 +16,7 @@ export default function MealsWithRecipes() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('https://flow108.coinagesoft.com/api/AllMealsWithRecipes');
+      const response = await fetch('https://api.flow108.in/api/AllMealsWithRecipes');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

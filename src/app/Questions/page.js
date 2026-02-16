@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import AdminQuestionModal from "./AdminQuestionModal";
 import authenticatedFetch from "../utils/authenticatedFetch";
 
-const API_BASE_URL = "https://flow108.coinagesoft.com/api";
+const API_BASE_URL = "https://api.flow108.in/api";
 
 // API functions for questions
 const fetchQuestions = async () => {

@@ -329,7 +329,7 @@ function WorkoutDetailsContent() {
   const fetchWorkoutDetails = async () => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`
+        `https://api.flow108.in/api/admin/workout_plan/${workoutId}/workouts`
       );
 
       setWorkoutPlan(data.data);
@@ -395,7 +395,7 @@ function WorkoutDetailsContent() {
     }));
 
     await authenticatedFetch(
-      `https://flow108.coinagesoft.com/api/admin/workout-plans/${workoutId}/assign-workout`,
+      `https://api.flow108.in/api/admin/workout-plans/${workoutId}/assign-workout`,
       {
         method: "POST",
         body: JSON.stringify({ Workouts: payload }),
@@ -409,7 +409,7 @@ function WorkoutDetailsContent() {
 
     try {
       const result = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/workout/${workoutId}`,
+        `https://api.flow108.in/api/admin/workout/${workoutId}`,
         {
           method: "DELETE",
         }
@@ -437,7 +437,7 @@ function WorkoutDetailsContent() {
       }
 
       await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/workout_plan/${workoutId}/workouts`,
+        `https://api.flow108.in/api/admin/workout_plan/${workoutId}/workouts`,
         {
           method: "POST",
           body: JSON.stringify({
@@ -469,7 +469,7 @@ function WorkoutDetailsContent() {
     try {
       setWorkoutsLoading(true);
       const data = await authenticatedFetch(
-        "https://flow108.coinagesoft.com/api/admin/workouts"
+        "https://api.flow108.in/api/admin/workouts"
       );
 
       const workouts = data.data || data.Data || [];
@@ -551,7 +551,7 @@ function WorkoutDetailsContent() {
 
     try {
       const result = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${planId}`,
+        `https://api.flow108.in/api/admin/users/${userId}/unassign-plan/${planId}`,
         {
           method: "DELETE",
         }
@@ -600,7 +600,7 @@ function WorkoutDetailsContent() {
     try {
       for (const userId of selectedUsers) {
         await authenticatedFetch(
-          `https://flow108.coinagesoft.com/api/admin/users/${userId}/unassign-plan/${workoutId}`,
+          `https://api.flow108.in/api/admin/users/${userId}/unassign-plan/${workoutId}`,
           {
             method: "DELETE",
           }

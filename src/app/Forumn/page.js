@@ -36,7 +36,7 @@ export default function Page() {
     }
 
     // Fix media URLs
-    const baseUrl = "https://flow108.coinagesoft.com";
+    const baseUrl = "https://api.flow108.in";
 
     const normalizedPosts = res.map(post => ({
       ...post,
@@ -65,7 +65,7 @@ export default function Page() {
   const deleteComment = async (commentId) => {
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/community/forum/comments/${commentId}`,
+        `https://api.flow108.in/api/admin/community/forum/comments/${commentId}`,
         {
           method: "DELETE",
           headers: {
@@ -104,7 +104,7 @@ export default function Page() {
       }
 
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${editingPost.Id}`,
+        `https://api.flow108.in/api/admin/community/forum/posts/${editingPost.Id}`,
         {
           method: "PATCH",
           headers: {
@@ -139,7 +139,7 @@ const deletePost = async (id) => {
       localStorage.getItem("adminToken") || localStorage.getItem("token");
 
     const res = await fetch(
-      `https://flow108.coinagesoft.com/api/admin/community/forum/posts/${id}`,
+      `https://api.flow108.in/api/admin/community/forum/posts/${id}`,
       {
         method: "DELETE",
         headers: {
@@ -175,7 +175,7 @@ const deletePost = async (id) => {
       const userId = localStorage.getItem("userId") || "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/admin/community/forum/comments`,
+        `https://api.flow108.in/api/admin/community/forum/comments`,
         {
           method: "POST",
           headers: {

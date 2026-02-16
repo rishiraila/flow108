@@ -23,7 +23,7 @@ export default function MealRecipeAssignment({ mealId, onRecipeAssigned }) {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch('https://flow108.coinagesoft.com/api/Recipies');
+      const response = await fetch('https://api.flow108.in/api/Recipies');
       if (!response.ok) throw new Error('Failed to fetch recipes');
       const data = await response.json();
       setRecipes(data.Data || []);

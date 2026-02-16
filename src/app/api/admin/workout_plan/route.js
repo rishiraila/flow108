@@ -5,7 +5,7 @@ export async function POST(request) {
     const formData = await request.formData();
 
     // Forward the request to the external API
-    const externalApiUrl = 'https://flow108.coinagesoft.com/api/admin/workout_plan';
+    const externalApiUrl = 'https://api.flow108.in/api/admin/workout_plan';
 
     const response = await fetch(externalApiUrl, {
       method: 'POST',

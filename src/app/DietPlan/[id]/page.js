@@ -438,7 +438,7 @@ const unassignAllUsers = async () => {
 
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/GlobalUsers/${id}`,
+        `https://api.flow108.in/GlobalUsers/${id}`,
         {
           method: "DELETE",
           headers: {

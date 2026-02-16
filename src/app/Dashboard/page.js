@@ -9,7 +9,7 @@ import authenticatedFetch from "../utils/authenticatedFetch";
 // API function to answer a question
 const answerQuestion = async (questionId, answerText) => {
   return authenticatedFetch(
-    `https://flow108.coinagesoft.com/api/admin/community/questions/${questionId}/answer`,
+    `https://api.flow108.in/api/admin/community/questions/${questionId}/answer`,
     {
       method: "POST",
       headers: {
@@ -22,7 +22,7 @@ const answerQuestion = async (questionId, answerText) => {
 
 const fetchQuestions = async () => {
   const data = await authenticatedFetch(
-    "https://flow108.coinagesoft.com/api/admin/community/questions",
+    "https://api.flow108.in/api/admin/community/questions",
     { method: "GET" }
   );
   return data.data || [];
@@ -49,7 +49,7 @@ export default function Page() {
     const loadPosts = async () => {
       try {
         const allPosts = await fetchForumPosts();
-        const baseUrl = "https://flow108.coinagesoft.com";
+        const baseUrl = "https://api.flow108.in";
         const normalizedPosts = allPosts.map(post => ({
           ...post,
           Media: post.Media?.Url

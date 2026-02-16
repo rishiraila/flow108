@@ -239,7 +239,7 @@ export default function TestimonialsPage() {
       Description: testimonial.Description,
       ImagePath: null,
     });
-    setCurrentEditImageUrl(testimonial.ImagePath ? `https://flow108.coinagesoft.com${testimonial.ImagePath}` : null);
+    setCurrentEditImageUrl(testimonial.ImagePath ? `https://api.flow108.in${testimonial.ImagePath}` : null);
     setEditPreviewImage(null);
 
     const modal = new bootstrap.Modal(
@@ -409,7 +409,7 @@ export default function TestimonialsPage() {
                           {testimonial.ImagePath && (
                             <div className="text-center mb-3">
                               <img
-                                src={`https://flow108.coinagesoft.com${testimonial.ImagePath}`}
+                                src={`https://api.flow108.in${testimonial.ImagePath}`}
                                 alt={testimonial.Title}
                                 className="img-fluid rounded"
                                 style={{ width: "100%", height: "200px", objectFit: "cover" }}

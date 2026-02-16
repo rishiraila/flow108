@@ -1,7 +1,7 @@
 // Centralized authenticated fetch utility that always includes JWT token
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://flow108.coinagesoft.com/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://api.flow108.in/api";
 
 // Configuration
 const CONFIG = {

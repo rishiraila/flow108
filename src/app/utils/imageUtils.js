@@ -2,7 +2,7 @@
  * Utility functions for handling images in the application
  */
 
-const BASE_DOMAIN = "https://flow108.coinagesoft.com";
+const BASE_DOMAIN = "https://api.flow108.in";
 
 /**
  * Converts relative image URLs to absolute URLs and handles edge cases

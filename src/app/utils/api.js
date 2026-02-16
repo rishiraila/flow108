@@ -2,7 +2,7 @@ import authenticatedFetch from "./authenticatedFetch";
 
 // API utility functions for diet plan management
 
-const API_BASE_URL = "https://flow108.coinagesoft.com/api";
+const API_BASE_URL = "https://api.flow108.in/api";
 
 const fetchWithTimeout = async (url, options = {}, timeout = 10000) => {
   try {
@@ -408,7 +408,7 @@ export const fetchWorkoutPlans = async () => {
       ? response.data
       : [];
 
-    const baseDomain = "https://flow108.coinagesoft.com";
+    const baseDomain = "https://api.flow108.in";
 
     return plans.map(plan => ({
       ...plan,
@@ -533,7 +533,7 @@ export const fetchWorkoutsByPlan = async (planId) => {
     const result = data.data || data.Data || { Workouts: [] };
     
     // Convert relative image URLs to absolute URLs for workouts
-    const baseDomain = "https://flow108.coinagesoft.com";
+    const baseDomain = "https://api.flow108.in";
     if (result.Workouts && Array.isArray(result.Workouts)) {
       result.Workouts = result.Workouts.map(workout => {
         const updatedWorkout = { ...workout };

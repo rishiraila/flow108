@@ -23,7 +23,7 @@ export default function Page() {
       console.log('Firebase ID Token:', idToken);
 
       // Call the API with the token
-      const response = await fetch('https://flow108.coinagesoft.com/api/AdminAccount/firebase-login', {
+      const response = await fetch('https://api.flow108.in/api/AdminAccount/firebase-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

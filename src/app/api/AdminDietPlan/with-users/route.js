@@ -5,7 +5,7 @@ export async function GET(request) {
     const authHeader = request.headers.get('authorization');
 
     // Forward the request to the external API
-    const externalApiUrl = 'https://flow108.coinagesoft.com/api/AdminDietPlan/with-users';
+    const externalApiUrl = 'https://api.flow108.in/api/AdminDietPlan/with-users';
 
     const response = await fetch(externalApiUrl, {
       method: 'GET',

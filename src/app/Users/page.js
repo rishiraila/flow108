@@ -47,7 +47,7 @@ export default function Page() {
       setLoadingAdmins(true);
 
       const res = await fetch(
-        "https://flow108.coinagesoft.com/api/AdminAccount/sub-admins",
+        "https://api.flow108.in/api/AdminAccount/sub-admins",
         {
           headers: {
             accept: "*/*",
@@ -88,7 +88,7 @@ export default function Page() {
       setAddingAdmin(true);
 
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
+        `https://api.flow108.in/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
         {
           method: "POST",
           headers: {
@@ -122,7 +122,7 @@ export default function Page() {
     try {
       // Use apiClient for delete request (includes JWT token)
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminAccount/delete-user-by-email?email=${encodeURIComponent(
+        `https://api.flow108.in/api/AdminAccount/delete-user-by-email?email=${encodeURIComponent(
           email,
         )}`,
         {
@@ -320,8 +320,8 @@ export default function Page() {
     }
 
     const url = isEditing
-      ? `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${editUserId}`
-      : "https://flow108.coinagesoft.com/api/AdminAccount/add-user";
+      ? `https://api.flow108.in/api/AdminAccount/update-user/${editUserId}`
+      : "https://api.flow108.in/api/AdminAccount/add-user";
 
     const method = isEditing ? "PATCH" : "POST";
 
@@ -403,7 +403,7 @@ export default function Page() {
 
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
+        `https://api.flow108.in/api/AdminAccount/sub-admin?email=${encodeURIComponent(email)}`,
         {
           method: "DELETE",
           headers: {
@@ -430,7 +430,7 @@ export default function Page() {
   const handleStatusChange = async (userId, isApproved) => {
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/AdminAccount/update-user/${userId}`,
+        `https://api.flow108.in/api/AdminAccount/update-user/${userId}`,
         {
           method: "PATCH",
           headers: {

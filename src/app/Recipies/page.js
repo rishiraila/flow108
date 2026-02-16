@@ -29,14 +29,14 @@ export default function RecipiesPage() {
   const getImageUrl = (url) => {
     if (!url) return "/placeholder.jpg";
     if (url.startsWith("http")) return url; // already absolute
-    return `https://flow108.coinagesoft.com${url}`; // prepend API domain
+    return `https://api.flow108.in${url}`; // prepend API domain
   };
   const handleDeleteRecipe = async (id) => {
     if (!confirm("Are you sure you want to delete this recipe?")) return;
 
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/receipe/${id}`,
+        `https://api.flow108.in/receipe/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -70,7 +70,7 @@ export default function RecipiesPage() {
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       const response = await fetch(
-        "https://flow108.coinagesoft.com/api/recipes",
+        "https://api.flow108.in/api/recipes",
         {
           method: "GET",
           headers: {
@@ -182,7 +182,7 @@ export default function RecipiesPage() {
 
     try {
       const response = await fetch(
-        "https://flow108.coinagesoft.com/api/recipes",
+        "https://api.flow108.in/api/recipes",
         {
           method: "POST",
           headers: {
@@ -285,7 +285,7 @@ export default function RecipiesPage() {
 
     try {
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/recipes/${editingRecipe.Id}`,
+        `https://api.flow108.in/api/recipes/${editingRecipe.Id}`,
         {
           method: "PUT",
           headers: {

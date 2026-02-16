@@ -178,7 +178,7 @@ export default function Page() {
           localStorage.getItem("adminToken") || localStorage.getItem("token");
 
         const usersResponse = await fetch(
-          "https://flow108.coinagesoft.com/api/AdminDietPlan/with-users",
+          "https://api.flow108.in/api/AdminDietPlan/with-users",
           {
             headers: {
               Authorization: `Bearer ${token}`,

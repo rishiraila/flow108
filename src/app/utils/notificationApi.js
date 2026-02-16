@@ -2,7 +2,7 @@ import authenticatedFetch from "./authenticatedFetch";
 
 // Notification API functions
 
-const API_BASE_URL = "https://flow108.coinagesoft.com/api";
+const API_BASE_URL = "https://api.flow108.in/api";
 
 
 

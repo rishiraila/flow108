@@ -23,7 +23,7 @@ export default function BannerAssignmentModal({ isOpen, onClose, bannerId, banne
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const data = await authenticatedFetch("https://api.flow108.in/api/AdminAccount/all-users");
       setUsers(data.Data || []);
     } catch (error) {
       setAssignError(error.message || "Failed to load users");

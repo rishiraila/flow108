@@ -3,7 +3,7 @@ import authenticatedFetch from "./authenticatedFetch";
 // Enhanced API client with robust error handling, timeouts, and retry logic
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://flow108.coinagesoft.com/api";
+  process.env.NEXT_PUBLIC_API_URL || "https://api.flow108.in/api";
 
 // Configuration
 const CONFIG = {

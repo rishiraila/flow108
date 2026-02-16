@@ -10,7 +10,7 @@ export default function Page() {
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
-      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/AdminFeedback/all");
+      const data = await authenticatedFetch("https://api.flow108.in/api/admin/AdminFeedback/all");
       setFeedbacks(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching feedbacks:", err);

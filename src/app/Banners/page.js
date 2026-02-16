@@ -42,7 +42,7 @@ export default function BannersPage() {
         name: banner.Name,
         title: banner.Title,
         description: banner.Content || '',
-        imageUrl: banner.ImagePath ? `https://flow108.coinagesoft.com${banner.ImagePath}` : '',
+        imageUrl: banner.ImagePath ? `https://api.flow108.in${banner.ImagePath}` : '',
         redirectUrl: banner.RedirectUrl || '',
         createdAt: banner.CreatedAt || new Date().toISOString(),
         likes: banner.LikeCount || 0,

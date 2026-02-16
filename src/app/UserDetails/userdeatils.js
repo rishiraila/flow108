@@ -484,7 +484,7 @@ export default function UserDetailsClient() {
   const fetchProfileData = async (uid) => {
     try {
       const allUsers = await authenticatedFetch(
-        "https://flow108.coinagesoft.com/api/admin/AdminOnBoarding/users",
+        "https://api.flow108.in/api/admin/AdminOnBoarding/users",
       );
       const profile = allUsers.find((user) => user.UserId === uid);
       setProfileData(profile || null);
@@ -560,7 +560,7 @@ export default function UserDetailsClient() {
 
   const fetchActivityData = async (uid) => {
     const data = await authenticatedFetch(
-      `https://flow108.coinagesoft.com/api/user/activity/report?userId=${uid}`,
+      `https://api.flow108.in/api/user/activity/report?userId=${uid}`,
     );
 
     setActivityData(data.Events || []);
@@ -569,7 +569,7 @@ export default function UserDetailsClient() {
   const fetchPeriodSeverity = async (uid) => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin-activity/period/${uid}`,
+        `https://api.flow108.in/api/admin-activity/period/${uid}`,
       );
 
       const severityMap = {};
@@ -621,7 +621,7 @@ export default function UserDetailsClient() {
   const fetchWeightData = async (uid) => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin-activity/weight/${uid}`,
+        `https://api.flow108.in/api/admin-activity/weight/${uid}`,
       );
       setWeightData(data);
     } catch (error) {
@@ -632,7 +632,7 @@ export default function UserDetailsClient() {
   const fetchDietLogs = async (uid) => {
     try {
       const data = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/AdminDietPlan/allLogs/${uid}`,
+        `https://api.flow108.in/api/AdminDietPlan/allLogs/${uid}`,
       );
       setDietLogs(data);
     } catch (error) {
@@ -643,7 +643,7 @@ export default function UserDetailsClient() {
   const fetchWorkoutData = async (uid) => {
     try {
       const res = await fetch(
-        `https://flow108.coinagesoft.com/api/user/activity/user/${uid}/activities`,
+        `https://api.flow108.in/api/user/activity/user/${uid}/activities`,
       );
       const data = await res.json();
       setWorkouts(data.Data.Workouts || []);

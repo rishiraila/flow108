@@ -26,7 +26,7 @@ export default function SettingsPage() {
         // Set default settings
         setSettings({
           api: {
-            baseUrl: process.env.NEXT_PUBLIC_API_URL || 'https://flow108.coinagesoft.com/api',
+            baseUrl: process.env.NEXT_PUBLIC_API_URL || 'https://api.flow108.in/api',
             timeout: 10000,
             maxRetries: 3,
             retryDelay: 1000

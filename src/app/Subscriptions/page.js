@@ -30,7 +30,7 @@ export default function Page() {
 
     try {
       const data = await authenticatedFetch(
-        "https://flow108.coinagesoft.com/api/AdminAccount/all-users"
+        "https://api.flow108.in/api/AdminAccount/all-users"
       );
 
       const approvedUsers = (data?.Data || []).filter((u) => u.IsApproved);
@@ -40,7 +40,7 @@ export default function Page() {
       for (const user of approvedUsers) {
         try {
           const plans = await authenticatedFetch(
-            `https://flow108.coinagesoft.com/api/UserPlans/user/${user.Id}`
+            `https://api.flow108.in/api/UserPlans/user/${user.Id}`
           );
           plansMap[user.Id] = plans?.[0]?.Title || "No Plan Assigned";
         } catch {
@@ -63,7 +63,7 @@ export default function Page() {
 
     try {
       await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/plans/unassign?userId=${userId}&planId=${plan.Id}`,
+        `https://api.flow108.in/api/admin/plans/unassign?userId=${userId}&planId=${plan.Id}`,
         {
           method: "POST",
         }
@@ -85,7 +85,7 @@ export default function Page() {
 
     try {
       await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/plans/assign?userId=${userId}&planId=${planId}`,
+        `https://api.flow108.in/api/admin/plans/assign?userId=${userId}&planId=${planId}`,
         {
           method: "POST",
         }
@@ -104,7 +104,7 @@ export default function Page() {
 
   const fetchPlans = async () => {
     try {
-      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/plans");
+      const data = await authenticatedFetch("https://api.flow108.in/api/admin/plans");
       console.log("API Response:", data);
       setPlans(data);
     } catch (err) {
@@ -124,7 +124,7 @@ export default function Page() {
 
     try {
       await authenticatedFetch(
-        "https://flow108.coinagesoft.com/api/admin/plans",
+        "https://api.flow108.in/api/admin/plans",
         {
           method: "POST",
           body: JSON.stringify(payload),
@@ -190,7 +190,7 @@ export default function Page() {
 
   try {
     await authenticatedFetch(
-      `https://flow108.coinagesoft.com/api/admin/plans/${selectedPlan.Id}`, // ✅ Correct endpoint
+      `https://api.flow108.in/api/admin/plans/${selectedPlan.Id}`, // ✅ Correct endpoint
       {
         method: "PUT",
         body: JSON.stringify(payload),
@@ -236,7 +236,7 @@ export default function Page() {
 
     try {
       await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/plans/${planId}`,
+        `https://api.flow108.in/api/admin/plans/${planId}`,
         {
           method: "DELETE",
         }

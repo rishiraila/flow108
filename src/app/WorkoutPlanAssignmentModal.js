@@ -27,7 +27,7 @@ export default function WorkoutPlanAssignmentModal({
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const data = await authenticatedFetch("https://api.flow108.in/api/AdminAccount/all-users");
       let allUsers = data.Data || [];
 
       try {
@@ -52,7 +52,7 @@ export default function WorkoutPlanAssignmentModal({
   const assignPlanToUser = async (userId) => {
     try {
       const result = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/users/${userId}/assign-plan`,
+        `https://api.flow108.in/api/admin/users/${userId}/assign-plan`,
         {
           method: "POST",
           body: JSON.stringify({

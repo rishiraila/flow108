@@ -24,7 +24,7 @@ export default function RecipiesPage() {
   const fetchRecipes = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://flow108.coinagesoft.com/api/recipes');
+      const response = await fetch('https://api.flow108.in/api/recipes');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -58,7 +58,7 @@ export default function RecipiesPage() {
     };
 
     try {
-      const response = await fetch('https://flow108.coinagesoft.com/api/recipes', {
+      const response = await fetch('https://api.flow108.in/api/recipes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

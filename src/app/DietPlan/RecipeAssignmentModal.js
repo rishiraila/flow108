@@ -50,7 +50,7 @@ export default function RecipeAssignmentModal({
         formData.recipeId || "00000000-0000-0000-0000-000000000000";
 
       const response = await fetch(
-        `https://flow108.coinagesoft.com/api/meals/${mealId}/recipes/${recipeId}`,
+        `https://api.flow108.in/api/meals/${mealId}/recipes/${recipeId}`,
         {
           method: "POST",
           headers: {

@@ -19,7 +19,7 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const response = await fetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const response = await fetch("https://api.flow108.in/api/AdminAccount/all-users");
       if (!response.ok) throw new Error("Failed to fetch users");
       const data = await response.json();
       setUsers(data.Data || []);
@@ -36,7 +36,7 @@ export default function UserAssignmentModal({ isOpen, onClose, planId, onAssignm
     setAssignSuccess(false);
     try {
       const result = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/users/${userId}/dietplans/${planId}`,
+        `https://api.flow108.in/api/users/${userId}/dietplans/${planId}`,
         {
           method: "POST",
         }

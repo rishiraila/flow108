@@ -22,7 +22,7 @@ export default function TestimonialAssignmentModal({ isOpen, onClose, testimonia
     setLoadingUsers(true);
     setAssignError(null);
     try {
-      const data = await authenticatedFetch("https://flow108.coinagesoft.com/api/AdminAccount/all-users");
+      const data = await authenticatedFetch("https://api.flow108.in/api/AdminAccount/all-users");
       setUsers(data.Data || []);
     } catch (error) {
       setAssignError(error.message || "Failed to load users");
@@ -55,7 +55,7 @@ export default function TestimonialAssignmentModal({ isOpen, onClose, testimonia
         formData.append('AssignToAll', 'true');
       }
 
-      const result = await authenticatedFetch("https://flow108.coinagesoft.com/api/admin/testimonials/assign", {
+      const result = await authenticatedFetch("https://api.flow108.in/api/admin/testimonials/assign", {
         method: "POST",
         body: formData,
       });

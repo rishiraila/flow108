@@ -59,7 +59,7 @@ export default function WorkoutAssignmentModal({
 
     try {
       const result = await authenticatedFetch(
-        `https://flow108.coinagesoft.com/api/admin/workout-plans/${planId}/assign-workout`,
+        `https://api.flow108.in/api/admin/workout-plans/${planId}/assign-workout`,
         {
           method: "POST",
           body: JSON.stringify({
